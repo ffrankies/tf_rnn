@@ -3,7 +3,7 @@ Contains constants for use within the project.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 16 September, 2017
+Date: 23 September, 2017
 """
 
 import time
@@ -82,12 +82,14 @@ SOURCE_TYPE_STR = 'source_type'
 VOCAB_SIZE_STR = 'vocab_size'
 NUM_ROWS_STR = 'num_rows'
 NUM_EXAMPLES_STR = 'num_examples'
+TYPE_STR = 'type'
 MODE_STR = 'mode'
 TOKEN_LEVEL_STR = 'token_level'
 
 #########################################
 # ARG CHOICES
 #########################################
+TYPE_CHOICES = ['text', 'number']
 MODE_CHOICES = ['sentences', 'paragraphs', 'stories']
 TOKEN_LEVEL_CHOICES = ['words', 'characters']
 
@@ -119,6 +121,7 @@ SOURCE_TYPE = 'csv'
 VOCAB_SIZE = 200
 NUM_ROWS = math.inf
 NUM_EXAMPLES = None # list[:None] returns all elements in list
+TYPE = TYPE_CHOICES[0]
 MODE = MODE_CHOICES[0]
 TOKEN_LEVEL = TOKEN_LEVEL_CHOICES[0]
 
@@ -150,5 +153,6 @@ DATA_ARGS = {
     VOCAB_SIZE_STR : VOCAB_SIZE,
     NUM_ROWS_STR : NUM_ROWS,
     NUM_EXAMPLES_STR : NUM_EXAMPLES,
+    TYPE_STR : TYPE,
     MODE_STR : MODE,
     TOKEN_LEVEL_STR : TOKEN_LEVEL }

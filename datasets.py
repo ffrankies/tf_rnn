@@ -10,7 +10,7 @@ https://goo.gl/DPf37h
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 15 September, 2017
+Date: 23 September, 2017
 """
 
 ###############################################################################
@@ -31,7 +31,7 @@ Date: 15 September, 2017
 #   the end token
 #
 # Author: Frank Wanye
-# Date: 16 September, 2017
+# Date: 23 September, 2017
 ###############################################################################
 
 # Specify documentation format
@@ -108,19 +108,66 @@ def create_dataset(logger, settings):
     settings (settings.SettingsNamespace): The dataset creation settings
 
     Return:
-    tuple: (vocabulary as List, index_to_word as List, word_to_index as Dict, x_train as List, y_train as List)
+    tuple: (vocabulary as List, index_to_word as List, token_to_index as Dict, x_train as List, y_train as List)
     """
+    dataset = create_text_dataset(logger, settings, None)
+    dataset = create_numeric_dataset(logger, settings, dataset)
+    return dataset
+# End of create_dataset()
+
+def create_text_dataset(logger, settings, dataset):
+    """
+    Creates a dataset based on text data. If the settings chosen do not specify a text dataset, returns the value 
+    of the dataset parameter, unchanged.
+
+    Params:
+    logger (logging.Logger): The logger used in this run of the script
+    settings (settings.SettingsNamespace): The dataset creation settings
+    dataset (tuple): The previously created dataset, if any
+
+    Return:
+    tuple: (type, token_level, vocabulary: List, index_to_word: List, token_to_index: Dict, x_train: List, 
+            y_train: List)
+    """
+    if settings.type != constants.TYPE_CHOICES[0]: # type = 'text'
+        return dataset   
     data = tokenize_data(logger, settings)
     data = normalize_examples(logger, settings, data)
     vocabulary = create_vocabulary(logger, settings, data)
+    index_to_token = [token[0] for token in vocabulary]
+    index_to_token.append(constants.UNKNOWN)
+    token_to_index = dict((token, index) for index, token in enumerate(index_to_token))
+    x_train, y_train = create_training_data(logger, settings, data, token_to_index)
+    return (constants.TYPE_CHOICES[0], 
+            constants.TOKEN_LEVEL_CHOICES[0], 
+            vocabulary, 
+            index_to_token, 
+            token_to_index, 
+            x_train, 
+            y_train)
+# End of create_text_dataset
 
-    index_to_word = [word[0] for word in vocabulary]
-    index_to_word.append(constants.UNKNOWN)
-    word_to_index = dict((word, index) for index, word in enumerate(index_to_word))
+def create_numeric_dataset(logger, settings, dataset):
+    """
+    Creates a dataset based on numeric data. If the settings chosen do not specify a numeric dataset, returns the value 
+    of the dataset parameter, unchanged.
 
-    x_train, y_train = create_training_data(logger, settings, data, word_to_index)
-    return (vocabulary, index_to_word, word_to_index, x_train, y_train)
-# End of create_dataset()
+    Params:
+    logger (logging.Logger): The logger used in this run of the script
+    settings (settings.SettingsNamespace): The dataset creation settings
+    dataset (tuple): The previously created dataset, if any
+
+    Return:
+    tuple: either 
+    ("word_dataset", vocabulary: List, index_to_word: List, token_to_index: Dict, x_train: List, y_train: List)
+           or
+    ("char_dataset", vocabulary: List, x_train: List, y_train: List)
+    """
+    if settings.type != constants.TYPE_CHOICES[1]: # type = 'number'
+        return dataset
+    # TODO: Implement this function
+    return dataset
+# End of create_numeric_dataset()
 
 def tokenize_data(logger, settings):
     """
@@ -346,7 +393,7 @@ def create_vocabulary(logger, settings, data):
     return vocabulary
 # End of create_vocabulary()
 
-def create_training_data(logger, settings, data, word_to_index):
+def create_training_data(logger, settings, data, token_to_index):
     """
     Creates the inputs and labels for training.
 
@@ -354,18 +401,18 @@ def create_training_data(logger, settings, data, word_to_index):
     logger (logging.Logger): The logger used in this run of the script
     settings (settings.SettingsNamespace): The dataset creation settings
     data (list): The data to break into inputs and labels
-    word_to_index (dict): The dictionary used to convert words to indexes
+    token_to_index (dict): The dictionary used to convert words to indexes
 
     Return:
     tuple: (inputs, labels)
     """
     logger.info("Replace all words not in vocabulary with unkown token.")
     for index, sentence in enumerate(data):
-        data[index] = [word if word in word_to_index else constants.UNKNOWN for word in sentence]
+        data[index] = [word if word in token_to_index else constants.UNKNOWN for word in sentence]
 
     logger.info("Creating training data.")
-    x_train = np.asarray([[word_to_index[word] for word in item[:-1]] for item in data])
-    y_train = np.asarray([[word_to_index[word] for word in item[1:]] for item in data])
+    x_train = np.asarray([[token_to_index[word] for word in item[:-1]] for item in data])
+    y_train = np.asarray([[token_to_index[word] for word in item[1:]] for item in data])
     return x_train, y_train
 # End of create_training_data()
 
@@ -378,23 +425,28 @@ def load_dataset(logger, dataset):
     dataset (string): The filename of the pickled dataset to load
 
     Return:
-    tuple: (vocabulary, index_to_word, word_to_index, x_train, y_train)
+    tuple: (vocabulary, index_to_word, token_to_index, x_train, y_train)
     """
     path = constants.DATASETS_DIR + dataset
 
     logger.info("Loading saved dataset.")
     with open(path, "rb") as dataset_file:
         data = cPickle.load(dataset_file)
-        vocabulary = data[0]
-        index_to_word = data[1]
-        word_to_index = data[2]
-        x_train = data[3]
-        y_train = data[4]
+        dataset_type = data[0]
+        token_level = data[1]
+        vocabulary = data[2]
+        index_to_token = data[3]
+        token_to_index = data[4]
+        x_train = data[5]
+        y_train = data[6]
 
+        logger.info("The dataset type is: %s" % dataset_type)
+        logger.info("The tokenizing level is: %s" % token_level)
         logger.info("Size of vocabulary is: %d" % len(vocabulary))
-        logger.info("Some words from vocabulary: %s" % index_to_word[:100])
+        logger.info("Some words from vocabulary: \n%s" % index_to_token[:50])
         logger.info("Number of examples: %d" % len(x_train))
-        logger.info("Sample training data: %s\n%s" % (x_train[:10], y_train[:10]))
+        logger.info("Sample training input: \n%s" % x_train[:5])
+        logger.info("Sample training labels: \n%s" % y_train[:5])
     # End with
     return data
 # End of load_dataset()

@@ -83,9 +83,11 @@ def add_dataset_parser(subparsers):
                         help="The number of rows of data to be read.")
     parser.add_argument("-n", "--num_examples", type=int, default=constants.NUM_EXAMPLES,
                         help="The number of sentence examples to be saved.")
+    parser.add_argument("-t", "--type", default=constants.TYPE, choices=constants.TYPE_CHOICES,
+                        help="The type of the dataset.")
     parser.add_argument("-m", "--mode", default=constants.MODE, choices=constants.MODE_CHOICES,
                         help="Selects what constitutes an example in the dataset.")
-    parser.add_argument("-t", "--token_level", default=constants.TOKEN_LEVEL, choices=constants.TOKEN_LEVEL_CHOICES,
+    parser.add_argument("-l", "--token_level", default=constants.TOKEN_LEVEL, choices=constants.TOKEN_LEVEL_CHOICES,
                         help="Selects on what level to break down the training data.")
 # End of add_dataset_parser()
 
