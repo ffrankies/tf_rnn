@@ -10,7 +10,7 @@ https://goo.gl/DPf37h
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 23 September, 2017
+Date: 24 September, 2017
 """
 
 ###############################################################################
@@ -31,7 +31,7 @@ Date: 23 September, 2017
 #   the end token
 #
 # Author: Frank Wanye
-# Date: 23 September, 2017
+# Date: 24 September, 2017
 ###############################################################################
 
 # Specify documentation format
@@ -425,7 +425,7 @@ def load_dataset(logger, dataset):
     dataset (string): The filename of the pickled dataset to load
 
     Return:
-    tuple: (vocabulary, index_to_word, token_to_index, x_train, y_train)
+    tuple: (data_type, token_level, vocabulary, index_to_word, token_to_index, x_train, y_train)
     """
     path = constants.DATASETS_DIR + dataset
 

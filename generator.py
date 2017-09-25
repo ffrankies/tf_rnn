@@ -3,7 +3,7 @@ Tensorflow implementation of methods for generating RNN output.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 5 September, 2017
+Date: 24 September, 2017
 """
 
 import numpy as np
@@ -12,17 +12,15 @@ import logging
 import math
 
 from . import constants
-from .model import RNNModel
 
-
-def generate_output(model, num_tokens=-1, num_outputs=10):
+def generate_output(model, num_tokens=math.inf, num_outputs=10):
     """
     Generates output from the RNN.
 
     Params: 
     model (rnn.RNNModel): The model to be used to generate output
-    num_tokens (int): The number of tokens to generate. If set to -1, the output is generated until an END token is
-                      reached
+    num_tokens (int): The number of tokens to generate. If set to infinity, the output is generated until an END token 
+                      is reached
     num_outputs (int): The number of outputs to generate.
 
     Return:
@@ -32,7 +30,7 @@ def generate_output(model, num_tokens=-1, num_outputs=10):
     outputs = []
     for i in range(1, num_outputs+1):
         sentence = generate_single_output(model, num_tokens)
-        sentence = " ".join([model.index_to_word[word] for word in sentence])
+        sentence = " ".join([model.index_to_token[word] for word in sentence])
         outputs.append(sentence)
     for sentence in outputs:
         print("%s\n\n" % sentence)
@@ -40,30 +38,29 @@ def generate_output(model, num_tokens=-1, num_outputs=10):
     return outputs
 # End of generate_output()
 
-def generate_single_output(model, num_tokens=-1):
+def generate_single_output(model, num_tokens=math.inf):
     """
     Generates a single output from the model.
 
     Params: 
     model (rnn.RNNModel): The model to be used to generate output
-    num_tokens (int): The number of tokens to generate. If set to -1, the output is generated until an END token is
-                      reached
+    num_tokens (int): The number of tokens to generate. If set to infinity, the output is generated until an END token 
+                      is reached
 
     Return:
     np.ndarray: The generated output as a numpy array
     """
-    sentence = np.array([model.word_to_index[constants.SENT_START]])
+    sentence = np.array([model.token_to_index[constants.START_TOKEN]])
     current_state = np.zeros((model.settings.train.batch_size, model.settings.rnn.hidden_size))
-    num_tokens = 0
-    while num_tokens < 1: # Generate until sentence_stop
+    num_generated = 0
+    while num_tokens > num_generated:
         output, new_current_state = predict(model, sentence, current_state)
         sentence = np.append(sentence, sample_output_word(model, output))
-        if sentence[-1] == model.word_to_index[constants.SENT_END] : break
-        num_tokens -= 1
-        num_tokens += 1
+        if sentence[-1] == model.token_to_index[constants.END_TOKEN] : break
+        num_generated += 1
     # End of while loop
     return sentence
-# End of __generate_single_output__()
+# End of generate_single_output()
 
 def predict(model, sentence, current_state):
     """
@@ -128,8 +125,8 @@ def sample_output_word(model, probabilities):
     :type return: int()
     :param return: the index of the next word in the sentence.
     """
-    output_word = model.word_to_index[constants.UNKNOWN]
-    while output_word == model.word_to_index[constants.UNKNOWN]:
+    output_word = model.token_to_index[constants.UNKNOWN]
+    while output_word == model.token_to_index[constants.UNKNOWN]:
         while sum(probabilities[:-1]) > 1.0 : 
             model.logger.error("Sum of word probabilities (%f) > 1.0" % sum(probabilities[:-1]))
             probabilities = softmax(probabilities)

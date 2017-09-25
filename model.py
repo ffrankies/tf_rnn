@@ -3,7 +3,7 @@ An RNN model implementation in tensorflow.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 16 September, 2017
+Date: 24 September, 2017
 """
 
 import numpy as np
@@ -32,57 +32,73 @@ class RNNModel(object):
         self.model_path = saver.create_model_dir(self.settings.general.model_name)
         self.logger = setup.setup_logger(self.settings.logging, self.model_path)
         self.logger.info("RNN settings: %s" % self.settings)
-        self._create_graph()
+        self.create_graph()
     # End of __init__()
 
-    def _create_graph(self):
+    def create_graph(self):
         """
         Creates all internal tensorflow operations and variables inside a local graph and session.
         """
         self.graph = tf.Graph()
         with self.graph.as_default():
-            self._load_dataset()
+            self.load_dataset()
             self._training()
             self.session = tf.Session(graph=self.graph)
             self._init_saver()
             self.session.run(tf.global_variables_initializer())
-    # End of _create_graph()
+    # End of create_graph()
 
-    def _load_dataset(self):
+    def load_dataset(self):
         """
         Loads the dataset specified in the command-line arguments. Instantiates variables for the class.
         """
         dataset_params = datasets.load_dataset(self.logger, self.settings.rnn.dataset)
+        self.data_type = dataset_params[0]
+        self.token_level = dataset_params[1]
+        # Skip vocabulary - we don't really need it
+        self.index_to_token = dataset_params[3]
+        self.token_to_index = dataset_params[4]
+        self.vocabulary_size = len(self.index_to_token)
         # Don't need to keep the actual training data when creating batches.
-        self.vocabulary, self.index_to_word, self.word_to_index, x_train, y_train = dataset_params
-        self.index_to_word = dataset_params[1]
-        self.word_to_index = dataset_params[2]
-        x_train = self._create_long_array(x_train)
-        y_train = self._create_long_array(y_train)
-        self.vocabulary_size = len(self.index_to_word)
-        self._create_batches(x_train, y_train)
-    # End of _load_dataset()
+        x_train = self.create_long_array(dataset_params[5])
+        y_train = self.create_long_array(dataset_params[6])
+        self.create_batches(x_train, y_train)
+    # End of load_dataset()
 
-    def _create_long_array(self, matrix):
+    def create_long_array(self, matrix):
+        """
+        Concatenates multi-dimensional array into one long array for simpler training. Pads the resulting array until 
+        it is divisible by the batch size.
+
+        Params:
+        matrix (numpy.ndarray): The multi-dimensional array to concatenate
+
+        Return:
+        numpy.array: The concatenated and padded array
+        """
         array = np.array([])
         for row in matrix: array = np.append(array, row)
         while len(array) % self.settings.train.batch_size != 0: array = np.append(array, [array[-1]])
         return array
-    # End of _create_long_array()
+    # End of create_long_array()
 
-    def _create_batches(self, x_train, y_train):
+    def create_batches(self, x_train, y_train):
         """
         Creates batches out of loaded data.
 
         Current implementation is very limited. It would probably be best to sort the training data based on length, 
         fill it up with placeholders so the sizes are standardized, and then break it up into batches.
+
+        Params:
+        x_train (numpy.array): The training examples
+        y_train (numpy.array): The training labels
         """
         self.logger.info("Breaking input data into batches.")
         self.x_train_batches = x_train.reshape((self.settings.train.batch_size,-1))
         self.y_train_batches = y_train.reshape((self.settings.train.batch_size,-1))
         self.num_batches = len(self.x_train_batches)
         self.logger.info("Obtained %d batches." % self.num_batches)
-    # End of _create_batches() 
+    # End of create_batches() 
 
     def _training(self):
         """
