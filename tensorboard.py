@@ -18,7 +18,7 @@ def init_tensorboard(model):
     """
     tensorboard_dir = model.model_path + constants.TENSORBOARD + model.run_dir
     with tf.variable_scope("summaries"):
-        tf.summary.scalar("total_loss", model.total_loss_fun)
+        tf.summary.scalar("total_loss", model.total_loss_op)
         summarize_variable(model.out_weights, "output_weights")
         summarize_variable(model.out_bias, "output_bias")
         summarize_variable(model.accuracy, "output_accuracy")

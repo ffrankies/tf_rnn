@@ -13,7 +13,7 @@ import math
 
 from . import constants
 
-def generate_output(model, num_tokens=math.inf, num_outputs=10):
+def generate_output(model, num_tokens=30, num_outputs=10):
     """
     Generates output from the RNN.
 
@@ -55,7 +55,7 @@ def generate_single_output(model, num_tokens=math.inf):
     num_generated = 0
     while num_tokens > num_generated:
         output, new_current_state = predict(model, sentence, current_state)
-        sentence = np.append(sentence, sample_output_word(model, output))
+        sentence = np.append(sentence, sample_output_token(model, output))
         if sentence[-1] == model.token_to_index[constants.END_TOKEN] : break
         num_generated += 1
     # End of while loop
@@ -111,7 +111,7 @@ def sentence_to_batch_array(train_settings, sentence):
     return batch_array
 # End of __sentence_to_batch_array__()
 
-def sample_output_word(model, probabilities):
+def sample_output_token(model, probabilities):
     """
     Returns the probable next word in sentence. Some randomization is included to make sure 
     that not all the sentences produced are the same.
@@ -125,15 +125,16 @@ def sample_output_word(model, probabilities):
     :type return: int()
     :param return: the index of the next word in the sentence.
     """
-    output_word = model.token_to_index[constants.UNKNOWN]
-    while output_word == model.token_to_index[constants.UNKNOWN]:
-        while sum(probabilities[:-1]) > 1.0 : 
-            model.logger.error("Sum of word probabilities (%f) > 1.0" % sum(probabilities[:-1]))
-            probabilities = softmax(probabilities)
-        samples = np.random.multinomial(1, probabilities)
-        output_word = np.argmax(samples)
-    return output_word
-# End of sample_output_word()
+    return np.argmax(probabilities)
+    # output_word = model.token_to_index[constants.UNKNOWN]
+    # while output_word == model.token_to_index[constants.UNKNOWN]:
+    #     while sum(probabilities[:-1]) > 1.0 : 
+    #         model.logger.error("Sum of word probabilities (%f) > 1.0" % sum(probabilities[:-1]))
+    #         probabilities = softmax(probabilities)
+    #     samples = np.random.multinomial(1, probabilities)
+    #     output_word = np.argmax(samples)
+    # return output_word
+# End of sample_output_token()
 
 def softmax(probabilities):
     """
@@ -148,5 +149,5 @@ def softmax(probabilities):
     :type return: an array of floats.
     :param return: an array of probabilities that sum up to 1.
     """
-    return np.exp(x) / np.sum(np.exp(x), axis=0)
+    return np.exp(probabilities) / np.sum(np.exp(probabilities), axis=0)
 # End of softmax

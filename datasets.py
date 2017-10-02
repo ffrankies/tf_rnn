@@ -44,7 +44,6 @@ except Exception:
 import re #regex library for re.split()
 import os
 import io
-import numpy as np
 # import operator
 import csv
 import itertools
@@ -336,8 +335,8 @@ def preprocess_data(logger, data_array):
             num_skipped += 1
             continue
         item = item.replace("\n", " %s " % constants.CARRIAGE_RETURN)
-        item = item.replace("\'\'", "\"")
-        item = item.replace("``", "\"")
+        item = item.replace("`", "'")
+        item = item.replace("''", "\"")
         preprocessed_data.append(item)
     logger.info("Skipped %d items in data." % num_skipped)
     return preprocessed_data
@@ -411,8 +410,8 @@ def create_training_data(logger, settings, data, token_to_index):
         data[index] = [word if word in token_to_index else constants.UNKNOWN for word in sentence]
 
     logger.info("Creating training data.")
-    x_train = np.asarray([[token_to_index[word] for word in item[:-1]] for item in data])
-    y_train = np.asarray([[token_to_index[word] for word in item[1:]] for item in data])
+    x_train = [[token_to_index[word] for word in item[:-1]] for item in data]
+    y_train = [[token_to_index[word] for word in item[1:]] for item in data]
     return x_train, y_train
 # End of create_training_data()
 

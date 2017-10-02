@@ -3,7 +3,7 @@ An RNN model implementation in tensorflow.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 24 September, 2017
+Date: 29 September, 2017
 """
 
 import numpy as np
@@ -18,6 +18,7 @@ from . import datasets
 from . import saver
 from . import tensorboard
 from . import settings
+from . import batchmaker
 
 class RNNModel(object):
     """
@@ -42,9 +43,9 @@ class RNNModel(object):
         self.graph = tf.Graph()
         with self.graph.as_default():
             self.load_dataset()
-            self._training()
+            self.training()
             self.session = tf.Session(graph=self.graph)
-            self._init_saver()
+            self.init_saver()
             self.session.run(tf.global_variables_initializer())
     # End of create_graph()
 
@@ -94,35 +95,44 @@ class RNNModel(object):
         y_train (numpy.array): The training labels
         """
         self.logger.info("Breaking input data into batches.")
-        self.x_train_batches = x_train.reshape((self.settings.train.batch_size,-1))
-        self.y_train_batches = y_train.reshape((self.settings.train.batch_size,-1))
-        self.num_batches = len(self.x_train_batches)
+        self.inputs, self.labels, self.sizes = batchmaker.make_batches(x_train, y_train, 
+            self.settings.train.batch_size, self.settings.train.truncate, constants.END_TOKEN) 
+        # self.x_train_batches = x_train.reshape((self.settings.train.batch_size,-1))
+        # self.y_train_batches = y_train.reshape((self.settings.train.batch_size,-1))
+        self.num_batches = len(self.inputs)
         self.logger.info("Obtained %d batches." % self.num_batches)
     # End of create_batches() 
 
-    def _training(self):
+    def calculate_loss(self):
+        """
+        Creates tensorflow variables and operations needed for calculating the training loss for one minibatch.
+        """
+        logits_series = self.output_layer()
+        with tf.variable_scope(constants.LOSS_CALC):
+            outputs_series = tf.unstack(self.batch_y_placeholder, axis=1, name="unstack_outputs_series")
+            self.accuracy = self.calculate_accuracy(outputs_series)
+            losses = []
+            for logits, labels in zip(logits_series, outputs_series):
+                labels = tf.to_int32(labels, "CastLabelsToInt")
+                losses.append(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels))
+            self.total_loss_op = tf.reduce_mean(losses)
+            return self.total_loss_op
+    # End of calculate_loss()
+
+    def training(self):
         """
         Creates tensorflow variables and operations needed for training.
         """
-        logits_series = self._output_layer()
+        total_loss = self.calculate_loss()
         with tf.variable_scope(constants.TRAINING):
             self.learning_rate = tf.Variable(
                 initial_value=self.settings.train.learn_rate,
                 dtype=tf.float32,
                 name="learning_rate")
-            outputs_series = tf.unstack(
-                self.batch_y_placeholder, axis=1, 
-                name="unstack_outputs_series")
-            losses = []
-            for logits, labels in zip(logits_series, outputs_series):
-                labels = tf.to_int32(labels, "CastLabelsToInt")
-                losses.append(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels))
-            self.total_loss_fun = tf.reduce_mean(losses)
-            self.train_step_fun = tf.train.AdagradOptimizer(self.learning_rate).minimize(self.total_loss_fun)
-            self.accuracy = self._calculate_accuracy(outputs_series)
-    # End of _training()
+            self.train_step_fun = tf.train.AdagradOptimizer(self.learning_rate).minimize(total_loss)
+    # End of training()
 
-    def _calculate_accuracy(self, labels):
+    def calculate_accuracy(self, labels):
         """
         Tensorflow operation that calculates the model's accuracy on a given minibatch.
 
@@ -138,13 +148,13 @@ class RNNModel(object):
             predictions = tf.argmax(predictions, axis=1)
             accuracy.append(tf.reduce_mean(tf.cast(tf.equal(predictions, labels), tf.float32)))
         return accuracy
-    # End of _calculate_accuracy()
+    # End of calculate_accuracy()
 
-    def _output_layer(self):
+    def output_layer(self):
         """
         Creates the tensorflow variables and operations needed to compute the network outputs.
         """
-        states_series = self._hidden_layer()
+        states_series = self.hidden_layer()
         with tf.variable_scope(constants.OUTPUT):
             self.batch_y_placeholder = tf.placeholder(
                 dtype=tf.float32,
@@ -164,13 +174,13 @@ class RNNModel(object):
         with tf.variable_scope("predictions"):
             self.predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
         return logits_series
-    # End of _output_layer()
+    # End of output_layer()
 
-    def _hidden_layer(self):
+    def hidden_layer(self):
         """
         Creates the tensorflow variables and operations needed to compute the hidden layer state.
         """
-        inputs_series = self._input_layer()
+        inputs_series = self.input_layer()
         with tf.variable_scope(constants.HIDDEN):
             self.hidden_state_placeholder = tf.placeholder(
                 dtype=tf.float32, 
@@ -182,38 +192,56 @@ class RNNModel(object):
                 inputs=inputs_series, 
                 initial_state=self.hidden_state_placeholder)
         return states_series
-    # End of _hidden_layer()
+    # End of hidden_layer()
 
-    def _input_layer(self):
+    def input_layer(self):
         """
         Creates the tensorflow variables and operations needed to perform the embedding lookup.
         """
-        with tf.variable_scope(constants.EMBEDDING):
+        with tf.variable_scope(constants.INPUT):
             self.batch_x_placeholder = tf.placeholder(
                 dtype=tf.int32, 
                 shape=[self.settings.train.batch_size, self.settings.train.truncate],
                 name="input_placeholder")
-            embeddings = tf.get_variable(
-                name="word_embeddings",
-                shape=[self.vocabulary_size, self.settings.rnn.hidden_size],
-                dtype=tf.float32)
-            inputs = tf.nn.embedding_lookup(
-                params=embeddings, ids=self.batch_x_placeholder,
-                name="embedding_lookup")
-            inputs_series = tf.unstack(
-                inputs, axis=1, 
-                name="unstack_inputs_series")
+            if self.data_type == constants.TYPE_CHOICES[0]: # data type = 'text'
+                inputs_series = self.token_to_vector()
+            else:
+                print("ERROR: Number inputs cannot be handled yet.")
+                exit(-1)
         return inputs_series
-    # End of _input_layer()
+    # End of input_layer()
 
-    def _init_saver(self):
+    def token_to_vector(self):
+        """
+        Within a batch, converts tokens that represent classes into a vector that has the same size as the hidden layer. 
+        
+        This step is equivalent to converting each token into a one-hot vector, multiplying that by a matrix
+        of size (num_tokens, hidden_layer_size), and extracting the non-zero row from the result.
+
+        Return:
+        tensorflow.Variable: This inputs series that serve as the input to the hidden layer
+        """
+        embeddings = tf.get_variable(
+            name="embedding_matrix",
+            shape=[self.vocabulary_size, self.settings.rnn.hidden_size],
+            dtype=tf.float32)
+        inputs = tf.nn.embedding_lookup(
+            params=embeddings, ids=self.batch_x_placeholder,
+            name="embedding_lookup")
+        inputs_series = tf.unstack(
+            inputs, axis=1, 
+            name="unstack_inputs_series")
+        return inputs_series
+    # End of word_inputs_series()
+
+    def init_saver(self):
         """
         Creates the variables needed to save the model weights and tensorboard summaries.
         """
         self.run_dir = saver.load_meta(self.model_path)
         self.summary_writer, self.summary_ops = tensorboard.init_tensorboard(self)
-        self.variables = ray.experimental.TensorFlowVariables(self.total_loss_fun, self.session)
-    # End of _init_saver()
+        self.variables = ray.experimental.TensorFlowVariables(self.total_loss_op, self.session)
+    # End of init_saver()
 
     def __pad_2d_matrix__(self, matrix, value=None):
         """
