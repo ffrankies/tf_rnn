@@ -125,7 +125,7 @@ def sample_output_token(model, probabilities):
     :type return: int()
     :param return: the index of the next word in the sentence.
     """
-    return np.argmax(probabilities)
+    return np.argmax(probabilities[:-1])
     # output_word = model.token_to_index[constants.UNKNOWN]
     # while output_word == model.token_to_index[constants.UNKNOWN]:
     #     while sum(probabilities[:-1]) > 1.0 : 

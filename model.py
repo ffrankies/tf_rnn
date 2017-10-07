@@ -61,9 +61,9 @@ class RNNModel(object):
         self.token_to_index = dataset_params[4]
         self.vocabulary_size = len(self.index_to_token)
         # Don't need to keep the actual training data when creating batches.
-        x_train = self.create_long_array(dataset_params[5])
-        y_train = self.create_long_array(dataset_params[6])
-        self.create_batches(x_train, y_train)
+        # x_train = self.create_long_array(dataset_params[5])
+        # y_train = self.create_long_array(dataset_params[6])
+        self.create_batches(dataset_params[5], dataset_params[6])
     # End of load_dataset()
 
     def create_long_array(self, matrix):
@@ -95,8 +95,9 @@ class RNNModel(object):
         y_train (numpy.array): The training labels
         """
         self.logger.info("Breaking input data into batches.")
+        end_token = self.token_to_index[constants.END_TOKEN]
         self.inputs, self.labels, self.sizes = batchmaker.make_batches(x_train, y_train, 
-            self.settings.train.batch_size, self.settings.train.truncate, constants.END_TOKEN) 
+            self.settings.train.batch_size, self.settings.train.truncate, end_token) 
         # self.x_train_batches = x_train.reshape((self.settings.train.batch_size,-1))
         # self.y_train_batches = y_train.reshape((self.settings.train.batch_size,-1))
         self.num_batches = len(self.inputs)
@@ -109,6 +110,10 @@ class RNNModel(object):
         """
         logits_series = self.output_layer()
         with tf.variable_scope(constants.LOSS_CALC):
+            self.batch_sizes = tf.placeholder(
+                dtype=tf.float32,
+                name="batch_sizes"
+            )
             outputs_series = tf.unstack(self.batch_y_placeholder, axis=1, name="unstack_outputs_series")
             self.accuracy = self.calculate_accuracy(outputs_series)
             losses = []
@@ -186,10 +191,10 @@ class RNNModel(object):
                 dtype=tf.float32, 
                 shape=[self.settings.train.batch_size, self.settings.rnn.hidden_size],
                 name="hidden_state_placeholder")
-            cell = tf.contrib.rnn.GRUCell(self.settings.rnn.hidden_size, reuse=tf.get_variable_scope().reuse)
-            states_series, self.current_state = tf.contrib.rnn.static_rnn(
+            cell = tf.contrib.rnn.GRUCell(self.settings.rnn.hidden_size)
+            states_series, self.current_state = tf.nn.static_rnn(
                 cell=cell, 
-                inputs=inputs_series, 
+                inputs=inputs_series,
                 initial_state=self.hidden_state_placeholder)
         return states_series
     # End of hidden_layer()
@@ -206,7 +211,7 @@ class RNNModel(object):
             if self.data_type == constants.TYPE_CHOICES[0]: # data type = 'text'
                 inputs_series = self.token_to_vector()
             else:
-                print("ERROR: Number inputs cannot be handled yet.")
+                print("ERROR: Numeric inputs cannot be handled yet.")
                 exit(-1)
         return inputs_series
     # End of input_layer()

@@ -1,11 +1,14 @@
 """
 Contains functions that handle the shaping of input into batches.
+The batches are converted into numpy arrays towards the end for them to play nice with tensorflow 
+(i.e. avoid the "ValueError: setting an array element with a sequence" error)
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 1 October, 2017
+Date: 7 October, 2017
 """
 import math
+import numpy as np
 
 def make_batches(input_data, labels, batch_size, truncate, pad_token):
     """
@@ -26,6 +29,7 @@ def make_batches(input_data, labels, batch_size, truncate, pad_token):
     x_data, y_data = truncate_batches(data, truncate)
     lengths = get_row_lengths(y_data)
     x_data = pad_batches(x_data, truncate, pad_token)
+    y_data = pad_batches(y_data, truncate, pad_token)
     return (x_data, y_data, lengths)
 # End of make_batches()
 
@@ -127,7 +131,7 @@ def pad_batches(x_data, truncate, pad_token):
     pad_token (numeric): The token with which to pad the input data batches
 
     Return:
-    list: The padded batches of input data
+    np.array: The padded batches of input data
     """
     if truncate < 1:
         raise ValueError("The length of each batch cannot be less than 1.")
@@ -136,10 +140,10 @@ def pad_batches(x_data, truncate, pad_token):
         padded_batch = list()
         for example in batch:
             padded_example = list()
-            padded_example.extend(example)
+            padded_example.extend(example) # Prevent editing the original list
             while len(padded_example) < truncate:
                 padded_example.append(pad_token)
-            padded_batch.append(padded_example)
-        padded_batches.append(padded_batch)
-    return padded_batches
+            padded_batch.append(np.array(padded_example))
+        padded_batches.append(np.array(padded_batch))
+    return np.array(padded_batches)
 # End of pad_batches()
