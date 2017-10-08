@@ -45,7 +45,7 @@ def sort_by_length(data):
     """
     sorted_data = list()
     for item in data:
-        sorted_item = sorted(item, reverse=True)
+        sorted_item = sorted(item, key=len, reverse=True)
         sorted_data.append(sorted_item)
     return sorted_data
 # End of sort_by_length()
