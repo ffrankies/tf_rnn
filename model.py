@@ -104,31 +104,11 @@ class RNNModel(object):
         self.logger.info("Obtained %d batches." % self.num_batches)
     # End of create_batches() 
 
-    def calculate_loss(self):
-        """
-        Creates tensorflow variables and operations needed for calculating the training loss for one minibatch.
-        """
-        logits_series = self.output_layer()
-        with tf.variable_scope(constants.LOSS_CALC):
-            self.batch_sizes = tf.placeholder(
-                dtype=tf.float32,
-                name="batch_sizes"
-            )
-            outputs_series = tf.unstack(self.batch_y_placeholder, axis=1, name="unstack_outputs_series")
-            self.accuracy = self.calculate_accuracy(outputs_series)
-            losses = []
-            for logits, labels in zip(logits_series, outputs_series):
-                labels = tf.to_int32(labels, "CastLabelsToInt")
-                losses.append(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels))
-            self.total_loss_op = tf.reduce_mean(losses)
-            return self.total_loss_op
-    # End of calculate_loss()
-
     def training(self):
         """
         Creates tensorflow variables and operations needed for training.
         """
-        total_loss = self.calculate_loss()
+        total_loss = self.loss_function()
         with tf.variable_scope(constants.TRAINING):
             self.learning_rate = tf.Variable(
                 initial_value=self.settings.train.learn_rate,
@@ -136,6 +116,23 @@ class RNNModel(object):
                 name="learning_rate")
             self.train_step_fun = tf.train.AdagradOptimizer(self.learning_rate).minimize(total_loss)
     # End of training()
+
+    def loss_function(self):
+        """
+        Creates tensorflow variables and operations needed for calculating the training loss for one minibatch.
+        """
+        logits_series = self.output_layer()
+        with tf.variable_scope(constants.LOSS_CALC):
+            self.batch_sizes = tf.placeholder(
+                dtype=tf.float32,
+                shape=[self.settings.train.batch_size],
+                name="batch_sizes"
+            )
+            labels_series = tf.unstack(self.batch_y_placeholder, axis=1, name="unstack_labels_series")
+            self.accuracy = self.calculate_accuracy(labels_series)
+            self.total_loss_op = self.calculate_loss(logits_series, labels_series)
+        return self.total_loss_op
+    # End of calculate_loss()
 
     def calculate_accuracy(self, labels):
         """
@@ -154,6 +151,31 @@ class RNNModel(object):
             accuracy.append(tf.reduce_mean(tf.cast(tf.equal(predictions, labels), tf.float32)))
         return accuracy
     # End of calculate_accuracy()
+
+    def calculate_loss(self, logits_series, labels_series):
+        losses = 0.0
+        row_lengths = tf.unstack(self.batch_sizes)
+        num_valid_rows = 0.0
+        for logits, labels, row_length in zip(logits_series, labels_series, row_lengths):
+            row_length = tf.to_int32(row_length, name="CastRowLengthToInt")
+            ans = tf.greater(row_length, 0)
+            # ans = tf.Print(ans, [ans], "ans: ")
+            num_valid_rows = tf.cond(ans, lambda: num_valid_rows + 1, lambda: num_valid_rows + 0)
+            # row_length = tf.Print(row_length, [row_length], "Row length: ")
+            logits = logits[:row_length, :]
+            labels = tf.to_int32(labels[:row_length], "CastLabelsToInt")
+            row_losses = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels)
+            # row_losses = tf.Print(row_loss, [row_loss, row_length], "Row loss | row length: ")
+            # mean_loss = tf.reduce_mean(row_losses[:row_length], name="AverageLossAcrossRow")
+            mean_loss = tf.cond(ans, lambda: tf.reduce_mean(row_losses[:row_length]), lambda: 0.0)
+            # mean_loss = tf.Print(mean_loss, [ans, mean_loss, row_length], "Ans | Mean row loss | row length: ")
+            # print(row_loss)
+            losses += mean_loss
+            # losses.append(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels))
+        # tf.Print(losses, [losses], "Losses: ")
+        total_loss_op = losses / num_valid_rows # Can't use reduce_mean because there will be 0s there
+        # total_loss_op = tf.Print(total_loss_op, [total_loss_op, num_valid_rows], "Minibatch loss: ")
+        return total_loss_op
 
     def output_layer(self):
         """
