@@ -108,7 +108,7 @@ class RNNModel(object):
         """
         Creates tensorflow variables and operations needed for training.
         """
-        total_loss = self.loss_function()
+        total_loss = self.performance_evaluation()
         with tf.variable_scope(constants.TRAINING):
             self.learning_rate = tf.Variable(
                 initial_value=self.settings.train.learn_rate,
@@ -117,65 +117,70 @@ class RNNModel(object):
             self.train_step_fun = tf.train.AdagradOptimizer(self.learning_rate).minimize(total_loss)
     # End of training()
 
-    def loss_function(self):
+    def performance_evaluation(self):
         """
-        Creates tensorflow variables and operations needed for calculating the training loss for one minibatch.
+        Evaluates the performance of the network on a given minibatch.
         """
         logits_series = self.output_layer()
-        with tf.variable_scope(constants.LOSS_CALC):
+        with tf.variable_scope(constants.PERFORMANCE):
             self.batch_sizes = tf.placeholder(
                 dtype=tf.float32,
                 shape=[self.settings.train.batch_size],
                 name="batch_sizes"
             )
+            row_lengths_series = tf.unstack(self.batch_sizes, name="unstack_batch_sizes")
             labels_series = tf.unstack(self.batch_y_placeholder, axis=1, name="unstack_labels_series")
             self.accuracy = self.calculate_accuracy(labels_series)
-            self.total_loss_op = self.calculate_loss(logits_series, labels_series)
+            self.total_loss_op = self.calculate_loss(logits_series, labels_series, row_lengths_series)
         return self.total_loss_op
     # End of calculate_loss()
 
-    def calculate_accuracy(self, labels):
+    def calculate_accuracy(self, labels_series):
         """
         Tensorflow operation that calculates the model's accuracy on a given minibatch.
 
-        :type labels: Tensor
-        :param labels: The output labels.
+        Params:
+        labels_series (tf.Tensor): True labels for each input
 
-        :type return: Tensor
-        :param return: The list of accuracies for each 'word' in the minibatch.
+        Return:
+        tf.Tensor: The average accuracy for each row in the minibatch
         """
-        accuracy = []
-        for predictions, labels in zip(self.predictions_series, labels):
-            labels = tf.to_int64(labels, "CastLabelsToInt")
-            predictions = tf.argmax(predictions, axis=1)
-            accuracy.append(tf.reduce_mean(tf.cast(tf.equal(predictions, labels), tf.float32)))
+        with tf.variable_scope(constants.ACCURACY):
+            accuracy = []
+            for predictions, labels in zip(self.predictions_series, labels_series):
+                labels = tf.to_int64(labels, "CastLabelsToInt")
+                predictions = tf.argmax(predictions, axis=1)
+                accuracy.append(tf.reduce_mean(tf.cast(tf.equal(predictions, labels), tf.float32)))
         return accuracy
     # End of calculate_accuracy()
 
-    def calculate_loss(self, logits_series, labels_series):
-        losses = 0.0
-        row_lengths = tf.unstack(self.batch_sizes)
-        num_valid_rows = 0.0
-        for logits, labels, row_length in zip(logits_series, labels_series, row_lengths):
-            row_length = tf.to_int32(row_length, name="CastRowLengthToInt")
-            ans = tf.greater(row_length, 0)
-            # ans = tf.Print(ans, [ans], "ans: ")
-            num_valid_rows = tf.cond(ans, lambda: num_valid_rows + 1, lambda: num_valid_rows + 0)
-            # row_length = tf.Print(row_length, [row_length], "Row length: ")
-            logits = logits[:row_length, :]
-            labels = tf.to_int32(labels[:row_length], "CastLabelsToInt")
-            row_losses = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels)
-            # row_losses = tf.Print(row_loss, [row_loss, row_length], "Row loss | row length: ")
-            # mean_loss = tf.reduce_mean(row_losses[:row_length], name="AverageLossAcrossRow")
-            mean_loss = tf.cond(ans, lambda: tf.reduce_mean(row_losses[:row_length]), lambda: 0.0)
-            # mean_loss = tf.Print(mean_loss, [ans, mean_loss, row_length], "Ans | Mean row loss | row length: ")
-            # print(row_loss)
-            losses += mean_loss
-            # losses.append(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels))
-        # tf.Print(losses, [losses], "Losses: ")
-        total_loss_op = losses / num_valid_rows # Can't use reduce_mean because there will be 0s there
-        # total_loss_op = tf.Print(total_loss_op, [total_loss_op, num_valid_rows], "Minibatch loss: ")
+    def calculate_loss(self, logits_series, labels_series, row_lengths_series):
+        """
+        Calculates the loss at a given minibatch.
+
+        Params:
+        logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
+        labels_series (tf.Tensor): True labels for each input
+        row_lengths_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
+
+        Return:
+        tf.Tensor: The calculated average loss for this minibatch
+        """
+        with tf.variable_scope(constants.LOSS_CALC):
+            loss_sum = 0.0
+            num_valid_rows = 0.0
+            for logits, labels, row_length in zip(logits_series, labels_series, row_lengths_series):
+                row_length = tf.to_int32(row_length, name="CastRowLengthToInt")
+                ans = tf.greater(row_length, 0)
+                num_valid_rows = tf.cond(ans, lambda: num_valid_rows + 1, lambda: num_valid_rows + 0)
+                logits = logits[:row_length, :]
+                labels = tf.to_int32(labels[:row_length], "CastLabelsToInt")
+                row_losses = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels)
+                mean_loss = tf.cond(ans, lambda: tf.reduce_mean(row_losses[:row_length]), lambda: 0.0)
+                loss_sum += mean_loss
+            total_loss_op = loss_sum / num_valid_rows # Can't use reduce_mean because there will be 0s there
         return total_loss_op
+    # End of calculate_loss()
 
     def output_layer(self):
         """
