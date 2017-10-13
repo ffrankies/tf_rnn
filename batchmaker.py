@@ -1,6 +1,6 @@
 """
 Contains functions that handle the shaping of input into batches.
-The batches are converted into numpy arrays towards the end for them to play nice with tensorflow 
+The batches are converted into numpy arrays towards the end for them to play nice with tensorflow
 (i.e. avoid the "ValueError: setting an array element with a sequence" error)
 
 Copyright (c) 2017 Frank Derry Wanye
@@ -79,17 +79,20 @@ def group_into_batches(data, batch_size):
     list: The data items, in batch form
     """
     if batch_size < 1:
-       raise ValueError("The size of the batches cannot be less than 1.") 
+       raise ValueError("The size of the batches cannot be less than 1.")
     batched_data = list()
     for item in data:
         batched_data_item = [item[i:i+batch_size] for i in range(0, len(item), batch_size)]
+        if len(batched_data_item) is not 0:
+            while(len(batched_data_item[-1]) < batch_size):
+                batched_data_item[-1].append([])
         batched_data.append(batched_data_item)
     return batched_data
 # End of group_into_batches()
 
 def truncate_batches(data, truncate):
     """
-    Truncates each row in each item in data, so that no row is longer than 'truncate' values long. The truncated 
+    Truncates each row in each item in data, so that no row is longer than 'truncate' values long. The truncated
     parts become new rows in the data.
 
     Params:

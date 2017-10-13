@@ -3,7 +3,7 @@ An RNN model implementation in tensorflow.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 29 September, 2017
+Date: 12 October, 2017
 """
 
 import numpy as np
@@ -68,7 +68,7 @@ class RNNModel(object):
 
     def create_long_array(self, matrix):
         """
-        Concatenates multi-dimensional array into one long array for simpler training. Pads the resulting array until 
+        Concatenates multi-dimensional array into one long array for simpler training. Pads the resulting array until
         it is divisible by the batch size.
 
         Params:
@@ -87,7 +87,7 @@ class RNNModel(object):
         """
         Creates batches out of loaded data.
 
-        Current implementation is very limited. It would probably be best to sort the training data based on length, 
+        Current implementation is very limited. It would probably be best to sort the training data based on length,
         fill it up with placeholders so the sizes are standardized, and then break it up into batches.
 
         Params:
@@ -96,13 +96,13 @@ class RNNModel(object):
         """
         self.logger.info("Breaking input data into batches.")
         end_token = self.token_to_index[constants.END_TOKEN]
-        self.inputs, self.labels, self.sizes = batchmaker.make_batches(x_train, y_train, 
-            self.settings.train.batch_size, self.settings.train.truncate, end_token) 
+        self.inputs, self.labels, self.sizes = batchmaker.make_batches(x_train, y_train,
+            self.settings.train.batch_size, self.settings.train.truncate, end_token)
         # self.x_train_batches = x_train.reshape((self.settings.train.batch_size,-1))
         # self.y_train_batches = y_train.reshape((self.settings.train.batch_size,-1))
         self.num_batches = len(self.inputs)
         self.logger.info("Obtained %d batches." % self.num_batches)
-    # End of create_batches() 
+    # End of create_batches()
 
     def training(self):
         """
@@ -123,11 +123,6 @@ class RNNModel(object):
         """
         logits_series = self.output_layer()
         with tf.variable_scope(constants.PERFORMANCE):
-            self.batch_sizes = tf.placeholder(
-                dtype=tf.float32,
-                shape=[self.settings.train.batch_size],
-                name="batch_sizes"
-            )
             row_lengths_series = tf.unstack(self.batch_sizes, name="unstack_batch_sizes")
             labels_series = tf.unstack(self.batch_y_placeholder, axis=1, name="unstack_labels_series")
             self.accuracy = self.calculate_accuracy(labels_series)
@@ -170,7 +165,7 @@ class RNNModel(object):
             loss_sum = 0.0
             num_valid_rows = 0.0
             for logits, labels, row_length in zip(logits_series, labels_series, row_lengths_series):
-                row_length = tf.to_int32(row_length, name="CastRowLengthToInt")
+                # row_length = tf.to_int32(row_length, name="CastRowLengthToInt")
                 ans = tf.greater(row_length, 0)
                 num_valid_rows = tf.cond(ans, lambda: num_valid_rows + 1, lambda: num_valid_rows + 0)
                 logits = logits[:row_length, :]
@@ -188,18 +183,19 @@ class RNNModel(object):
         """
         states_series = self.hidden_layer()
         with tf.variable_scope(constants.OUTPUT):
+            states_series = tf.unstack(states_series, axis=1, name="unstack_states_series")
             self.batch_y_placeholder = tf.placeholder(
                 dtype=tf.float32,
                 shape=np.shape(self.batch_x_placeholder),
                 name="output_placeholder")
             self.out_weights = tf.Variable(
-                initial_value=np.random.rand(self.settings.rnn.hidden_size, self.vocabulary_size), 
+                initial_value=np.random.rand(self.settings.rnn.hidden_size, self.vocabulary_size),
                 dtype=tf.float32,
                 name="out_weights")
             self.out_bias = tf.Variable(
-                np.zeros((self.vocabulary_size)), 
+                np.zeros((self.vocabulary_size)),
                 dtype=tf.float32,
-                name="out_bias") 
+                name="out_bias")
             logits_series = [
                 tf.nn.xw_plus_b(state, self.out_weights, self.out_bias, name="state_times_out_weights")
                 for state in states_series] #Broadcasted addition
@@ -214,15 +210,20 @@ class RNNModel(object):
         """
         inputs_series = self.input_layer()
         with tf.variable_scope(constants.HIDDEN):
+            self.batch_sizes = tf.placeholder(
+                dtype=tf.int32,
+                shape=[self.settings.train.batch_size],
+                name="batch_sizes")
             self.hidden_state_placeholder = tf.placeholder(
-                dtype=tf.float32, 
+                dtype=tf.float32,
                 shape=[self.settings.train.batch_size, self.settings.rnn.hidden_size],
                 name="hidden_state_placeholder")
             cell = tf.contrib.rnn.GRUCell(self.settings.rnn.hidden_size)
-            states_series, self.current_state = tf.nn.static_rnn(
-                cell=cell, 
+            states_series, self.current_state = tf.nn.dynamic_rnn(
+                cell=cell,
                 inputs=inputs_series,
-                initial_state=self.hidden_state_placeholder)
+                initial_state=self.hidden_state_placeholder,
+                sequence_length=self.batch_sizes)
         return states_series
     # End of hidden_layer()
 
@@ -232,7 +233,7 @@ class RNNModel(object):
         """
         with tf.variable_scope(constants.INPUT):
             self.batch_x_placeholder = tf.placeholder(
-                dtype=tf.int32, 
+                dtype=tf.int32,
                 shape=[self.settings.train.batch_size, self.settings.train.truncate],
                 name="input_placeholder")
             if self.data_type == constants.TYPE_CHOICES[0]: # data type = 'text'
@@ -245,8 +246,8 @@ class RNNModel(object):
 
     def token_to_vector(self):
         """
-        Within a batch, converts tokens that represent classes into a vector that has the same size as the hidden layer. 
-        
+        Within a batch, converts tokens that represent classes into a vector that has the same size as the hidden layer.
+
         This step is equivalent to converting each token into a one-hot vector, multiplying that by a matrix
         of size (num_tokens, hidden_layer_size), and extracting the non-zero row from the result.
 
@@ -257,12 +258,12 @@ class RNNModel(object):
             name="embedding_matrix",
             shape=[self.vocabulary_size, self.settings.rnn.hidden_size],
             dtype=tf.float32)
-        inputs = tf.nn.embedding_lookup(
+        inputs_series = tf.nn.embedding_lookup(
             params=embeddings, ids=self.batch_x_placeholder,
             name="embedding_lookup")
-        inputs_series = tf.unstack(
-            inputs, axis=1, 
-            name="unstack_inputs_series")
+        # inputs_series = tf.unstack(
+        #     inputs, axis=1,
+        #     name="unstack_inputs_series")
         return inputs_series
     # End of word_inputs_series()
 
@@ -277,7 +278,7 @@ class RNNModel(object):
 
     def __pad_2d_matrix__(self, matrix, value=None):
         """
-        Pads the rows of a 2d matrix with either a given value or the last value in each 
+        Pads the rows of a 2d matrix with either a given value or the last value in each
         row.
 
         :type matrix: nested list
