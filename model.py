@@ -66,23 +66,6 @@ class RNNModel(object):
         self.create_batches(dataset_params[5], dataset_params[6])
     # End of load_dataset()
 
-    def create_long_array(self, matrix):
-        """
-        Concatenates multi-dimensional array into one long array for simpler training. Pads the resulting array until
-        it is divisible by the batch size.
-
-        Params:
-        matrix (numpy.ndarray): The multi-dimensional array to concatenate
-
-        Return:
-        numpy.array: The concatenated and padded array
-        """
-        array = np.array([])
-        for row in matrix: array = np.append(array, row)
-        while len(array) % self.settings.train.batch_size != 0: array = np.append(array, [array[-1]])
-        return array
-    # End of create_long_array()
-
     def create_batches(self, x_train, y_train):
         """
         Creates batches out of loaded data.
@@ -98,8 +81,6 @@ class RNNModel(object):
         end_token = self.token_to_index[constants.END_TOKEN]
         self.inputs, self.labels, self.sizes = batchmaker.make_batches(x_train, y_train,
             self.settings.train.batch_size, self.settings.train.truncate, end_token)
-        # self.x_train_batches = x_train.reshape((self.settings.train.batch_size,-1))
-        # self.y_train_batches = y_train.reshape((self.settings.train.batch_size,-1))
         self.num_batches = len(self.inputs)
         self.logger.info("Obtained %d batches." % self.num_batches)
     # End of create_batches()
@@ -275,40 +256,3 @@ class RNNModel(object):
         self.summary_writer, self.summary_ops = tensorboard.init_tensorboard(self)
         self.variables = ray.experimental.TensorFlowVariables(self.total_loss_op, self.session)
     # End of init_saver()
-
-    def __pad_2d_matrix__(self, matrix, value=None):
-        """
-        Pads the rows of a 2d matrix with either a given value or the last value in each
-        row.
-
-        :type matrix: nested list
-        :param matrix: 2d matrix in python list form with variable row length.
-
-        :type value: int
-        :param value: the value to append to each row.
-
-        :type return: nested list
-        :param return: 2d matrix in python list form with a fixed row length.
-        """
-        self.logger.debug("Padding matrix with shape: ", matrix.shape)
-        paddedMatrix = matrix
-        maxRowLength = max([len(row) for row in paddedMatrix])
-        for row in paddedMatrix:
-            while len(row) < maxRowLength:
-                row.append(value) if value is not None else row.append(row[-1])
-        return paddedMatrix
-    # End of __pad_2d_matrix__()
-
-    def __list_to_numpy_array__(self, matrix):
-        """
-        Converts a list of list matrix to a numpy array of arrays.
-
-        :type matrix: nested list
-        :param matrix: 2d matrix in python list form.
-
-        :type return: nested numpy array
-        :param return: the matrix as a numpy array or arrays.
-        """
-        paddedMatrix = self.__pad_2d_matrix__(matrix, value=None)
-        return np.array([np.array(row, dtype=int) for row in paddedMatrix], dtype=int)
-    # End of __list_to_numpy_array__()
