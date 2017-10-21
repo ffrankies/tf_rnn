@@ -10,29 +10,8 @@ https://goo.gl/DPf37h
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 24 September, 2017
+Date: 21 October, 2017
 """
-
-###############################################################################
-# Source: rnn tutorial from www.wildml.com
-# This script closely follows the tutorial, repurposing it to work with python3.
-# This part of the code creates a dataset from a given csv file. The csv file
-# should contain only one column, start with a column heading, and contain
-# text data in sentence format. The script will break the data down into
-# sentences, paragraphs or stories, tokenize them, and then save the dataset in
-# a file of the user's choice.
-# The file will contain the following items, in the same order:
-#   the vocabulary of the training set
-#   the vector used to convert token indexes to words
-#   the dictionary used to convert words to token indexes
-#   the input for training, in tokenized format (as indexes)
-#   the output for training, in tokenized format (as indexes)
-#   the start token
-#   the end token
-#
-# Author: Frank Wanye
-# Date: 24 September, 2017
-###############################################################################
 
 # Specify documentation format
 __docformat__ = 'restructedtext en'
@@ -57,7 +36,14 @@ from . import settings
 
 def run():
     """
-    A simplified method for creating a dataset.
+    A simplified method for creating a dataset. The file will contain the following items, in the same order:
+    the vocabulary of the training set
+    the vector used to convert token indexes to words
+    the dictionary used to convert words to token indexes
+    the input for training, in tokenized format (as indexes)
+    the output for training, in tokenized format (as indexes)
+    the start token
+    the end token
     """
     settings_obj = get_settings()
     logger = setup.setup_logger(settings_obj.logging, settings_obj.logging.log_dir)
@@ -382,7 +368,10 @@ def create_vocabulary(logger, settings, data):
     word_freq = nltk.FreqDist(itertools.chain(*data))
     logger.info("Found %d unique words." % len(word_freq.items()))
 
-    vocabulary = word_freq.most_common(settings.vocab_size - 1)
+    if settings.vocab_size == 'None':
+        vocabulary = word_freq.most_common(None)
+    else:
+        vocabulary = word_freq.most_common(settings.vocab_size - 1)
 
     logger.info("Calculating percent of words captured...")
     total = 0
