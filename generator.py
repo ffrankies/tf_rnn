@@ -79,11 +79,13 @@ def predict(model, sentence, current_state):
     :param return: the predictions and the hidden state after the sentence is passed through.
     """
     input_batch = sentence_to_batch_array(model.settings.train, sentence)
+    sizes = [model.settings.train.truncate] * model.settings.train.batch_size
 
     predictions, final_hidden_state = model.session.run(
         [model.predictions_series, model.current_state], 
         feed_dict={
             model.batch_x_placeholder:input_batch, 
+            model.batch_sizes:sizes,
             model.hidden_state_placeholder:current_state   
         })
 
