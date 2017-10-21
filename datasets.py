@@ -368,7 +368,7 @@ def create_vocabulary(logger, settings, data):
     word_freq = nltk.FreqDist(itertools.chain(*data))
     logger.info("Found %d unique words." % len(word_freq.items()))
 
-    if settings.vocab_size == 'None':
+    if settings.vocab_size == None:
         vocabulary = word_freq.most_common(None)
     else:
         vocabulary = word_freq.most_common(settings.vocab_size - 1)
