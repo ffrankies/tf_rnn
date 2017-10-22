@@ -85,7 +85,8 @@ def train_minibatch(model, batch_num, current_state):
     sizes = model.sizes[batch_num]
 
     if batch_x[0][0] == model.token_to_index[constants.START_TOKEN]: # Reset state if start of sentence
-        current_state = np.zeros((model.settings.train.batch_size, model.settings.rnn.hidden_size), dtype=float)
+        current_state = np.zeros((model.settings.rnn.layers, model.settings.train.batch_size, 
+            model.settings.rnn.hidden_size), dtype=float)
     
     total_loss, train_step, current_state, summary = model.session.run(
         [model.total_loss_op, model.train_step_fun, model.current_state, model.summary_ops],

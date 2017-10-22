@@ -51,7 +51,8 @@ def generate_single_output(model, num_tokens=math.inf):
     np.ndarray: The generated output as a numpy array
     """
     sentence = np.array([model.token_to_index[constants.START_TOKEN]])
-    current_state = np.zeros((model.settings.train.batch_size, model.settings.rnn.hidden_size))
+    current_state = np.zeros((model.settings.rnn.layers, model.settings.train.batch_size, 
+        model.settings.rnn.hidden_size))
     num_generated = 0
     while num_tokens > num_generated:
         output, new_current_state = predict(model, sentence, current_state)

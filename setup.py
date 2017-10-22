@@ -3,7 +3,7 @@ Utility class for setting up an RNN.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 15 September, 2017
+Date: 21 October, 2017
 """
 
 # Specify documentation format
@@ -130,7 +130,8 @@ def add_rnn_arguments(parser):
     --dataset
     --hidden_size
     --embed_size
-    --model
+    --layers
+    --dropout
 
     :type parser: argparse.ArgumentParser
     :param parser: The argument parser to which to add the logger arguments.
@@ -141,6 +142,10 @@ def add_rnn_arguments(parser):
                         help="The size of the hidden layers in the RNN.")
     parser.add_argument("-es", "--embed_size", type=int, default=constants.EMBED_SIZE,
                         help="The size of the embedding layer in the RNN.")
+    parser.add_argument("-y", "--layers", type=int, default=constants.LAYERS,
+                        help="The number of layers in the RNN.")
+    parser.add_argument("-r", "--dropout", type=float, default=constants.DROPOUT,
+                        help="The dropout to be applied at each RNN layer.")
 # End of add_rnn_arguments()
 
 def add_train_arguments(parser):

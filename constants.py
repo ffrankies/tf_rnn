@@ -3,7 +3,7 @@ Contains constants for use within the project.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 8 October, 2017
+Date: 21 October, 2017
 """
 
 import time
@@ -70,6 +70,8 @@ LOG_FILENAME_STR = 'log_filename'
 DATASET_STR = 'dataset'
 EMBED_SIZE_STR = 'embed_size'
 HIDDEN_SIZE_STR = 'hidden_size'
+LAYERS_STR = 'layers'
+DROPOUT_STR = 'dropout'
 # TRAIN
 BATCH_SIZE_STR = 'batch_size'
 PATIENCE_STR = 'patience'
@@ -109,6 +111,8 @@ LOG_FILENAME = 'logging.log'
 DATASET = 'test.pkl'
 EMBED_SIZE = 100
 HIDDEN_SIZE = 100
+LAYERS = 2
+DROPOUT = 0.5
 # TRAIN
 BATCH_SIZE = 5
 PATIENCE = 100000 # Probably going to be deprecated
@@ -140,7 +144,9 @@ LOGGING_ARGS = {
 RNN_ARGS = {
     DATASET_STR : DATASET,
     EMBED_SIZE_STR : EMBED_SIZE,
-    HIDDEN_SIZE_STR : HIDDEN_SIZE }
+    HIDDEN_SIZE_STR : HIDDEN_SIZE,
+    LAYERS_STR : LAYERS,
+    DROPOUT_STR : DROPOUT }
 TRAIN_ARGS = {
     BATCH_SIZE_STR : BATCH_SIZE,
     PATIENCE_STR : PATIENCE,

@@ -3,7 +3,7 @@ An RNN model implementation in tensorflow.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 12 October, 2017
+Date: 21 October, 2017
 """
 
 import numpy as np
@@ -60,9 +60,6 @@ class RNNModel(object):
         self.index_to_token = dataset_params[3]
         self.token_to_index = dataset_params[4]
         self.vocabulary_size = len(self.index_to_token)
-        # Don't need to keep the actual training data when creating batches.
-        # x_train = self.create_long_array(dataset_params[5])
-        # y_train = self.create_long_array(dataset_params[6])
         self.create_batches(dataset_params[5], dataset_params[6])
     # End of load_dataset()
 
@@ -195,18 +192,44 @@ class RNNModel(object):
                 dtype=tf.int32,
                 shape=[self.settings.train.batch_size],
                 name="batch_sizes")
-            self.hidden_state_placeholder = tf.placeholder(
-                dtype=tf.float32,
-                shape=[self.settings.train.batch_size, self.settings.rnn.hidden_size],
-                name="hidden_state_placeholder")
-            cell = tf.contrib.rnn.GRUCell(self.settings.rnn.hidden_size)
+            hidden_state = self.layered_state_tuple()
+            cell = self.rnn_cell()
             states_series, self.current_state = tf.nn.dynamic_rnn(
                 cell=cell,
                 inputs=inputs_series,
-                initial_state=self.hidden_state_placeholder,
+                initial_state=hidden_state,
                 sequence_length=self.batch_sizes)
         return states_series
     # End of hidden_layer()
+
+    def layered_state_tuple(self):
+        """
+        Constructs a tuple from the hidden state placeholder.
+
+        Return:
+        tuple: The current hidden state to be passed into the dynamic_rnn
+        """
+        self.hidden_state_placeholder = tf.placeholder(
+                dtype=tf.float32,
+                shape=[self.settings.rnn.layers, self.settings.train.batch_size, self.settings.rnn.hidden_size],
+                name="hidden_state_placeholder")
+        unpacked_hidden_state = tf.unstack(self.hidden_state_placeholder, axis=0, name="unpack_hidden_state")
+        hidden_state = tuple(unpacked_hidden_state)
+        return hidden_state
+    # End of layered_state_tuple()
+
+    def rnn_cell(self):
+        """
+        Creates a multi-layered RNN cell with dropout.
+
+        Return:
+        RNNCell: The cell of the given RNN
+        """
+        cell = tf.contrib.rnn.GRUCell(self.settings.rnn.hidden_size)
+        cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=0.5)
+        cell = tf.contrib.rnn.MultiRNNCell([cell] * self.settings.rnn.layers)
+        return cell
+    # End of rnn_cell
 
     def input_layer(self):
         """
