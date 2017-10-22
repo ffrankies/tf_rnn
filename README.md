@@ -1,3 +1,5 @@
+[![codebeat badge](https://codebeat.co/badges/6590fd50-3c6a-48ae-8967-3f5af7b87c02)](https://codebeat.co/projects/github-com-ffrankies-tf-rnn-master)
+
 # tensorflow-rnn
 
 Everything needed to create and train a RecurrentNeuralNetwork with tensorflow.
@@ -14,3 +16,4 @@ The module has only been run and tested with the following environment:
 - tensorflow-tensorboard v0.1.6
 - matplotlib v2.0.2
 - nltk v3.2.4
+- ray v0.2.0
