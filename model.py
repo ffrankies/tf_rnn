@@ -3,7 +3,7 @@ An RNN model implementation in tensorflow.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 21 October, 2017
+Date: 22 October, 2017
 """
 
 import numpy as np
@@ -19,6 +19,11 @@ from . import saver
 from . import tensorboard
 from . import settings
 from . import batchmaker
+
+from .layers.input_layer import *
+from .layers.hidden_layer import *
+# from .layers.output_layer import *
+from .layers.performance_layer import *
 
 class RNNModel(object):
     """
@@ -103,57 +108,10 @@ class RNNModel(object):
         with tf.variable_scope(constants.PERFORMANCE):
             row_lengths_series = tf.unstack(self.batch_sizes, name="unstack_batch_sizes")
             labels_series = tf.unstack(self.batch_y_placeholder, axis=1, name="unstack_labels_series")
-            self.accuracy = self.calculate_accuracy(labels_series)
-            self.total_loss_op = self.calculate_loss(logits_series, labels_series, row_lengths_series)
+            self.accuracy = calculate_accuracy(labels_series, self.predictions_series)
+            self.total_loss_op = calculate_loss(logits_series, labels_series, row_lengths_series)
         return self.total_loss_op
-    # End of calculate_loss()
-
-    def calculate_accuracy(self, labels_series):
-        """
-        Tensorflow operation that calculates the model's accuracy on a given minibatch.
-
-        Params:
-        labels_series (tf.Tensor): True labels for each input
-
-        Return:
-        tf.Tensor: The average accuracy for each row in the minibatch
-        """
-        with tf.variable_scope(constants.ACCURACY):
-            accuracy = []
-            for predictions, labels in zip(self.predictions_series, labels_series):
-                labels = tf.to_int64(labels, "CastLabelsToInt")
-                predictions = tf.argmax(predictions, axis=1)
-                accuracy.append(tf.reduce_mean(tf.cast(tf.equal(predictions, labels), tf.float32)))
-        return accuracy
-    # End of calculate_accuracy()
-
-    def calculate_loss(self, logits_series, labels_series, row_lengths_series):
-        """
-        Calculates the loss at a given minibatch.
-
-        Params:
-        logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
-        labels_series (tf.Tensor): True labels for each input
-        row_lengths_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
-
-        Return:
-        tf.Tensor: The calculated average loss for this minibatch
-        """
-        with tf.variable_scope(constants.LOSS_CALC):
-            loss_sum = 0.0
-            num_valid_rows = 0.0
-            for logits, labels, row_length in zip(logits_series, labels_series, row_lengths_series):
-                # row_length = tf.to_int32(row_length, name="CastRowLengthToInt")
-                ans = tf.greater(row_length, 0)
-                num_valid_rows = tf.cond(ans, lambda: num_valid_rows + 1, lambda: num_valid_rows + 0)
-                logits = logits[:row_length, :]
-                labels = tf.to_int32(labels[:row_length], "CastLabelsToInt")
-                row_losses = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels)
-                mean_loss = tf.cond(ans, lambda: tf.reduce_mean(row_losses[:row_length]), lambda: 0.0)
-                loss_sum += mean_loss
-            total_loss_op = loss_sum / num_valid_rows # Can't use reduce_mean because there will be 0s there
-        return total_loss_op
-    # End of calculate_loss()
+    # End of performance_evaluation()
 
     def output_layer(self):
         """
@@ -192,8 +150,9 @@ class RNNModel(object):
                 dtype=tf.int32,
                 shape=[self.settings.train.batch_size],
                 name="batch_sizes")
-            hidden_state = self.layered_state_tuple()
-            cell = self.rnn_cell()
+            hidden_state, self.hidden_state_placeholder, self.hidden_state_shape = layered_state_tuple(
+                self.settings.rnn.layers, self.settings.train.batch_size, self.settings.rnn.hidden_size)
+            cell = rnn_cell(self.settings.rnn.layers, self.settings.rnn.hidden_size, self.settings.rnn.dropout)
             states_series, self.current_state = tf.nn.dynamic_rnn(
                 cell=cell,
                 inputs=inputs_series,
@@ -201,35 +160,6 @@ class RNNModel(object):
                 sequence_length=self.batch_sizes)
         return states_series
     # End of hidden_layer()
-
-    def layered_state_tuple(self):
-        """
-        Constructs a tuple from the hidden state placeholder.
-
-        Return:
-        tuple: The current hidden state to be passed into the dynamic_rnn
-        """
-        self.hidden_state_placeholder = tf.placeholder(
-                dtype=tf.float32,
-                shape=[self.settings.rnn.layers, self.settings.train.batch_size, self.settings.rnn.hidden_size],
-                name="hidden_state_placeholder")
-        unpacked_hidden_state = tf.unstack(self.hidden_state_placeholder, axis=0, name="unpack_hidden_state")
-        hidden_state = tuple(unpacked_hidden_state)
-        return hidden_state
-    # End of layered_state_tuple()
-
-    def rnn_cell(self):
-        """
-        Creates a multi-layered RNN cell with dropout.
-
-        Return:
-        RNNCell: The cell of the given RNN
-        """
-        cell = tf.contrib.rnn.GRUCell(self.settings.rnn.hidden_size)
-        cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=0.5)
-        cell = tf.contrib.rnn.MultiRNNCell([cell] * self.settings.rnn.layers)
-        return cell
-    # End of rnn_cell
 
     def input_layer(self):
         """
@@ -241,35 +171,13 @@ class RNNModel(object):
                 shape=[self.settings.train.batch_size, self.settings.train.truncate],
                 name="input_placeholder")
             if self.data_type == constants.TYPE_CHOICES[0]: # data type = 'text'
-                inputs_series = self.token_to_vector()
+                inputs_series = token_to_vector(self.vocabulary_size, self.settings.rnn.hidden_size, 
+                    self.batch_x_placeholder)
             else:
                 print("ERROR: Numeric inputs cannot be handled yet.")
                 exit(-1)
         return inputs_series
     # End of input_layer()
-
-    def token_to_vector(self):
-        """
-        Within a batch, converts tokens that represent classes into a vector that has the same size as the hidden layer.
-
-        This step is equivalent to converting each token into a one-hot vector, multiplying that by a matrix
-        of size (num_tokens, hidden_layer_size), and extracting the non-zero row from the result.
-
-        Return:
-        tensorflow.Variable: This inputs series that serve as the input to the hidden layer
-        """
-        embeddings = tf.get_variable(
-            name="embedding_matrix",
-            shape=[self.vocabulary_size, self.settings.rnn.hidden_size],
-            dtype=tf.float32)
-        inputs_series = tf.nn.embedding_lookup(
-            params=embeddings, ids=self.batch_x_placeholder,
-            name="embedding_lookup")
-        # inputs_series = tf.unstack(
-        #     inputs, axis=1,
-        #     name="unstack_inputs_series")
-        return inputs_series
-    # End of word_inputs_series()
 
     def init_saver(self):
         """

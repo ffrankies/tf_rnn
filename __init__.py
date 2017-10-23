@@ -1,9 +1,9 @@
 """
-Utils for the generated recurrent neural networks.
+General purpose RNN written with tensorflow 1.3
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 16 July, 2017
+Date: 22 October, 2017
 """
 
 from . import constants
