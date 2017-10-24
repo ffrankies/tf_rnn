@@ -5,10 +5,46 @@ The batches are converted into numpy arrays towards the end for them to play nic
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 7 October, 2017
+Date: 24 October, 2017
 """
 import math
 import numpy as np
+from random import shuffle
+
+def Batches(object):
+    """
+    Stores the dataset in batches for easy access.
+    """
+
+    def __init__(self):
+        """
+        Creates a Batches object.
+        """
+        # Instantiate cross-validation parameters
+        self.current = -1; # The number of the current section used for validation
+        self.k = 10; # The total number of sections the dataset will be broken into
+    # End of __init__()
+
+    def shuffle(inputs, labels):
+        """
+        Shuffles the inputs and labels to remove any ordering present in the dataset.
+        The inputs and labels are joined together before they are shuffled, to ensure that they still correctly
+        correspond to each other.
+
+        Params:
+        inputs (list): The inputs from the dataset
+        labels (list): The labels from the dataset
+
+        Return:
+        shuffled inputs (list): The shuffled inputs
+        shuffled lables (list): The shuffled labels
+        """
+        dataset = zip(inputs, labels)
+        shuffle(dataset)
+        shuffled_inputs, shuffled_lables = zip(*dataset)
+        return shuffled_inputs, shuffled_labels
+    # End of shuffle()
+# End of Batches()
 
 def make_batches(input_data, labels, batch_size, truncate, pad_token):
     """
