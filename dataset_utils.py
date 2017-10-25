@@ -1,16 +1,7 @@
 """
-This project is licensed under the MIT license:
-https://github.com/ffrankies/Terry/blob/master/LICENSE
+Utility class for creating, saving and loading datasets.
 
-This project uses the Theano library:
-https://arxiv.org/pdf/1605.02688.pdf
-
-This project is based on the following tutorial:
-https://goo.gl/DPf37h
-
-Copyright (c) 2017 Frank Derry Wanye
-
-Date: 21 October, 2017
+Date: 25 October, 2017
 """
 
 # Specify documentation format
@@ -53,7 +44,7 @@ def run():
 
 def get_settings():
     """
-    Parses command-line arguments into a settings Object. 
+    Parses command-line arguments into a settings Object.
     If non-dataset arguments are provided, prints error and exits script.
 
     Return:
@@ -102,7 +93,7 @@ def create_dataset(logger, settings):
 
 def create_text_dataset(logger, settings, dataset):
     """
-    Creates a dataset based on text data. If the settings chosen do not specify a text dataset, returns the value 
+    Creates a dataset based on text data. If the settings chosen do not specify a text dataset, returns the value
     of the dataset parameter, unchanged.
 
     Params:
@@ -111,11 +102,11 @@ def create_text_dataset(logger, settings, dataset):
     dataset (tuple): The previously created dataset, if any
 
     Return:
-    tuple: (type, token_level, vocabulary: List, index_to_word: List, token_to_index: Dict, x_train: List, 
+    tuple: (type, token_level, vocabulary: List, index_to_word: List, token_to_index: Dict, x_train: List,
             y_train: List)
     """
     if settings.type != constants.TYPE_CHOICES[0]: # type = 'text'
-        return dataset   
+        return dataset
     data = tokenize_data(logger, settings)
     data = normalize_examples(logger, settings, data)
     vocabulary = create_vocabulary(logger, settings, data)
@@ -123,18 +114,18 @@ def create_text_dataset(logger, settings, dataset):
     index_to_token.append(constants.UNKNOWN)
     token_to_index = dict((token, index) for index, token in enumerate(index_to_token))
     x_train, y_train = create_training_data(logger, settings, data, token_to_index)
-    return (constants.TYPE_CHOICES[0], 
-            constants.TOKEN_LEVEL_CHOICES[0], 
-            vocabulary, 
-            index_to_token, 
-            token_to_index, 
-            x_train, 
+    return (constants.TYPE_CHOICES[0],
+            constants.TOKEN_LEVEL_CHOICES[0],
+            vocabulary,
+            index_to_token,
+            token_to_index,
+            x_train,
             y_train)
 # End of create_text_dataset
 
 def create_numeric_dataset(logger, settings, dataset):
     """
-    Creates a dataset based on numeric data. If the settings chosen do not specify a numeric dataset, returns the value 
+    Creates a dataset based on numeric data. If the settings chosen do not specify a numeric dataset, returns the value
     of the dataset parameter, unchanged.
 
     Params:
@@ -143,7 +134,7 @@ def create_numeric_dataset(logger, settings, dataset):
     dataset (tuple): The previously created dataset, if any
 
     Return:
-    tuple: either 
+    tuple: either
     ("word_dataset", vocabulary: List, index_to_word: List, token_to_index: Dict, x_train: List, y_train: List)
            or
     ("char_dataset", vocabulary: List, x_train: List, y_train: List)
@@ -240,7 +231,7 @@ def tokenize_stories(logger, settings):
     logger.info("Retrieving stories from data.")
     stories = [comment.lower() for comment in comments]
     logger.info("Found %d stories in the dataset." % len(stories))
-    
+
     return stories
 # End of tokenize_stories()
 
@@ -280,7 +271,7 @@ def read_csv(logger, settings):
 
 def normalize_examples(logger, settings, examples):
     """
-    Normalizes tokenized examples. 
+    Normalizes tokenized examples.
     - Removes invalid examples
     - Replaces invalid tokens with valid ones
     - Reduces number of examples to the requested number

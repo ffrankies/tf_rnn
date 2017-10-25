@@ -14,7 +14,7 @@ import time
 
 from . import constants
 from . import setup
-from . import datasets
+from . import dataset
 from . import saver
 from . import tensorboard
 from . import settings
@@ -47,7 +47,7 @@ class RNNModel(object):
         """
         self.graph = tf.Graph()
         with self.graph.as_default():
-            self.load_dataset()
+            self.dataset = Dataset(self.logger, self.settings.rnn.dataset)
             self.training()
             self.session = tf.Session(graph=self.graph)
             self.init_saver()
@@ -58,7 +58,7 @@ class RNNModel(object):
         """
         Loads the dataset specified in the command-line arguments. Instantiates variables for the class.
         """
-        dataset_params = datasets.load_dataset(self.logger, self.settings.rnn.dataset)
+        dataset_params = dataset_utils.load_dataset(self.logger, self.settings.rnn.dataset)
         self.data_type = dataset_params[0]
         self.token_level = dataset_params[1]
         # Skip vocabulary - we don't really need it
@@ -171,7 +171,7 @@ class RNNModel(object):
                 shape=[self.settings.train.batch_size, self.settings.train.truncate],
                 name="input_placeholder")
             if self.data_type == constants.TYPE_CHOICES[0]: # data type = 'text'
-                inputs_series = token_to_vector(self.vocabulary_size, self.settings.rnn.hidden_size, 
+                inputs_series = token_to_vector(self.vocabulary_size, self.settings.rnn.hidden_size,
                     self.batch_x_placeholder)
             else:
                 print("ERROR: Numeric inputs cannot be handled yet.")
