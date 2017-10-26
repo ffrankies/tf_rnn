@@ -1,13 +1,12 @@
 """
 An object for storing a dataset for training.
 
-Date: 25 October 2017
+Date: 26 October 2017
 """
 import random
 import math
 
 from . import dataset_utils
-from . import settings
 from . import batchmaker
 from . import constants
 
@@ -43,7 +42,7 @@ class Dataset(object):
         Params:
         logger (logging.Logger): The loregger to be used by this class
         dataset_name (string): The name of the dataset to load
-        train_settings (settings.Settings): The settings containing truncate and batch_size values
+        train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
         """
         self.logger = logger
         self.settings = train_settings
