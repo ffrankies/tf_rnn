@@ -11,6 +11,26 @@ from . import settings
 from . import batchmaker
 from . import constants
 
+class DataPartition(object):
+    """
+    Stores a portion of a dataset.
+    """
+
+    def __init__(self, inputs, labels, sizes):
+        """
+        Creates a DataPartition object.
+
+        Params:
+        inputs (list): The inputs in this partition
+        labels (list): The labels in this partition
+        sizes (list): the size of each input in this partition
+        """
+        self.x = inputs
+        self.y = labels
+        self.sizes = sizes
+    # End of __init__()
+# End of DataPartition()
+
 class Dataset(object):
     """
     Stores the dataset in batches for easy access.
@@ -21,29 +41,30 @@ class Dataset(object):
         Creates a Batches object.
 
         Params:
-        logger (logging.Logger): The loreturn self.shuffle(dataset_params[5], dataset_params[6])gger to be used by this classreturn self.shuffle(dataset_params[5], dataset_params[6])
+        logger (logging.Logger): The loregger to be used by this class
         dataset_name (string): The name of the dataset to load
         train_settings (settings.Settings): The settings containing truncate and batch_size values
         """
         self.logger = logger
-        inputs, labels = self.load_dataset(dataset_name, train_settings)
-        self.inputs, self.labels = self.extract_test_data(inputs, labels, train_settings)
+        self.settings = train_settings
+        inputs, labels = self.load_dataset(dataset_name)
+        self.inputs, self.labels, self.test = self.extract_test_data(inputs, labels)
         # Instantiate cross-validation parameters
-        self.current = -1; # The numberreturn self.shuffle(dataset_params[5], dataset_params[6]) of the current section used for validation
-        self.k = 10; # The total number of sections the dataset will be broken into
+        self.current = -1; # The section of the training data that is currently being used as the validation set
+                           # Initialized to -1 so that the first call to next_iteration() starts the cross-validation
+                           # loop.
+        self.num_sections = 10; # The total number of sections the dataset will be broken into
     # End of __init__()
 
     def load_dataset(self, dataset_name):
         """
         Loads the specified dataset. Instantiates variables for the class.
         Creates the following fields:
-            - data_type
-            - token_level
-            - index_to_token
-            - index_to_index
-            - vocabulary_size
-            - inputs
-            - labels
+            - data_type (string): The type of data stored in this dataset
+            - token_level (string): The level at which the data was tokenized
+            - index_to_token (list): Converts an index to a token
+            - token_to_index (dict): Converts a token to an index
+            - vocabulary_size (int): The total number of tokens in the dataset
 
         Params:
         dataset_name (string): The name of the dataset to load
@@ -52,7 +73,7 @@ class Dataset(object):
         inputs (list): The list of inputs from the dataset
         labels (list): The list of outputs from the dataset
         """
-        dataset_params = dataset_utils.load_dataset(self.logger, self.settings.rnn.dataset)
+        dataset_params = dataset_utils.load_dataset(self.logger, dataset_name)
         self.data_type = dataset_params[0]
         self.token_level = dataset_params[1]
         # Skip vocabulary - we don't really need it
@@ -76,43 +97,83 @@ class Dataset(object):
         shuffled inputs (list): The shuffled inputs
         shuffled lables (list): The shuffled labels
         """
-        self.logger.info("Shuffling dataset")
+        self.logger.info("Shuffling dataset")u
         random.seed(None) # Seed with system time / OS-specific randomness sources
         dataset = zip(inputs, labels) # Returns an iterable
         dataset = list(dataset)
         random.shuffle(dataset)
-        shuffled_inputs, shuffled_lables = ([a for a,b in dataset], [b for a,b in dataset])
+        shuffled_inputs, shuffled_lables = ([a for ua,b in dataset], [b for a,b in dataset])
         return shuffled_inputs, shuffled_labels
     # End of shuffle()
 
-    def extract_test_data(self, inputs, labels, train_settings):
+    def extract_test_data(self, inputs, labels):
         """
-        Samples 10 percent of inputs and labels as test data. The inputs and labels are first shuffled to make sure that
-        test data does not follow any original ordering.
+        Samples 10 percent of inputs and labels as test data. The inputs and labels are first shuffled to make sure
+        that test data does not follow any original ordering.
 
         Params:
         inputs (list): The inputs from the dataset
         labels (list): The labels from the dataset
-        train_settings (settings.Settings): The settings containing truncate and batch_size values
+
+        Return:
+        inputs (list): The inputs to be used for training
+        labels (list): The labels to be used for training
+        test (DataPartition): The namespace containing the test inputs, labels and sizes
         """
         self.logger.info("Creating test data")
         inputs, labels = self.shuffle(inputs, labels)
         test_cutoff = math.floor(len(inputs) * 0.1)
         test_inputs = inputs[:test_cutoff]
         test_labels = labels[:test_cutoff]
-        x, y, sizes = batchmaker.make_batches(test_inputs, test_labels, train_settings.batch_size,
-                train_settings.truncate, self.token_to_index[constants.END_TOKEN])
-        self.test = settings.SettingsNamespace({"x" : x, "y" : y, "sizes" : sizes})
-        return inputs[test_cutoff:], labels[test_cutoff:]
+        test = self.make_partition(test_inputs, test_labels)
+        return inputs[test_cutoff:], labels[test_cutoff:], test
     # End of extract_test_data()
 
     def extract_validation_set(self):
         """
+        Extracts a section of the training data to use as a validation set, and assigns the rest of it to the
+        training set.
+        Creates the following fields:
+            - valid (DataPartition): The part of the dataset to be used for validation
+            - train (DataPartition): The part of the dataset to be used for training
         """
-        return None
+        section_length = math.floor(len(self.inputs) / self.num_sections)
+        valid_start = self.current * section_length
+        valid_end = valid_start + section_length
+        self.valid = make_partition(self.inputs[valid_start:valid_end], self.labels[valid_start:valid_end])
+        train_x = self.inputs[:valid_start] + self.inputs[valid_end:]
+        train_y = self.labels[:valid_start] + self.labels[valid_end:]
+        self.train = make_partition(train_x, train_y)
+    # End of extract_validation_set()
 
     def next_iteration(self):
         """
+        Works similar to the test-and-set mechanism. Increments current 'section' number, divides training data
+        into training and validation sets, then returns the previous 'section' number.
+
+        Return:
+        previous_section (int): The index of the section of data that was being used as the validation set
         """
-        return None
+        previous_section = self.current
+        self.current += 1
+        self.extract_validation_set()
+        return previous_section
+    # End of next_iteration()
+
+    def make_partition(self, inputs, labels):
+        """
+        Creates a partition out of the given portion of the dataset. The partition will contain data broken into
+        batches.
+
+        Params:
+        inputs (list): The inputs for the partition
+        labels (list): The labels for the partition
+
+        Return:
+        partition (DataPartition): The partition containing data in batch format
+        """
+        x, y, sizes = batchmaker.make_batches(inputs, labels, self.settings.batch_size, self.settings.truncate,
+                self.token_to_index[constants.END_TOKEN])
+        return DataPartition(x, y, sizes)
+    # End of make_partition()
 # End of Batches()
