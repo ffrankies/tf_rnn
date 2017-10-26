@@ -47,7 +47,7 @@ class Dataset(object):
         self.logger = logger
         self.settings = train_settings
         inputs, labels = self.load_dataset(dataset_name)
-        self.inputs, self.labels, self.test = self.extract_test_data(inputs, labels)
+        self.inputs, self.labels, self.test = self.extract_test_partition(inputs, labels)
         # Instantiate cross-validation parameters
         self.current = -1; # The section of the training data that is currently being used as the validation set
                            # Initialized to -1 so that the first call to next_iteration() starts the cross-validation
@@ -96,7 +96,7 @@ class Dataset(object):
         shuffled inputs (list): The shuffled inputs
         shuffled lables (list): The shuffled labels
         """
-        self.logger.info("Shuffling dataset")u
+        self.logger.info("Shuffling dataset")
         random.seed(None) # Seed with system time / OS-specific randomness sources
         dataset = zip(inputs, labels) # Returns an iterable
         dataset = list(dataset)
@@ -105,7 +105,7 @@ class Dataset(object):
         return shuffled_inputs, shuffled_labels
     # End of shuffle()
 
-    def extract_test_data(self, inputs, labels):
+    def extract_test_partition(self, inputs, labels):
         """
         Samples 10 percent of inputs and labels as test data. The inputs and labels are first shuffled to make sure
         that test data does not follow any original ordering.
@@ -119,16 +119,16 @@ class Dataset(object):
         labels (list): The labels to be used for training
         test (DataPartition): The namespace containing the test inputs, labels and sizes
         """
-        self.logger.info("Creating test data")
+        self.logger.info("Creating test data partition")
         inputs, labels = self.shuffle(inputs, labels)
         test_cutoff = math.floor(len(inputs) * 0.1)
         test_inputs = inputs[:test_cutoff]
         test_labels = labels[:test_cutoff]
         test = self.make_partition(test_inputs, test_labels)
         return inputs[test_cutoff:], labels[test_cutoff:], test
-    # End of extract_test_data()
+    # End of extract_test_partition()
 
-    def extract_validation_set(self):
+    def extract_validation_partition(self):
         """
         Extracts a section of the training data to use as a validation set, and assigns the rest of it to the
         training set.
@@ -136,6 +136,7 @@ class Dataset(object):
             - valid (DataPartition): The part of the dataset to be used for validation
             - train (DataPartition): The part of the dataset to be used for training
         """
+        self.logger.info("Creating validation data partition")
         section_length = math.floor(len(self.inputs) / self.num_sections)
         valid_start = self.current * section_length
         valid_end = valid_start + section_length
@@ -143,7 +144,7 @@ class Dataset(object):
         train_x = self.inputs[:valid_start] + self.inputs[valid_end:]
         train_y = self.labels[:valid_start] + self.labels[valid_end:]
         self.train = make_partition(train_x, train_y)
-    # End of extract_validation_set()
+    # End of extract_validation_partition()
 
     def next_iteration(self):
         """

@@ -18,7 +18,6 @@ from . import dataset
 from . import saver
 from . import tensorboard
 from . import settings
-from . import batchmaker
 
 from .layers.input_layer import *
 from .layers.hidden_layer import *
@@ -38,6 +37,7 @@ class RNNModel(object):
         self.model_path = saver.create_model_dir(self.settings.general.model_name)
         self.logger = setup.setup_logger(self.settings.logging, self.model_path)
         self.logger.info("RNN settings: %s" % self.settings)
+        self.dataset = Dataset(self.logger, self.settings.rnn.dataset, self.settings.train)
         self.create_graph()
     # End of __init__()
 
@@ -47,45 +47,11 @@ class RNNModel(object):
         """
         self.graph = tf.Graph()
         with self.graph.as_default():
-            self.dataset = Dataset(self.logger, self.settings.rnn.dataset)
             self.training()
             self.session = tf.Session(graph=self.graph)
             self.init_saver()
             self.session.run(tf.global_variables_initializer())
     # End of create_graph()
-
-    def load_dataset(self):
-        """
-        Loads the dataset specified in the command-line arguments. Instantiates variables for the class.
-        """
-        dataset_params = dataset_utils.load_dataset(self.logger, self.settings.rnn.dataset)
-        self.data_type = dataset_params[0]
-        self.token_level = dataset_params[1]
-        # Skip vocabulary - we don't really need it
-        self.index_to_token = dataset_params[3]
-        self.token_to_index = dataset_params[4]
-        self.vocabulary_size = len(self.index_to_token)
-        self.create_batches(dataset_params[5], dataset_params[6])
-    # End of load_dataset()
-
-    def create_batches(self, x_train, y_train):
-        """
-        Creates batches out of loaded data.
-
-        Current implementation is very limited. It would probably be best to sort the training data based on length,
-        fill it up with placeholders so the sizes are standardized, and then break it up into batches.
-
-        Params:
-        x_train (numpy.array): The training examples
-        y_train (numpy.array): The training labels
-        """
-        self.logger.info("Breaking input data into batches.")
-        end_token = self.token_to_index[constants.END_TOKEN]
-        self.inputs, self.labels, self.sizes = batchmaker.make_batches(x_train, y_train,
-            self.settings.train.batch_size, self.settings.train.truncate, end_token)
-        self.num_batches = len(self.inputs)
-        self.logger.info("Obtained %d batches." % self.num_batches)
-    # End of create_batches()
 
     def training(self):
         """
