@@ -3,7 +3,7 @@ Tensorflow implementation of a training method to train a given model.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 30 September, 2017
+Date: 26 October, 2017
 """
 
 import numpy as np
@@ -18,11 +18,11 @@ from .model import RNNModel
 def train(model):
     """
     Trains the given model on the given dataset, and saves the losses incurred
-    at the end of each epoch to a plot image. Also saves tensorflow event logs 
+    at the end of each epoch to a plot image. Also saves tensorflow event logs
     to the <model_path>/tensorboard directory for tensorboard functionality.
 
     Params:
-    model (rnn.RNNModel): The model to train
+    model (model.RNNModel): The model to train
     """
     model.logger.info("Started training the model.")
     # writer = tf.summary.FileWriter(model.model_path + "tensorboard", graph=model.session.graph)
@@ -42,20 +42,28 @@ def train_epoch(model, epoch_num, current_state):
     """
     Trains one full epoch.
 
-    :type model: RNNModel()
-    :param model: the model to train.
+    Params:
+    model (model.RNNModel): The model to train
+    epoch_num (int): The number of the current epoch
+    current_state (np.ndarray): The current state of the hidden layer
 
-    :type epoch_num: int
-    :param epoch_num: the number of the current epoch.
-
-    :type current_state: numpy matrix
-    :param current_state: the current hidden state.
-
-    :type return: (float, numpy matrix)
-    :param return: (the average incurred lost, the latest hidden state)
+    Return:
+    average_loss (float): The average incurred loss
+    latest_state (np.ndarray): The latest state of the hidden layer
     """
     model.logger.info("Starting epoch: %d" % (epoch_num))
 
+    '''
+    Workflow:
+    while(next_iteration):
+        for batch in train_batches
+            train()
+        for batch in valid_batches
+            validate()
+    '''
+
+    while model.dataset.next_iteration() is True:
+        
     total_loss = 0
     for batch_num in range(model.num_batches):
         # Debug log outside of function to reduce number of arguments.
@@ -76,7 +84,7 @@ def train_minibatch(model, batch_num, current_state):
     model (rnn.RNNModel): The model to train
     batch_num (int): The current batch number
     current_state (np.ndarray): The current hidden state of the model
-    
+
     Return:
     tuple: (minibatch_loss, updated_hidden_state)
     """
@@ -86,12 +94,12 @@ def train_minibatch(model, batch_num, current_state):
 
     if batch_x[0][0] == model.token_to_index[constants.START_TOKEN]: # Reset state if start of sentence
         current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
-    
+
     total_loss, train_step, current_state, summary = model.session.run(
         [model.total_loss_op, model.train_step_fun, model.current_state, model.summary_ops],
         feed_dict={
-            model.batch_x_placeholder:batch_x, 
-            model.batch_y_placeholder:batch_y, 
+            model.batch_x_placeholder:batch_x,
+            model.batch_y_placeholder:batch_y,
             model.batch_sizes:sizes,
             model.hidden_state_placeholder:current_state
         })

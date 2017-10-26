@@ -27,6 +27,7 @@ class DataPartition(object):
         self.x = inputs
         self.y = labels
         self.sizes = sizes
+        self.num_batches = len(self.sizes)
     # End of __init__()
 # End of DataPartition()
 
@@ -49,7 +50,7 @@ class Dataset(object):
         inputs, labels = self.load_dataset(dataset_name)
         self.inputs, self.labels, self.test = self.extract_test_partition(inputs, labels)
         # Instantiate cross-validation parameters
-        self.current = -1; # The section of the training data that is currently being used as the validation set
+        self.current = 0; # The section of the training data that is currently being used as the validation set
                            # Initialized to -1 so that the first call to next_iteration() starts the cross-validation
                            # loop.
         self.num_sections = 10; # The total number of sections the dataset will be broken into
@@ -152,12 +153,12 @@ class Dataset(object):
         into training and validation sets, then returns the previous 'section' number.
 
         Return:
-        previous_section (int): The index of the section of data that was being used as the validation set
+        has_more_sections (bool): False if current = 0, True otherwise
         """
-        previous_section = self.current
-        self.current += 1
         self.extract_validation_set()
-        return previous_section
+        self.current += 1
+        self.current = self.current % (self.num_sections + 1)
+        return self.current != 0
     # End of next_iteration()
 
     def make_partition(self, inputs, labels):
