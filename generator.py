@@ -3,7 +3,7 @@ Tensorflow implementation of methods for generating RNN output.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 24 September, 2017
+Date: 27 September, 2017
 """
 
 import numpy as np
@@ -17,9 +17,9 @@ def generate_output(model, num_tokens=30, num_outputs=10):
     """
     Generates output from the RNN.
 
-    Params: 
+    Params:
     model (rnn.RNNModel): The model to be used to generate output
-    num_tokens (int): The number of tokens to generate. If set to infinity, the output is generated until an END token 
+    num_tokens (int): The number of tokens to generate. If set to infinity, the output is generated until an END token
                       is reached
     num_outputs (int): The number of outputs to generate.
 
@@ -30,7 +30,7 @@ def generate_output(model, num_tokens=30, num_outputs=10):
     outputs = []
     for i in range(1, num_outputs+1):
         sentence = generate_single_output(model, num_tokens)
-        sentence = " ".join([model.index_to_token[word] for word in sentence])
+        sentence = " ".join([model.dataset.index_to_token[word] for word in sentence])
         outputs.append(sentence)
     for sentence in outputs:
         print("%s\n\n" % sentence)
@@ -42,21 +42,21 @@ def generate_single_output(model, num_tokens=math.inf):
     """
     Generates a single output from the model.
 
-    Params: 
+    Params:
     model (rnn.RNNModel): The model to be used to generate output
-    num_tokens (int): The number of tokens to generate. If set to infinity, the output is generated until an END token 
+    num_tokens (int): The number of tokens to generate. If set to infinity, the output is generated until an END token
                       is reached
 
     Return:
     np.ndarray: The generated output as a numpy array
     """
-    sentence = np.array([model.token_to_index[constants.START_TOKEN]])
+    sentence = np.array([model.dataset.token_to_index[constants.START_TOKEN]])
     current_state = np.zeros(tuple(model.hidden_state_shape))
     num_generated = 0
     while num_tokens > num_generated:
         output, new_current_state = predict(model, sentence, current_state)
         sentence = np.append(sentence, sample_output_token(model, output))
-        if sentence[-1] == model.token_to_index[constants.END_TOKEN] : break
+        if sentence[-1] == model.dataset.token_to_index[constants.END_TOKEN] : break
         num_generated += 1
     # End of while loop
     return sentence
@@ -82,11 +82,11 @@ def predict(model, sentence, current_state):
     sizes = [model.settings.train.truncate] * model.settings.train.batch_size
 
     predictions, final_hidden_state = model.session.run(
-        [model.predictions_series, model.current_state], 
+        [model.predictions_series, model.current_state],
         feed_dict={
-            model.batch_x_placeholder:input_batch, 
+            model.batch_x_placeholder:input_batch,
             model.batch_sizes:sizes,
-            model.hidden_state_placeholder:current_state   
+            model.hidden_state_placeholder:current_state
         })
 
     position = (len(sentence)-1) % model.settings.train.truncate
@@ -97,7 +97,7 @@ def sentence_to_batch_array(train_settings, sentence):
     """
     Convert sentence to batch array.
 
-    Params: 
+    Params:
     train_settings (settings.SettingsNamespace): The training settings
     sentence (list): The input sentence as a list of integers
 
@@ -115,7 +115,7 @@ def sentence_to_batch_array(train_settings, sentence):
 
 def sample_output_token(model, probabilities):
     """
-    Returns the probable next word in sentence. Some randomization is included to make sure 
+    Returns the probable next word in sentence. Some randomization is included to make sure
     that not all the sentences produced are the same.
 
     :type model: RNNModel()
@@ -130,7 +130,7 @@ def sample_output_token(model, probabilities):
     return np.argmax(probabilities[:-1])
     # output_word = model.token_to_index[constants.UNKNOWN]
     # while output_word == model.token_to_index[constants.UNKNOWN]:
-    #     while sum(probabilities[:-1]) > 1.0 : 
+    #     while sum(probabilities[:-1]) > 1.0 :
     #         model.logger.error("Sum of word probabilities (%f) > 1.0" % sum(probabilities[:-1]))
     #         probabilities = softmax(probabilities)
     #     samples = np.random.multinomial(1, probabilities)
@@ -141,7 +141,7 @@ def sample_output_token(model, probabilities):
 def softmax(probabilities):
     """
     Compute softmax values for each sets of scores in the given array.
-    It is needed because python's floats are dumb. 
+    It is needed because python's floats are dumb.
     There are times when, say, 1.00000 does not equal 1
     Credit: https://stackoverflow.com/q/34968722/5760608
 

@@ -37,7 +37,7 @@ class RNNModel(object):
         self.model_path = saver.create_model_dir(self.settings.general.model_name)
         self.logger = setup.setup_logger(self.settings.logging, self.model_path)
         self.logger.info("RNN settings: %s" % self.settings)
-        self.dataset = Dataset(self.logger, self.settings.rnn.dataset, self.settings.train)
+        self.dataset = dataset.Dataset(self.logger, self.settings.rnn.dataset, self.settings.train)
         self.create_graph()
     # End of __init__()
 
@@ -91,11 +91,11 @@ class RNNModel(object):
                 shape=np.shape(self.batch_x_placeholder),
                 name="output_placeholder")
             self.out_weights = tf.Variable(
-                initial_value=np.random.rand(self.settings.rnn.hidden_size, self.vocabulary_size),
+                initial_value=np.random.rand(self.settings.rnn.hidden_size, self.dataset.vocabulary_size),
                 dtype=tf.float32,
                 name="out_weights")
             self.out_bias = tf.Variable(
-                np.zeros((self.vocabulary_size)),
+                np.zeros((self.dataset.vocabulary_size)),
                 dtype=tf.float32,
                 name="out_bias")
             logits_series = [
@@ -136,8 +136,8 @@ class RNNModel(object):
                 dtype=tf.int32,
                 shape=[self.settings.train.batch_size, self.settings.train.truncate],
                 name="input_placeholder")
-            if self.data_type == constants.TYPE_CHOICES[0]: # data type = 'text'
-                inputs_series = token_to_vector(self.vocabulary_size, self.settings.rnn.hidden_size,
+            if self.dataset.data_type == constants.TYPE_CHOICES[0]: # data type = 'text'
+                inputs_series = token_to_vector(self.dataset.vocabulary_size, self.settings.rnn.hidden_size,
                     self.batch_x_placeholder)
             else:
                 print("ERROR: Numeric inputs cannot be handled yet.")

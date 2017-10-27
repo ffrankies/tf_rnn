@@ -13,6 +13,12 @@ from . import constants
 class DataPartition(object):
     """
     Stores a portion of a dataset.
+
+    Instance Variables:
+    x (list): The inputs of this partition, as padded batches
+    y (list): The outputs/labels of this partition, as padded batches
+    sizes (list): The sizes of the examples in this partition
+    num_batches (int): The number of batches in this partition
     """
 
     def __init__(self, inputs, labels, sizes):
@@ -34,6 +40,28 @@ class DataPartition(object):
 class Dataset(object):
     """
     Stores the dataset in batches for easy access.
+
+    Instance variables:
+    - General:
+        - logger (logging.Logger): The logger for this class
+        - settings (settings.SettingsNamespace): The training settings, containing batch_size and truncate values
+    - Data:
+        - inputs (list): The inputs to be used for training and validation
+        - labels (list): The labels to be used for training and validation
+    - Partitions:
+        - test (DataPartition): The partition to be used for testing the performance of the trained model
+        - valid (DataPartition): The current partition of the dataset to be used for validation
+        - train (DataPartition): The current partition of the dataset to be used for training
+    - Cross-validation:
+        - current (int): The current section of inputs and labels being used for validation
+        - num_sections (int): The total number of sections being used for cross-validation
+    - Info on dataset:
+        - data_type (string): The type of data stored in this dataset
+        - token_level (string): The level at which the data was tokenized
+        - index_to_token (list): Converts an index to a token
+        - token_to_index (dict): Converts a token to an index
+        - vocabulary_size (int): The total number of tokens in the dataset
+        - max_length (int): The length (number of time-steps in) the longest example in the dataset
     """
 
     def __init__(self, logger, dataset_name, train_settings):
@@ -41,7 +69,7 @@ class Dataset(object):
         Creates a Batches object.
 
         Params:
-        logger (logging.Logger): The loregger to be used by this class
+        logger (logging.Logger): The logger to be used by this class
         dataset_name (string): The name of the dataset to load
         train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
         """
@@ -50,7 +78,7 @@ class Dataset(object):
         inputs, labels = self.load_dataset(dataset_name)
         self.inputs, self.labels, self.test = self.extract_test_partition(inputs, labels)
         # Instantiate cross-validation parameters
-        self.current = 0; # The section of the training data that is currently being used as the validation set
+        self.current = -1; # The section of the training data that is currently being used as the validation set
                            # Initialized to -1 so that the first call to next_iteration() starts the cross-validation
                            # loop.
         self.num_sections = 10; # The total number of sections the dataset will be broken into
@@ -65,6 +93,7 @@ class Dataset(object):
             - index_to_token (list): Converts an index to a token
             - token_to_index (dict): Converts a token to an index
             - vocabulary_size (int): The total number of tokens in the dataset
+            - max_length (int): The length (number of time-steps in) the longest example in the dataset
 
         Params:
         dataset_name (string): The name of the dataset to load
@@ -80,8 +109,29 @@ class Dataset(object):
         self.index_to_token = dataset_params[3]
         self.token_to_index = dataset_params[4]
         self.vocabulary_size = len(self.index_to_token)
+        self.max_length = self.longest_example(dataset_params[6])
         return dataset_params[5], dataset_params[6]
     # End of load_dataset()
+
+    def longest_example(self, labels):
+        """
+        Finds the length (number of time-steps) of the longest example in the dataset. This can be done by looking
+        at the labels only.
+
+        Params:
+        labels (list): The list of outputs from the dataset
+
+        Return:
+        length (int): The length of the longest example
+        """
+        self.logger.info("Finding longest example in the dataset")
+        longest_length = -1
+        for label in labels:
+            label_length = len(label)
+            if label_length > longest_length:
+                longest_length = label_length
+        return longest_length
+    # End of longest_example()
 
     def shuffle(self, inputs, labels):
         """
@@ -102,7 +152,7 @@ class Dataset(object):
         dataset = zip(inputs, labels) # Returns an iterable
         dataset = list(dataset)
         random.shuffle(dataset)
-        shuffled_inputs, shuffled_lables = ([a for ua,b in dataset], [b for a,b in dataset])
+        shuffled_inputs, shuffled_labels = ([a for a,b in dataset], [b for a,b in dataset])
         return shuffled_inputs, shuffled_labels
     # End of shuffle()
 
@@ -137,28 +187,25 @@ class Dataset(object):
             - valid (DataPartition): The part of the dataset to be used for validation
             - train (DataPartition): The part of the dataset to be used for training
         """
-        self.logger.info("Creating validation data partition")
+        self.logger.debug("Creating validation data partition")
         section_length = math.floor(len(self.inputs) / self.num_sections)
         valid_start = self.current * section_length
         valid_end = valid_start + section_length
-        self.valid = make_partition(self.inputs[valid_start:valid_end], self.labels[valid_start:valid_end])
+        self.valid = self.make_partition(self.inputs[valid_start:valid_end], self.labels[valid_start:valid_end])
         train_x = self.inputs[:valid_start] + self.inputs[valid_end:]
         train_y = self.labels[:valid_start] + self.labels[valid_end:]
-        self.train = make_partition(train_x, train_y)
+        self.train = self.make_partition(train_x, train_y)
     # End of extract_validation_partition()
 
     def next_iteration(self):
         """
-        Works similar to the test-and-set mechanism. Increments current 'section' number, divides training data
-        into training and validation sets, then returns the previous 'section' number.
-
-        Return:
-        has_more_sections (bool): False if current = 0, True otherwise
+        Increments the current section number, and extracts the validation set corresponding to that section
+        number from the dataset.
         """
-        self.extract_validation_set()
+        self.logger.debug("Updating validation set to next cross-validation section")
         self.current += 1
         self.current = self.current % (self.num_sections + 1)
-        return self.current != 0
+        self.extract_validation_partition()
     # End of next_iteration()
 
     def make_partition(self, inputs, labels):
