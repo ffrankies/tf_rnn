@@ -204,7 +204,7 @@ class Dataset(object):
         """
         self.logger.debug("Updating validation set to next cross-validation section")
         self.current += 1
-        self.current = self.current % (self.num_sections + 1)
+        self.current = self.current % self.num_sections
         self.extract_validation_partition()
     # End of next_iteration()
 
