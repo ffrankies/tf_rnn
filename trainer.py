@@ -3,7 +3,7 @@ Tensorflow implementation of a training method to train a given model.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 26 October, 2017
+Date: 29 October, 2017
 """
 
 import numpy as np
@@ -13,7 +13,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from . import constants
-from .model import RNNModel
 
 def train(model):
     """
@@ -32,8 +31,11 @@ def train(model):
         average_loss = train_epoch(model, epoch_num)
         loss_list.append(average_loss)
         # End of epoch training
+    
+    test_loss = test_step(model)
 
-    model.logger.info("Finished training the model. Final loss: %f" % average_loss)
+    model.logger.info("Finished training the model. Final validation loss: %f. Final test loss: %f" % 
+            (average_loss, test_loss))
     plot(model, loss_list)
 # End of train()
 
@@ -137,17 +139,17 @@ def validate_minibatch(model, batch_num, current_state):
     Calculates the performance of the network on one minibatch, logs the performance to tensorflow.
 
     Params:
-    model (model.RNNModel): The model to train
+    model (model.RNNModel): The model to validate
     batch_num (int): The current batch number
     current_state (np.ndarray): The current hidden state of the model
 
     Return:
     minibatch_loss (float): The average loss over this minibatch
-    updated_hidden_state (np.ndarray): The updated state of the hidden layer after training
+    updated_hidden_state (np.ndarray): The updated state of the hidden layer after validating
     """
-    batch_x = model.dataset.train.x[batch_num]
-    batch_y = model.dataset.train.y[batch_num]
-    sizes = model.dataset.train.sizes[batch_num]
+    batch_x = model.dataset.valid.x[batch_num]
+    batch_y = model.dataset.valid.y[batch_num]
+    sizes = model.dataset.valid.sizes[batch_num]
 
     if batch_x[0][0] == model.dataset.token_to_index[constants.START_TOKEN]: # Reset state if start of example
         current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
@@ -164,6 +166,60 @@ def validate_minibatch(model, batch_num, current_state):
     model.summary_writer.add_summary(summary)
     return total_loss, current_state
 # End of validate_minibatch()
+
+def test_step(model):
+    """
+    Finds the performance of the trained model on the testing partition of the dataset. Used as the definitive 
+    performance test for the model.
+
+    Params:
+    model (model.RNNModel): The trained model
+
+    Return:
+    averate_test_loss (float): The average loss on the testing partition
+    """
+    current_state = np.zeros((model.settings.train.batch_size, model.settings.rnn.hidden_size), dtype=float)
+    total_test_loss = 0
+    for batch_num in range(model.dataset.test.num_batches):
+        # Debug log outside of function to reduce number of arguments.
+        model.logger.debug("Testing minibatch : ", batch_num)
+        minibatch_loss, current_state = test_minibatch(model, batch_num, current_state)
+        total_test_loss += minibatch_loss
+    average_test_loss = total_test_loss / model.dataset.test.num_batches
+    return average_test_loss
+# End of test_step()
+
+def test_minibatch(model, batch_num, current_state):
+    """
+    Finds the average loss of a given minibatch for a trained network.
+
+    Params:
+    model (model.RNNModel): The model to test
+    batch_num (int): The current batch number
+    current_state (np.ndarray): The current hidden state of the model
+
+    Return:
+    minibatch_loss (float): The loss for this minibatch
+    updated_state (np.ndarray): The updated hidden state of the model
+    """
+    batch_x = model.dataset.test.x[batch_num]
+    batch_y = model.dataset.test.y[batch_num]
+    sizes = model.dataset.test.sizes[batch_num]
+
+    if batch_x[0][0] == model.dataset.token_to_index[constants.START_TOKEN]: # Reset state if start of example
+        current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
+
+    total_loss, current_state = model.session.run(
+        [model.total_loss_op, model.current_state],
+        feed_dict={
+            model.batch_x_placeholder:batch_x,
+            model.batch_y_placeholder:batch_y,
+            model.batch_sizes:sizes,
+            model.hidden_state_placeholder:current_state
+        })
+
+    return total_loss, current_state
+# End of test_minibatch()
 
 def plot(model, loss_list):
     """
