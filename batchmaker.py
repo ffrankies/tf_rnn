@@ -5,7 +5,7 @@ The batches are converted into numpy arrays towards the end for them to play nic
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 25 October, 2017
+Date: 31 October, 2017
 """
 import math
 import numpy as np
@@ -49,23 +49,6 @@ def sort_by_length(data):
         sorted_data.append(sorted_item)
     return sorted_data
 # End of sort_by_length()
-
-def get_row_lengths(data):
-    """
-    Returns the lengths of every row in the given data. The data must be arranged in batches or the function will fail.
-
-    Params:
-    data (list): The list of data (arranged in batches) whose length is to be found
-
-    Return:
-    list: The lengths of the rows of every batch in the given data
-    """
-    batch_lengths = list()
-    for batch in data:
-        item_row_lengths = [len(row) for row in batch]
-        batch_lengths.append(item_row_lengths)
-    return batch_lengths
-# End of get_row_lengths()
 
 def group_into_batches(data, batch_size):
     """
@@ -115,14 +98,28 @@ def truncate_batches(data, truncate):
                 start = i * truncate
                 end = start + truncate
                 for example in batch:
-                    if start > len(example):
-                        truncated_batch.append([])
-                    else:
-                        truncated_batch.append(example[start:end])
+                    truncated_batch.append(example[start:end])
                 item_batches.append(truncated_batch)
         truncated_data.append(item_batches)
     return truncated_data
 # End of truncate_batches()
+
+def get_row_lengths(data):
+    """
+    Returns the lengths of every row in the given data. The data must be arranged in batches or the function will fail.
+
+    Params:
+    data (list): The list of data (arranged in batches) whose length is to be found
+
+    Return:
+    list: The lengths of the rows of every batch in the given data
+    """
+    batch_lengths = list()
+    for batch in data:
+        item_row_lengths = [len(row) for row in batch]
+        batch_lengths.append(item_row_lengths)
+    return batch_lengths
+# End of get_row_lengths()
 
 def pad_batches(x_data, truncate, pad_token):
     """
