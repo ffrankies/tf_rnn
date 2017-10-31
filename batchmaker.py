@@ -25,8 +25,9 @@ def make_batches(input_data, labels, batch_size, truncate, pad_token):
     (list, list, list): The padded input data batches, the labels batches, and the row sizes of the lables batches
     """
     data = sort_by_length([input_data, labels])
-    data = group_into_batches(data, batch_size)
-    x_data, y_data = truncate_batches(data, truncate)
+    x_data, y_data = group_into_batches(data, batch_size)
+    x_data = truncate_batches(x_data, truncate)
+    y_data = truncate_batches(x_data, truncate)
     lengths = get_row_lengths(y_data)
     x_data = pad_batches(x_data, truncate, pad_token)
     y_data = pad_batches(y_data, truncate, pad_token)
@@ -75,8 +76,8 @@ def group_into_batches(data, batch_size):
 
 def truncate_batches(data, truncate):
     """
-    Truncates each row in each item in data, so that no row is longer than 'truncate' values long. The truncated
-    parts become new rows in the data.
+    Truncates each example in batch in data, so that no row is longer than 'truncate' values long. The truncated
+    parts become new batches in the data.
 
     Params:
     data (list): The data batches to be truncated
@@ -87,19 +88,16 @@ def truncate_batches(data, truncate):
     """
     if truncate < 1:
         raise ValueError("The length of each batch cannot be less than 1.")
-    truncated_data = list()
-    for item in data:
-        item_batches = list()
-        for batch in item:
-            max_length = max(map(len, batch))
-            times_to_truncate = math.ceil(max_length / truncate)
-            for i in range(times_to_truncate):
-                start = i * truncate
-                end = start + truncate
-                truncated_batch = [example[start:end] for example in batch]
-                item_batches.append(truncated_batch)
-        truncated_data.append(item_batches)
-    return truncated_data
+    truncated_batches = list()
+    for batch in data:
+        max_length = max(map(len, batch))
+        times_to_truncate = math.ceil(max_length / truncate)
+        for i in range(times_to_truncate):
+            start = i * truncate
+            end = start + truncate
+            truncated_batch = [example[start:end] for example in batch]
+            truncated_batches.append(truncated_batch)
+    return truncated_batches
 # End of truncate_batches()
 
 def get_row_lengths(data):

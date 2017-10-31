@@ -329,22 +329,19 @@ class TestTruncateBatches():
         pass
 
     def test_should_return_same_data_when_truncate_is_equal_to_longest_example(self):
-        assert truncate_batches([BATCHED_SCRAMBLED_DATA_2], 8) == [BATCHED_SCRAMBLED_DATA_2]
+        assert truncate_batches(BATCHED_SCRAMBLED_DATA_2, 8) == BATCHED_SCRAMBLED_DATA_2
 
     def test_should_return_batches_with_length_less_than_or_equal_to_truncate(self):
         for i in range(1, 10):
-            truncated_data = truncate_batches([BATCHED_SCRAMBLED_DATA_2], i)
-            for batch in truncated_data[0]:
+            truncated_data = truncate_batches(BATCHED_SCRAMBLED_DATA_2, i)
+            for batch in truncated_data:
                 for example in batch:
                     assert len(example) <= i
 
     def test_should_correctly_truncate_data(self):
-        assert truncate_batches([BATCHED_SCRAMBLED_DATA_2], 4) == [TRUNCATED_SCRAMBLED_BATCHES_4]
-        assert truncate_batches([BATCHED_SORTED_DATA_3], 4) == [TRUNCATED_SORTED_BATCHES_3_4]
-
-    def test_should_correctly_work_with_multiple_data(self):
-        assert truncate_batches([BATCHED_SCRAMBLED_DATA_2, BATCHED_SORTED_DATA_2], 4) == [
-            TRUNCATED_SCRAMBLED_BATCHES_4, TRUNCATED_SORTED_BATCHES_4]
+        assert truncate_batches(BATCHED_SCRAMBLED_DATA_2, 4) == TRUNCATED_SCRAMBLED_BATCHES_4
+        assert truncate_batches(BATCHED_SORTED_DATA_3, 4) == TRUNCATED_SORTED_BATCHES_3_4
+        assert truncate_batches(BATCHED_SORTED_DATA_2, 4) == TRUNCATED_SORTED_BATCHES_4
 
 class TestGetRowLenghts():
     def test_should_return_empty_list_when_data_is_empty(self):
