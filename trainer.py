@@ -93,9 +93,7 @@ def train_minibatch(model, batch_num, current_state):
     Return:
     updated_hidden_state (np.ndarray): The updated state of the hidden layer after training
     """
-    batch_x = model.dataset.train.x[batch_num]
-    batch_y = model.dataset.train.y[batch_num]
-    sizes = model.dataset.train.sizes[batch_num]
+    batch_x, batch_y, sizes = model.dataset.train.get_batch(batch_num)
 
     if batch_x[0][0] == model.dataset.token_to_index[constants.START_TOKEN]: # Reset state if start of example
         current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
@@ -147,9 +145,7 @@ def validate_minibatch(model, batch_num, current_state):
     minibatch_loss (float): The average loss over this minibatch
     updated_hidden_state (np.ndarray): The updated state of the hidden layer after validating
     """
-    batch_x = model.dataset.valid.x[batch_num]
-    batch_y = model.dataset.valid.y[batch_num]
-    sizes = model.dataset.valid.sizes[batch_num]
+    batch_x, batch_y, sizes = model.dataset.valid.get_batch(batch_num)
 
     if batch_x[0][0] == model.dataset.token_to_index[constants.START_TOKEN]: # Reset state if start of example
         current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
@@ -202,9 +198,7 @@ def test_minibatch(model, batch_num, current_state):
     minibatch_loss (float): The loss for this minibatch
     updated_state (np.ndarray): The updated hidden state of the model
     """
-    batch_x = model.dataset.test.x[batch_num]
-    batch_y = model.dataset.test.y[batch_num]
-    sizes = model.dataset.test.sizes[batch_num]
+    batch_x, batch_y, sizes = model.dataset.test.get_batch(batch_num)
 
     if batch_x[0][0] == model.dataset.token_to_index[constants.START_TOKEN]: # Reset state if start of example
         current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)

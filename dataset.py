@@ -35,6 +35,21 @@ class DataPartition(object):
         self.sizes = sizes
         self.num_batches = len(self.sizes)
     # End of __init__()
+
+    def get_batch(self, batch_num):
+        """
+        Obtains the inputs, labels and sizes for a particular batch in the partition.
+
+        Params:
+        batch_num (int): The index of the requested batch
+
+        Return:
+        inputs (list): The inputs for the requested batch
+        labels (list): The labels for the requested batch
+        sizes (list): The sizes for the requested batch
+        """
+        return self.x[batch_num], self.y[batch_num], self.sizes[batch_num]
+    # End of get_batch()
 # End of DataPartition()
 
 class Dataset(object):
