@@ -94,11 +94,9 @@ def truncate_batches(data, truncate):
             max_length = max(map(len, batch))
             times_to_truncate = math.ceil(max_length / truncate)
             for i in range(times_to_truncate):
-                truncated_batch = list()
                 start = i * truncate
                 end = start + truncate
-                for example in batch:
-                    truncated_batch.append(example[start:end])
+                truncated_batch = [example[start:end] for example in batch]
                 item_batches.append(truncated_batch)
         truncated_data.append(item_batches)
     return truncated_data
