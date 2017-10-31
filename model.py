@@ -3,7 +3,7 @@ An RNN model implementation in tensorflow.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 22 October, 2017
+Date: 31 October, 2017
 """
 
 import numpy as np
@@ -153,3 +153,4 @@ class RNNModel(object):
         self.summary_writer, self.summary_ops = tensorboard.init_tensorboard(self)
         self.variables = ray.experimental.TensorFlowVariables(self.total_loss_op, self.session)
     # End of init_saver()
+# End of RNNModel()

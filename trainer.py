@@ -3,7 +3,7 @@ Tensorflow implementation of a training method to train a given model.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 29 October, 2017
+Date: 31 October, 2017
 """
 
 import numpy as np
@@ -31,10 +31,10 @@ def train(model):
         average_loss = train_epoch(model, epoch_num)
         loss_list.append(average_loss)
         # End of epoch training
-    
+
     test_loss = test_step(model)
 
-    model.logger.info("Finished training the model. Final validation loss: %f. Final test loss: %f" % 
+    model.logger.info("Finished training the model. Final validation loss: %f. Final test loss: %f" %
             (average_loss, test_loss))
     plot(model, loss_list)
 # End of train()
@@ -54,7 +54,7 @@ def train_epoch(model, epoch_num):
     model.logger.info("Starting epoch: %d" % (epoch_num))
 
     cross_validation_loss = 0
-    current_state = np.zeros((model.settings.train.batch_size, model.settings.rnn.hidden_size), dtype=float)
+    current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
     for section in range(model.dataset.num_sections):
         model.dataset.next_iteration()
         train_step(model, epoch_num, current_state)
@@ -94,9 +94,7 @@ def train_minibatch(model, batch_num, current_state):
     updated_hidden_state (np.ndarray): The updated state of the hidden layer after training
     """
     batch_x, batch_y, sizes = model.dataset.train.get_batch(batch_num)
-
-    if batch_x[0][0] == model.dataset.token_to_index[constants.START_TOKEN]: # Reset state if start of example
-        current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
+    current_state = reset_state(current_state, batch_x, model.dataset.token_to_index)
 
     train_step, current_state = model.session.run(
         [model.train_step_fun, model.current_state],
@@ -146,9 +144,7 @@ def validate_minibatch(model, batch_num, current_state):
     updated_hidden_state (np.ndarray): The updated state of the hidden layer after validating
     """
     batch_x, batch_y, sizes = model.dataset.valid.get_batch(batch_num)
-
-    if batch_x[0][0] == model.dataset.token_to_index[constants.START_TOKEN]: # Reset state if start of example
-        current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
+    current_state = reset_state(current_state, batch_x, model.dataset.token_to_index)
 
     total_loss, current_state, summary = model.session.run(
         [model.total_loss_op, model.current_state, model.summary_ops],
@@ -165,7 +161,7 @@ def validate_minibatch(model, batch_num, current_state):
 
 def test_step(model):
     """
-    Finds the performance of the trained model on the testing partition of the dataset. Used as the definitive 
+    Finds the performance of the trained model on the testing partition of the dataset. Used as the definitive
     performance test for the model.
 
     Params:
@@ -174,7 +170,7 @@ def test_step(model):
     Return:
     averate_test_loss (float): The average loss on the testing partition
     """
-    current_state = np.zeros((model.settings.train.batch_size, model.settings.rnn.hidden_size), dtype=float)
+    current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
     total_test_loss = 0
     for batch_num in range(model.dataset.test.num_batches):
         # Debug log outside of function to reduce number of arguments.
@@ -199,9 +195,7 @@ def test_minibatch(model, batch_num, current_state):
     updated_state (np.ndarray): The updated hidden state of the model
     """
     batch_x, batch_y, sizes = model.dataset.test.get_batch(batch_num)
-
-    if batch_x[0][0] == model.dataset.token_to_index[constants.START_TOKEN]: # Reset state if start of example
-        current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
+    current_state = reset_state(current_state, batch_x, model.dataset.token_to_index)
 
     total_loss, current_state = model.session.run(
         [model.total_loss_op, model.current_state],
@@ -214,6 +208,23 @@ def test_minibatch(model, batch_num, current_state):
 
     return total_loss, current_state
 # End of test_minibatch()
+
+def reset_state(current_state, batch_x, token_to_index):
+    """
+    Resets the current state to zeros if the batch contains data from the beginning of a sequence.
+
+    Params:
+    current_state (np.ndarray): The current hidden state of the network after training the previous batch
+    batch_x (list): The inputs of the current batch
+    token_to_index (dict): Converts tokens to their respective indexes in the vocabulary
+
+    Return:
+    current_state (np.ndarray): The current hidden state of the network.
+    """
+    if batch_x[0][0] == token_to_index[constants.START_TOKEN]: # If start of sequence
+        current_state = np.zeros_like(current_state)
+    return current_state
+# End of reset_state()
 
 def plot(model, loss_list):
     """
