@@ -93,7 +93,7 @@ def train_minibatch(model, batch_num, current_state):
     Return:
     updated_hidden_state (np.ndarray): The updated state of the hidden layer after training
     """
-    batch_x, batch_y, sizes = model.dataset.train.get_batch(batch_num)
+    batch_x, batch_y, sizes, metadata = model.dataset.train.get_batch(batch_num)
     current_state = reset_state(current_state, batch_x, model.dataset.token_to_index)
 
     train_step, current_state = model.session.run(
@@ -143,7 +143,7 @@ def validate_minibatch(model, batch_num, current_state):
     minibatch_loss (float): The average loss over this minibatch
     updated_hidden_state (np.ndarray): The updated state of the hidden layer after validating
     """
-    batch_x, batch_y, sizes = model.dataset.valid.get_batch(batch_num)
+    batch_x, batch_y, sizes, metadata = model.dataset.valid.get_batch(batch_num)
     current_state = reset_state(current_state, batch_x, model.dataset.token_to_index)
 
     total_loss, current_state, summary = model.session.run(
@@ -194,7 +194,7 @@ def test_minibatch(model, batch_num, current_state):
     minibatch_loss (float): The loss for this minibatch
     updated_state (np.ndarray): The updated hidden state of the model
     """
-    batch_x, batch_y, sizes = model.dataset.test.get_batch(batch_num)
+    batch_x, batch_y, sizes, metadata = model.dataset.test.get_batch(batch_num)
     current_state = reset_state(current_state, batch_x, model.dataset.token_to_index)
 
     total_loss, current_state = model.session.run(

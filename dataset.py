@@ -47,8 +47,13 @@ class DataPartition(object):
         inputs (list): The inputs for the requested batch
         labels (list): The labels for the requested batch
         sizes (list): The sizes for the requested batch
+        metadata (pair): Metadata showing whether this batch is the start and/or end of a sequence
         """
-        return self.x[batch_num], self.y[batch_num], self.sizes[batch_num]
+        x = self.x[batch_num]
+        y = self.y[batch_num]
+        sizes = self.sizes[batch_num][1:-1]
+        metadata = (self.sizes[batch_num][0], self.sizes[batch_num][-1])
+        return x, y, sizes, metadata
     # End of get_batch()
 # End of DataPartition()
 

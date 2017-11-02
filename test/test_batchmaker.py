@@ -101,100 +101,103 @@ BATCHED_SCRAMBLED_DATA_3 = [
 
 TRUNCATED_SCRAMBLED_BATCHES_4 = [
     [
-        [0, 1, 2, 3],
-        [0, 1, 2]
+        True, [0, 1, 2, 3],
+        [0, 1, 2], False
     ],
     [
-        [4, 5, 6, 7],
-        []
+        False, [4, 5, 6, 7],
+        [], True
     ],
     [
-        [0, 1],
-        [0, 1, 2, 3]
+        True, [0, 1],
+        [0, 1, 2, 3], False
     ],
     [
-        [],
-        [4]
+        False, [],
+        [4], True
     ],
     [
-        [0, 1, 2, 3],
-        [0]
+        True, [0, 1, 2, 3],
+        [0], True
     ],
     [
-        [0, 1, 2, 3],
-        [0, 1, 2, 3]
+        True, [0, 1, 2, 3],
+        [0, 1, 2, 3], False
     ],
     [
-        [4, 5, 6],
-        [4, 5]
+        False, [4, 5, 6],
+        [4, 5], True
     ]
 ]
 
 TRUNCATED_SORTED_BATCHES_4 = [
     [
-        [0, 1, 2, 3],
-        [0, 1, 2, 3]
+        True, [0, 1, 2, 3],
+        [0, 1, 2, 3], False
     ],
     [
-        [4, 5, 6, 7],
-        [4, 5, 6]
+        False, [4, 5, 6, 7],
+        [4, 5, 6], True
     ],
     [
-        [0, 1, 2, 3],
-        [0, 1, 2, 3]
+        True, [0, 1, 2, 3],
+        [0, 1, 2, 3], False
     ],
     [
-        [4, 5],
-        [4]
+        False, [4, 5],
+        [4], True
     ],
     [
-        [0, 1, 2, 3],
-        [0, 1, 2]
+        True, [0, 1, 2, 3],
+        [0, 1, 2], True
     ],
     [
-        [0, 1],
-        [0]
+        True, [0, 1],
+        [0], True
     ]
 ]
 
 TRUNCATED_SORTED_BATCHES_3_4 = [
     [
+        True, [0, 1, 2, 3],
         [0, 1, 2, 3],
-        [0, 1, 2, 3],
-        [0, 1, 2, 3]
+        [0, 1, 2, 3], False
     ],
     [
-        [4, 5, 6, 7],
+        False, [4, 5, 6, 7],
         [4, 5, 6],
-        [4, 5]
+        [4, 5], True
     ],
     [
+        True, [0, 1, 2, 3],
         [0, 1, 2, 3],
-        [0, 1, 2, 3],
-        [0, 1, 2]
+        [0, 1, 2], False
     ],
     [
-        [4],
+        False, [4],
         [],
-        []
+        [], True
     ],
     [
-        [0, 1],
+        True, [0, 1],
         [0],
-        []
+        [], True
     ]
 ]
 
 SIZES_TRUNCATED_SCRAMBLED_BATCHES_4 = [
-    [4, 3], [4, 0], [2, 4], [0, 1], [4, 1], [4, 4], [3, 2]
+    [True, 4, 3, False], [False, 4, 0, True], [True, 2, 4, False], [False, 0, 1, True], [True, 4, 1, True],
+    [True, 4, 4, False], [False, 3, 2, True]
 ]
 
 SIZES_TRUNCATED_SORTED_BATCHES_4 = [
-    [4, 4], [4, 3], [4, 4], [2, 1], [4, 3], [2, 1]
+    [True, 4, 4, False], [False, 4, 3, True], [True, 4, 4, False], [False, 2, 1, True], [True, 4, 3, True],
+    [True, 2, 1, True]
 ]
 
 SIZES_TRUNCATED_SORTED_BATCHES_3_4 = [
-    [4, 4, 4], [4, 3, 2], [4, 4, 3], [1, 0, 0], [2, 1, 0]
+    [True, 4, 4, 4, False], [False, 4, 3, 2, True], [True, 4, 4, 3, False], [False, 1, 0, 0, True],
+    [True, 2, 1, 0, True]
 ]
 
 PADDED_SCRAMBLED_BATCHES_4 = [
@@ -329,13 +332,14 @@ class TestTruncateBatches():
         pass
 
     def test_should_return_same_data_when_truncate_is_equal_to_longest_example(self):
-        assert truncate_batches(BATCHED_SCRAMBLED_DATA_2, 8) == BATCHED_SCRAMBLED_DATA_2
+        assert truncate_batches(BATCHED_SCRAMBLED_DATA_2, 8) == [
+                [True] + batch + [True] for batch in BATCHED_SCRAMBLED_DATA_2]
 
     def test_should_return_batches_with_length_less_than_or_equal_to_truncate(self):
         for i in range(1, 10):
             truncated_data = truncate_batches(BATCHED_SCRAMBLED_DATA_2, i)
             for batch in truncated_data:
-                for example in batch:
+                for example in batch[1:-1]:
                     assert len(example) <= i
 
     def test_should_correctly_truncate_data(self):
