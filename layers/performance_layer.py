@@ -6,8 +6,77 @@ Copyright (c) 2017 Frank Derry Wanye
 Date: 3 November, 2017
 """
 import tensorflow as tf
+import numpy as np
 
 from .. import constants
+
+class PerformanceVariables(object):
+    """
+    Stores and builds the variables needed for calculating performance at the end of an epoch
+    """
+
+    def __init__(self, max_length, shapes, types, pad):
+        """
+        Creates a PerformanceVariables object.
+        """
+        self._inputs = list()
+        self._labels = list()
+        self._sizes = list()
+        self.max_length = max_length
+        self.input_shape = shapes[0]
+        self.label_shape = shapes[1]
+        self.input_type = types[0]
+        self.label_type = types[1]
+        self.pad_value = pad
+    # End of __init__()
+
+    def batch_padding(self, shape, type):
+        """
+        Creates a full batch made entirely of padding data.
+        """
+        batch = np.full(shape=shape, fill_value=self.pad_value, dtype=type)
+        return batch.tolist()
+    # End of batch_padding()
+
+    def add_batch(self, inputs, labels, sizes, beginning, ending):
+        """
+        Adds a given batch to the validation variables data.
+        """
+        if beginning is True:
+            self._inputs.append(inputs)
+            self._labels.append(labels)
+            self._sizes.append(sizes)
+        else:
+            self._inputs[-1].extend(inputs)
+            self._labels[-1].extend(labels)
+            for index, size in enumerate(sizes):
+                self._sizes[-1][index] += size
+        if ending is True:
+            while len(self._labels[-1]) < self.max_length:
+                self._inputs[-1].extend(self.batch_padding(self.input_shape, self.input_type))
+                self._labels[-1].extend(self.batch_padding(self.label_shape, self.label_type))
+            self._inputs = [row[:self.max_length] for row in self._inputs]
+            self._labels = [row[:self.max_length] for row in self._labels]
+    # End of add_batch()
+
+    def inputs(self):
+        inputs = list()
+        for batch in self._inputs:
+            inputs.extend(batch)
+        return inputs
+
+    def labels(self):
+        labels = list()
+        for batch in self._labels:
+            labels.extend(batch)
+        return labels
+
+    def sizes(self):
+        sizes = list()
+        for batch in self._sizes:
+            sizes.extend(batch)
+        return sizes
+# End of PerformanceVariables()
 
 def calculate_accuracy(labels_series, predictions_series):
     """
@@ -42,6 +111,10 @@ def calculate_loss(logits_series, labels_series, row_lengths_series):
     tf.Tensor: The calculated average loss for this minibatch
     """
     with tf.variable_scope(constants.LOSS_CALC):
+        logits_series = tf.placeholder(dtype=tf.float32, shape=np.shape(logits_series), name="logits_placeholder")
+        labels_series = tf.placeholder(dtype=tf.int32, shape=np.shape(labels_series), name="labels_placeholder")
+        sizes_series = tf.placeholder(dtype=tf.int32, shape=np.shape(row_lengths_series), name="sizes_series")
+
         loss_sum = 0.0
         num_valid_rows = 0.0
         for logits, labels, row_length in zip(logits_series, labels_series, row_lengths_series):
@@ -57,7 +130,7 @@ def calculate_loss(logits_series, labels_series, row_lengths_series):
     return total_loss_op
 # End of calculate_loss()
 
-# def append_minibatch(all_inputs, all_outputs, new_inputs, new_outputs):
-#     """
-#     Builds a large matrix from the inputs and outputs.
-#     """
+def append_minibatch(all_inputs, all_outputs, new_inputs, new_outputs):
+    """
+    Builds a large matrix from the inputs and outputs.
+    """
