@@ -93,17 +93,11 @@ def train_minibatch(model, batch_num, current_state):
     Return:
     updated_hidden_state (np.ndarray): The updated state of the hidden layer after training
     """
-    batch_x, batch_y, sizes, metadata = model.dataset.train.get_batch(batch_num)
-    current_state = reset_state(current_state, batch_x, model.dataset.token_to_index)
+    current_feed_dict = get_feed_dict(model, model.dataset.train, batch_num, current_state)
 
     train_step, current_state = model.session.run(
         [model.train_step_fun, model.current_state],
-        feed_dict={
-            model.batch_x_placeholder:batch_x,
-            model.batch_y_placeholder:batch_y,
-            model.batch_sizes:sizes,
-            model.hidden_state_placeholder:current_state
-        })
+        feed_dict=current_feed_dict)
 
     return current_state
 # End of train_minibatch()
@@ -137,23 +131,19 @@ def validate_minibatch(model, batch_num, current_state):
     Params:
     model (model.RNNModel): The model to validate
     batch_num (int): The current batch number
+    epoch_num (int): The current epoch
     current_state (np.ndarray): The current hidden state of the model
 
     Return:
     minibatch_loss (float): The average loss over this minibatch
     updated_hidden_state (np.ndarray): The updated state of the hidden layer after validating
     """
-    batch_x, batch_y, sizes, metadata = model.dataset.valid.get_batch(batch_num)
-    current_state = reset_state(current_state, batch_x, model.dataset.token_to_index)
+    current_feed_dict = get_feed_dict(model, model.dataset.valid, batch_num, current_state)
 
     total_loss, current_state, summary = model.session.run(
         [model.total_loss_op, model.current_state, model.summary_ops],
-        feed_dict={
-            model.batch_x_placeholder:batch_x,
-            model.batch_y_placeholder:batch_y,
-            model.batch_sizes:sizes,
-            model.hidden_state_placeholder:current_state
-        })
+        feed_dict=current_feed_dict
+        )
 
     model.summary_writer.add_summary(summary)
     return total_loss, current_state
@@ -194,37 +184,72 @@ def test_minibatch(model, batch_num, current_state):
     minibatch_loss (float): The loss for this minibatch
     updated_state (np.ndarray): The updated hidden state of the model
     """
-    batch_x, batch_y, sizes, metadata = model.dataset.test.get_batch(batch_num)
-    current_state = reset_state(current_state, batch_x, model.dataset.token_to_index)
+    current_feed_dict = get_feed_dict(model, model.dataset.test, batch_num, current_state)
 
     total_loss, current_state = model.session.run(
         [model.total_loss_op, model.current_state],
-        feed_dict={
-            model.batch_x_placeholder:batch_x,
-            model.batch_y_placeholder:batch_y,
-            model.batch_sizes:sizes,
-            model.hidden_state_placeholder:current_state
-        })
+        feed_dict=current_feed_dict
+        )
 
     return total_loss, current_state
 # End of test_minibatch()
 
-def reset_state(current_state, batch_x, token_to_index):
+def get_feed_dict(model, dataset, batch_num, current_state):
+    """
+    Obtains the information needed for running tensorflow operations as a feed dictionary.
+
+    Params:
+    model (model.RNNModel): The model containing the operations
+    dataset (dataset.DataPartition): The dataset from which to extract the batch information
+    batch_num (int): The index of the batch in the dataset
+    current_state (np.ndarray): The current hidden state of the RNN
+
+    Return:
+    feed_dict (dict): The dictionary holding the necessary information for running tensorflow operations
+    """
+    batch = model.dataset.test.get_batch(batch_num)
+    beginning = model.dataset.test.beginning[batch_num]
+    current_state = reset_state(current_state, beginning)
+    feed_dict=build_feed_dict(model, batch, current_state)
+    return feed_dict
+# End of get_feed_dict()
+
+def reset_state(current_state, beginning):
     """
     Resets the current state to zeros if the batch contains data from the beginning of a sequence.
 
     Params:
     current_state (np.ndarray): The current hidden state of the network after training the previous batch
-    batch_x (list): The inputs of the current batch
-    token_to_index (dict): Converts tokens to their respective indexes in the vocabulary
+    beginning (boolean): True if the batch represents the start of a sequence
 
     Return:
     current_state (np.ndarray): The current hidden state of the network.
     """
-    if batch_x[0][0] == token_to_index[constants.START_TOKEN]: # If start of sequence
+    if beginning is True: # If start of sequence
         current_state = np.zeros_like(current_state)
     return current_state
 # End of reset_state()
+
+def build_feed_dict(model, batch, current_state):
+    """
+    Builds a dictionary to feed into the model for performing tensorflow operations.
+
+    Params:
+    model (model.RNNModel): The model for which to build the feed dictionary
+    batch (tuple): Contains the inputs, outputs and sizes of the current batch
+    current_state (np.ndarray): The current hidden state of the RNN
+
+    Return:
+    feed_dict (dict): The dictionary built out of the provided batch and current state
+    """
+    x, y, sizes = batch
+    feed_dict = {
+        model.batch_x_placeholder:x,
+        model.batch_y_placeholder:y,
+        model.batch_sizes:sizes,
+        model.hidden_state_placeholder:current_state}
+    return feed_dict
+# End of build_feed_dict()
 
 def plot(model, loss_list):
     """

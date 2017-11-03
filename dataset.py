@@ -18,6 +18,8 @@ class DataPartition(object):
     x (list): The inputs of this partition, as padded batches
     y (list): The outputs/labels of this partition, as padded batches
     sizes (list): The sizes of the examples in this partition
+    beginning (boolean): True if this batch contains the beginning of a sequence
+    ending (boolean): True if this batch contains the ending of a sequence
     num_batches (int): The number of batches in this partition
     """
 
@@ -32,7 +34,9 @@ class DataPartition(object):
         """
         self.x = inputs
         self.y = labels
-        self.sizes = sizes
+        self.sizes = [size_of_batch[1:-1] for size_of_batch in sizes]
+        self.beginning = [size_of_batch[0] for size_of_batch in sizes]
+        self.ending = [size_of_batch[-1] for size_of_batch in sizes]
         self.num_batches = len(self.sizes)
     # End of __init__()
 
@@ -51,9 +55,8 @@ class DataPartition(object):
         """
         x = self.x[batch_num]
         y = self.y[batch_num]
-        sizes = self.sizes[batch_num][1:-1]
-        metadata = (self.sizes[batch_num][0], self.sizes[batch_num][-1])
-        return x, y, sizes, metadata
+        sizes = self.sizes[batch_num]
+        return x, y, sizes
     # End of get_batch()
 # End of DataPartition()
 

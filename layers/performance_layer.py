@@ -3,7 +3,7 @@ Contains functions for setting up the performance evaluation layer for a tensorf
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 22 October, 2017
+Date: 3 November, 2017
 """
 import tensorflow as tf
 
@@ -56,3 +56,8 @@ def calculate_loss(logits_series, labels_series, row_lengths_series):
         total_loss_op = loss_sum / num_valid_rows # Can't use reduce_mean because there will be 0s there
     return total_loss_op
 # End of calculate_loss()
+
+# def append_minibatch(all_inputs, all_outputs, new_inputs, new_outputs):
+#     """
+#     Builds a large matrix from the inputs and outputs.
+#     """
