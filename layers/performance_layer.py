@@ -3,10 +3,11 @@ Contains functions for setting up the performance evaluation layer for a tensorf
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 3 November, 2017
+Date: 4 November, 2017
 """
 import tensorflow as tf
 import numpy as np
+from copy import deepcopy
 
 from .. import constants
 
@@ -19,9 +20,9 @@ class PerformanceVariables(object):
         """
         Creates a PerformanceVariables object.
         """
-        self._inputs = list()
-        self._labels = list()
-        self._sizes = list()
+        self.inputs = list()
+        self.labels = list()
+        self.sizes = list()
         self.max_length = max_length
         self.input_shape = shapes[0]
         self.label_shape = shapes[1]
@@ -43,39 +44,53 @@ class PerformanceVariables(object):
         Adds a given batch to the validation variables data.
         """
         if beginning is True:
-            self._inputs.append(inputs)
-            self._labels.append(labels)
-            self._sizes.append(sizes)
+            self.append_batch(inputs, labels, sizes)
         else:
-            self._inputs[-1].extend(inputs)
-            self._labels[-1].extend(labels)
-            for index, size in enumerate(sizes):
-                self._sizes[-1][index] += size
+            self.extend_batch(inputs, labels, sizes)
         if ending is True:
-            while len(self._labels[-1]) < self.max_length:
-                self._inputs[-1].extend(self.batch_padding(self.input_shape, self.input_type))
-                self._labels[-1].extend(self.batch_padding(self.label_shape, self.label_type))
-            self._inputs = [row[:self.max_length] for row in self._inputs]
-            self._labels = [row[:self.max_length] for row in self._labels]
+            self.pad_batch()
     # End of add_batch()
 
-    def inputs(self):
-        inputs = list()
-        for batch in self._inputs:
-            inputs.extend(batch)
-        return inputs
+    def append_batch(self, inputs, labels, sizes):
+        x, y, s = self.copy_batch(inputs, labels, sizes)
+        self.inputs.append(x)
+        self.labels.append(y)
+        self.sizes.append(s)
+    
+    def extend_batch(self, inputs, labels, sizes):
+        if len(inputs) != len(labels) or len(inputs) != len(sizes):
+            raise ValueError("Members of batch must all have the same first dimension (number of rows)")
+        x, y, s = self.copy_batch(inputs, labels, sizes)
+        for index in range(len(sizes), 0, -1):
+            self.inputs[-1][-index].extend(x[-index])
+            self.labels[-1][-index].extend(y[-index])
+            self.sizes[-1][-index] += s[-index]
 
-    def labels(self):
-        labels = list()
-        for batch in self._labels:
-            labels.extend(batch)
-        return labels
+    def copy_batch(self, inputs, labels, sizes):
+        x = deepcopy(inputs)
+        y = deepcopy(labels)
+        s = deepcopy(sizes)
+        return x, y, s
 
-    def sizes(self):
-        sizes = list()
-        for batch in self._sizes:
-            sizes.extend(batch)
-        return sizes
+    def pad_batch(self):
+        x_pad = self.batch_padding(self.input_shape, self.input_type)
+        y_pad = self.batch_padding(self.label_shape, self.label_type)
+        sizes = [0 for s in range(len(y_pad))]
+        while len(self.labels[-1][-1]) < self.max_length: # Doesn't matter if using inputs or labels here
+            self.extend_batch(x_pad, y_pad, sizes)
+        self.inputs = [row[:self.max_length] for row in self.inputs]
+        self.labels = [row[:self.max_length] for row in self.labels]
+
+    def complete(self):
+        self.inputs = self.breakdown(self.inputs)
+        self.labels = self.breakdown(self.labels)
+        self.sizes = self.breakdown(self.sizes)
+
+    def breakdown(self, batched_values):
+        values = list()
+        for batch in batched_values:
+            values.extend(batch)
+        return values
 # End of PerformanceVariables()
 
 def calculate_accuracy(labels_series, predictions_series):
