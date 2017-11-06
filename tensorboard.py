@@ -19,9 +19,9 @@ def init_tensorboard(model):
     tensorboard_dir = model.model_path + constants.TENSORBOARD + model.run_dir
     with tf.variable_scope("summaries"):
         tf.summary.scalar("total_loss", model.total_loss_op)
-        summarize_variable(model.out_weights, "output_weights")
-        summarize_variable(model.out_bias, "output_bias")
-        summarize_variable(model.accuracy, "output_accuracy")
+        # summarize_variable(model.out_weights, "output_weights")
+        # summarize_variable(model.out_bias, "output_bias")
+        # summarize_variable(model.accuracy, "output_accuracy")
     merged_summary_ops = tf.summary.merge_all()
     writer = tf.summary.FileWriter(tensorboard_dir, graph=model.session.graph)
     return writer, merged_summary_ops

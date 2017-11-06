@@ -45,6 +45,7 @@ class RNNModel(object):
         """
         Creates all internal tensorflow operations and variables inside a local graph and session.
         """
+        self.logger.info("Creating the computational graph")
         self.graph = tf.Graph()
         with self.graph.as_default():
             self.training()
@@ -73,11 +74,26 @@ class RNNModel(object):
         logits_series = self.output_layer()
         with tf.variable_scope(constants.PERFORMANCE):
             row_lengths_series = tf.unstack(self.batch_sizes, name="unstack_batch_sizes")
-            labels_series = tf.unstack(self.batch_y_placeholder, axis=1, name="unstack_labels_series")
+            labels_series = tf.unstack(self.batch_y_placeholder, name="unstack_labels_series")
             self.accuracy = calculate_accuracy(labels_series, self.predictions_series)
-            self.total_loss_op = calculate_loss(logits_series, labels_series, row_lengths_series)
-        return self.total_loss_op
+            minibatch_loss_op = calculate_minibatch_loss(logits_series, labels_series, row_lengths_series)
+            self.total_loss_op = self.calculate_loss()
+        return minibatch_loss_op
     # End of performance_evaluation()
+
+    def calculate_loss(self):
+        logits_shape = [len(self.dataset.inputs), self.dataset.max_length, self.dataset.vocabulary_size]
+        labels_shape = [len(self.dataset.labels), self.dataset.max_length]
+        sizes_shape = len(self.dataset.labels)
+        self.loss_logits = tf.placeholder_with_default(input=np.zeros(logits_shape, dtype=np.float32),
+            shape=logits_shape, name="logits_placeholder")
+        self.loss_labels = tf.placeholder_with_default(input=np.zeros(labels_shape, dtype=np.int32),
+            shape=labels_shape, name="labels_placeholder")
+        self.loss_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32), 
+            shape=sizes_shape, name="sizes_placeholder")
+        loss_op = calculate_loss_op(self.loss_logits, self.loss_labels, self.loss_sizes)
+        return loss_op
+    # End of calculate_loss()
 
     def output_layer(self):
         """
@@ -101,9 +117,10 @@ class RNNModel(object):
             logits_series = [
                 tf.nn.xw_plus_b(state, self.out_weights, self.out_bias, name="state_times_out_weights")
                 for state in states_series] #Broadcasted addition
+            self.logits_series = tf.unstack(logits_series, axis=1, name="unstack_logits_series")
         with tf.variable_scope("predictions"):
-            self.predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
-        return logits_series
+            self.predictions_series = [tf.nn.softmax(logits) for logits in self.logits_series]
+        return self.logits_series
     # End of output_layer()
 
     def hidden_layer(self):

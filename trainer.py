@@ -13,6 +13,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from . import constants
+from .layers.performance_layer import *
 
 def train(model):
     """
@@ -53,15 +54,20 @@ def train_epoch(model, epoch_num):
     """
     model.logger.info("Starting epoch: %d" % (epoch_num))
 
-    cross_validation_loss = 0
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
+    # Only the test partition will have been created by this point
+    validation_variables = PerformanceVariables(
+        max_length=model.dataset.max_length, 
+        shapes=[np.shape(model.dataset.test.x[0]), np.shape(model.dataset.test.y[0])],
+        types=[np.float32, np.int32], 
+        pad=model.dataset.token_to_index[constants.END_TOKEN])
     for section in range(model.dataset.num_sections):
         model.dataset.next_iteration()
         train_step(model, epoch_num, current_state)
-        minibatch_loss = validation_step(model, epoch_num, current_state)
-        cross_validation_loss += minibatch_loss
+        minibatch_loss = validation_step(model, epoch_num, current_state, validation_variables)
+    validation_variables.complete()
+    cross_validation_loss = validate_epoch(model, validation_variables, epoch_num)
 
-    cross_validation_loss /= model.dataset.num_sections
     model.logger.info("Finished epoch: %d | loss: %f" % (epoch_num, cross_validation_loss))
     return cross_validation_loss
 # End of train_epoch()
@@ -102,7 +108,7 @@ def train_minibatch(model, batch_num, current_state):
     return current_state
 # End of train_minibatch()
 
-def validation_step(model, epoch_num, current_state):
+def validation_step(model, epoch_num, current_state, variables):
     """
     Performs performance calculations on the dataset's validation partition.
 
@@ -114,24 +120,19 @@ def validation_step(model, epoch_num, current_state):
     Return:
     average_loss (float): The average loss over all minibatches in the validation partition
     """
-    total_validation_loss = 0
     for batch_num in range(model.dataset.valid.num_batches):
         # Debug log outside of function to reduce number of arguments.
         model.logger.debug("Validating minibatch : ", batch_num, " | ", "epoch : ", epoch_num)
-        minibatch_loss, current_state = validate_minibatch(model, batch_num, current_state)
-        total_validation_loss += minibatch_loss
-    average_validation_loss = total_validation_loss / model.dataset.valid.num_batches
-    return average_validation_loss
+        current_state = validate_minibatch(model, batch_num, current_state, variables)
 # End of validation_step()
 
-def validate_minibatch(model, batch_num, current_state):
+def validate_minibatch(model, batch_num, current_state, variables):
     """
     Calculates the performance of the network on one minibatch, logs the performance to tensorflow.
 
     Params:
     model (model.RNNModel): The model to validate
     batch_num (int): The current batch number
-    epoch_num (int): The current epoch
     current_state (np.ndarray): The current hidden state of the model
 
     Return:
@@ -140,14 +141,38 @@ def validate_minibatch(model, batch_num, current_state):
     """
     current_feed_dict = get_feed_dict(model, model.dataset.valid, batch_num, current_state)
 
-    total_loss, current_state, summary = model.session.run(
-        [model.total_loss_op, model.current_state, model.summary_ops],
+    batch_logits, current_state = model.session.run(
+        [model.logits_series, model.current_state],
         feed_dict=current_feed_dict
         )
+    batch_logits = [row.tolist() for row in batch_logits]
+    variables.add_batch(
+        inputs=batch_logits, 
+        labels=model.dataset.valid.y[batch_num].tolist(), 
+        sizes=model.dataset.valid.sizes[batch_num],
+        beginning=model.dataset.valid.beginning[batch_num],
+        ending=model.dataset.valid.ending[batch_num])
 
-    model.summary_writer.add_summary(summary)
-    return total_loss, current_state
+    return current_state
 # End of validate_minibatch()
+
+def validate_epoch(model, variables, epoch_num):
+    x = variables.inputs
+    y = variables.labels
+    s = variables.sizes
+
+    epoch_loss, summary = model.session.run(
+        [model.total_loss_op, model.summary_ops], 
+        feed_dict={
+            model.loss_logits:x,
+            model.loss_labels:y,
+            model.loss_sizes:s
+        })
+
+    model.summary_writer.add_summary(summary, epoch_num)
+    
+    return epoch_loss
+# End of validate_epoch()
 
 def test_step(model):
     """
@@ -207,8 +232,8 @@ def get_feed_dict(model, dataset, batch_num, current_state):
     Return:
     feed_dict (dict): The dictionary holding the necessary information for running tensorflow operations
     """
-    batch = model.dataset.test.get_batch(batch_num)
-    beginning = model.dataset.test.beginning[batch_num]
+    batch = dataset.get_batch(batch_num)
+    beginning = dataset.beginning[batch_num]
     current_state = reset_state(current_state, beginning)
     feed_dict=build_feed_dict(model, batch, current_state)
     return feed_dict

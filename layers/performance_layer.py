@@ -31,11 +31,14 @@ class PerformanceVariables(object):
         self.pad_value = pad
     # End of __init__()
 
-    def batch_padding(self, shape, type):
+    def batch_padding(self, shape, pad_type, alt_pad_value=None):
         """
         Creates a full batch made entirely of padding data.
         """
-        batch = np.full(shape=shape, fill_value=self.pad_value, dtype=type)
+        if alt_pad_value is None:
+            batch = np.full(shape=shape, fill_value=self.pad_value, dtype=pad_type)
+        else:
+            batch = np.full(shape=shape, fill_value=alt_pad_value, dtype=pad_type)
         return batch.tolist()
     # End of batch_padding()
 
@@ -59,7 +62,8 @@ class PerformanceVariables(object):
     
     def extend_batch(self, inputs, labels, sizes):
         if len(inputs) != len(labels) or len(inputs) != len(sizes):
-            raise ValueError("Members of batch must all have the same first dimension (number of rows)")
+            raise ValueError("Members of batch must all have the same first dimension (number of rows) "
+                            "inputs=%s | labels=%s | sizes=%s" % (np.shape(inputs), np.shape(labels), np.shape(sizes)))
         x, y, s = self.copy_batch(inputs, labels, sizes)
         for index in range(len(sizes), 0, -1):
             self.inputs[-1][-index].extend(x[-index])
@@ -78,13 +82,16 @@ class PerformanceVariables(object):
         sizes = [0 for s in range(len(y_pad))]
         while len(self.labels[-1][-1]) < self.max_length: # Doesn't matter if using inputs or labels here
             self.extend_batch(x_pad, y_pad, sizes)
-        self.inputs = [row[:self.max_length] for row in self.inputs]
-        self.labels = [row[:self.max_length] for row in self.labels]
 
     def complete(self):
         self.inputs = self.breakdown(self.inputs)
         self.labels = self.breakdown(self.labels)
         self.sizes = self.breakdown(self.sizes)
+        self.inputs = [row[:self.max_length] for row in self.inputs]
+        self.labels = [row[:self.max_length] for row in self.labels]
+        # self.inputs = np.asarray(self.inputs)
+        # self.labels = np.asarray(self.labels)
+        # self.sizes = np.asarray(self.sizes)
 
     def breakdown(self, batched_values):
         values = list()
@@ -113,7 +120,7 @@ def calculate_accuracy(labels_series, predictions_series):
     return accuracy
 # End of calculate_accuracy()
 
-def calculate_loss(logits_series, labels_series, row_lengths_series):
+def calculate_minibatch_loss(logits_series, labels_series, row_lengths_series):
     """
     Calculates the loss at a given minibatch.
 
@@ -125,11 +132,7 @@ def calculate_loss(logits_series, labels_series, row_lengths_series):
     Return:
     tf.Tensor: The calculated average loss for this minibatch
     """
-    with tf.variable_scope(constants.LOSS_CALC):
-        logits_series = tf.placeholder(dtype=tf.float32, shape=np.shape(logits_series), name="logits_placeholder")
-        labels_series = tf.placeholder(dtype=tf.int32, shape=np.shape(labels_series), name="labels_placeholder")
-        sizes_series = tf.placeholder(dtype=tf.int32, shape=np.shape(row_lengths_series), name="sizes_series")
-
+    with tf.variable_scope(constants.BATCH_LOSS_CALC):
         loss_sum = 0.0
         num_valid_rows = 0.0
         for logits, labels, row_length in zip(logits_series, labels_series, row_lengths_series):
@@ -141,11 +144,38 @@ def calculate_loss(logits_series, labels_series, row_lengths_series):
             row_losses = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels)
             mean_loss = tf.cond(ans, lambda: tf.reduce_mean(row_losses[:row_length]), lambda: 0.0)
             loss_sum += mean_loss
+        batch_loss_op = loss_sum / num_valid_rows # Can't use reduce_mean because there will be 0s there
+    return batch_loss_op
+# End of calculate_minibatch_loss()
+
+def calculate_loss_op(logits_series, labels_series, sizes_series):
+    """
+    Calculates the loss at a given epoch.
+
+    Params:
+    logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
+    labels_series (tf.Tensor): True labels for each input
+    row_lengths_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
+
+    Return:
+    logits_series
+    tf.Tensor: The calculated average loss for this minibatch
+    """
+    with tf.variable_scope(constants.LOSS_CALC):
+        logits_series = tf.unstack(logits_series)
+        labels_series = tf.unstack(labels_series)
+        sizes_series = tf.unstack(sizes_series)
+        loss_sum = 0.0
+        num_valid_rows = 0.0
+        for logits, labels, row_length in zip(logits_series, labels_series, sizes_series):
+            # row_length = tf.to_int32(row_length, name="CastRowLengthToInt")
+            ans = tf.greater(row_length, 0)
+            num_valid_rows = tf.cond(ans, lambda: num_valid_rows + 1, lambda: num_valid_rows + 0)
+            logits = logits[:row_length, :]
+            labels = tf.to_int32(labels[:row_length], "CastLabelsToInt")
+            row_losses = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels)
+            mean_loss = tf.cond(ans, lambda: tf.reduce_mean(row_losses[:row_length]), lambda: 0.0)
+            loss_sum += mean_loss
         total_loss_op = loss_sum / num_valid_rows # Can't use reduce_mean because there will be 0s there
     return total_loss_op
 # End of calculate_loss()
-
-def append_minibatch(all_inputs, all_outputs, new_inputs, new_outputs):
-    """
-    Builds a large matrix from the inputs and outputs.
-    """
