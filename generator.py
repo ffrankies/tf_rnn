@@ -90,7 +90,7 @@ def predict(model, sentence, current_state):
         })
 
     position = (len(sentence)-1) % model.settings.train.truncate
-    return predictions[position][0], final_hidden_state
+    return predictions[0][position], final_hidden_state
 # End of predict()
 
 def sentence_to_batch_array(train_settings, sentence):
