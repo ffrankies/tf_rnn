@@ -88,7 +88,6 @@ def predict(model, sentence, current_state):
             model.batch_sizes:sizes,
             model.hidden_state_placeholder:current_state
         })
-    print(np.shape(predictions))
 
     position = (len(sentence)-1) % model.settings.train.truncate
     return predictions[0][position], final_hidden_state
