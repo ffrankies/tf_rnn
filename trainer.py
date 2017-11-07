@@ -3,7 +3,7 @@ Tensorflow implementation of a training method to train a given model.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 31 October, 2017
+Date: 7 November, 2017
 """
 
 import numpy as np
@@ -33,7 +33,14 @@ def train(model):
         loss_list.append(average_loss)
         # End of epoch training
 
-    test_loss = test_step(model)
+    validation_variables = PerformanceVariables(
+        max_length=model.dataset.max_length,
+        shapes=[np.shape(model.dataset.test.x[0]), np.shape(model.dataset.test.y[0])],
+        types=[np.float32, np.int32],
+        pad=model.dataset.token_to_index[constants.END_TOKEN])
+    test_step(model, validation_variables)
+    validation_variables.complete()
+    test_loss = test_final(model, validation_variables)
 
     model.logger.info("Finished training the model. Final validation loss: %f. Final test loss: %f" %
             (average_loss, test_loss))
@@ -57,14 +64,14 @@ def train_epoch(model, epoch_num):
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
     # Only the test partition will have been created by this point
     validation_variables = PerformanceVariables(
-        max_length=model.dataset.max_length, 
+        max_length=model.dataset.max_length,
         shapes=[np.shape(model.dataset.test.x[0]), np.shape(model.dataset.test.y[0])],
-        types=[np.float32, np.int32], 
+        types=[np.float32, np.int32],
         pad=model.dataset.token_to_index[constants.END_TOKEN])
     for section in range(model.dataset.num_sections):
         model.dataset.next_iteration()
         train_step(model, epoch_num, current_state)
-        minibatch_loss = validation_step(model, epoch_num, current_state, validation_variables)
+        validation_step(model, epoch_num, current_state, validation_variables)
     validation_variables.complete()
     cross_validation_loss = validate_epoch(model, validation_variables, epoch_num)
 
@@ -147,8 +154,8 @@ def validate_minibatch(model, batch_num, current_state, variables):
         )
     batch_logits = [row.tolist() for row in batch_logits]
     variables.add_batch(
-        inputs=batch_logits, 
-        labels=model.dataset.valid.y[batch_num].tolist(), 
+        inputs=batch_logits,
+        labels=model.dataset.valid.y[batch_num].tolist(),
         sizes=model.dataset.valid.sizes[batch_num],
         beginning=model.dataset.valid.beginning[batch_num],
         ending=model.dataset.valid.ending[batch_num])
@@ -162,25 +169,26 @@ def validate_epoch(model, variables, epoch_num):
     s = variables.sizes
 
     epoch_loss, summary = model.session.run(
-        [model.total_loss_op, model.summary_ops], 
+        [model.validation_loss_op, model.summary_ops],
         feed_dict={
-            model.loss_logits:x,
-            model.loss_labels:y,
-            model.loss_sizes:s
+            model.valid_logits:x,
+            model.valid_labels:y,
+            model.valid_sizes:s
         })
 
     model.summary_writer.add_summary(summary, epoch_num)
-    
+
     return epoch_loss
 # End of validate_epoch()
 
-def test_step(model):
+def test_step(model, variables):
     """
     Finds the performance of the trained model on the testing partition of the dataset. Used as the definitive
     performance test for the model.
 
     Params:
     model (model.RNNModel): The trained model
+    variables (layers.performance_layer.PerformanceVariables): The object that builds up the minibatch data
 
     Return:
     averate_test_loss (float): The average loss on the testing partition
@@ -190,13 +198,10 @@ def test_step(model):
     for batch_num in range(model.dataset.test.num_batches):
         # Debug log outside of function to reduce number of arguments.
         model.logger.debug("Testing minibatch : ", batch_num)
-        minibatch_loss, current_state = test_minibatch(model, batch_num, current_state)
-        total_test_loss += minibatch_loss
-    average_test_loss = total_test_loss / model.dataset.test.num_batches
-    return average_test_loss
+        current_state = test_minibatch(model, batch_num, current_state, variables)
 # End of test_step()
 
-def test_minibatch(model, batch_num, current_state):
+def test_minibatch(model, batch_num, current_state, variables):
     """
     Finds the average loss of a given minibatch for a trained network.
 
@@ -204,20 +209,44 @@ def test_minibatch(model, batch_num, current_state):
     model (model.RNNModel): The model to test
     batch_num (int): The current batch number
     current_state (np.ndarray): The current hidden state of the model
+    variables (layers.performance_layer.PerformanceVariables): The object that builds up the minibatch data
 
     Return:
     minibatch_loss (float): The loss for this minibatch
     updated_state (np.ndarray): The updated hidden state of the model
     """
-    current_feed_dict = get_feed_dict(model, model.dataset.test, batch_num, current_state)
+    current_feed_dict = get_feed_dict(model, model.dataset.valid, batch_num, current_state)
 
-    total_loss, current_state = model.session.run(
-        [model.total_loss_op, model.current_state],
+    batch_logits, current_state = model.session.run(
+        [model.logits_series, model.current_state],
         feed_dict=current_feed_dict
         )
+    batch_logits = [row.tolist() for row in batch_logits]
+    variables.add_batch(
+        inputs=batch_logits,
+        labels=model.dataset.valid.y[batch_num].tolist(),
+        sizes=model.dataset.valid.sizes[batch_num],
+        beginning=model.dataset.valid.beginning[batch_num],
+        ending=model.dataset.valid.ending[batch_num])
 
-    return total_loss, current_state
+    return current_state
 # End of test_minibatch()
+
+def test_final(model, variables):
+    x = variables.inputs
+    y = variables.labels
+    s = variables.sizes
+
+    epoch_loss = model.session.run(
+        [model.test_loss_op],
+        feed_dict={
+            model.test_logits:x,
+            model.test_labels:y,
+            model.test_sizes:s
+        })
+
+    return epoch_loss
+# End of test_final()
 
 def get_feed_dict(model, dataset, batch_num, current_state):
     """
@@ -278,7 +307,7 @@ def build_feed_dict(model, batch, current_state):
 
 def plot(model, loss_list):
     """
-    Plots a graph of epochs against losses. Saves the plot to file in <model_path>/graph.png.
+    Plots a grminibatch_loss, aph of epochs against losses. Saves the plot to file in <model_path>/graph.png.
 
     :type model: RNNModel()
     :param model: the model whose loss graph will be plotted.

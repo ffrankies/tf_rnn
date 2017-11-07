@@ -1,7 +1,7 @@
 """
 An object for storing a dataset for training.
 
-Date: 26 October 2017
+Date: 7 November 2017
 """
 import random
 import math
@@ -23,7 +23,7 @@ class DataPartition(object):
     num_batches (int): The number of batches in this partition
     """
 
-    def __init__(self, inputs, labels, sizes):
+    def __init__(self, inputs, labels, sizes, num_sequences=None):
         """
         Creates a DataPartition object.
 
@@ -38,6 +38,7 @@ class DataPartition(object):
         self.beginning = [size_of_batch[0] for size_of_batch in sizes]
         self.ending = [size_of_batch[-1] for size_of_batch in sizes]
         self.num_batches = len(self.sizes)
+        self.num_sequences = num_sequences
     # End of __init__()
 
     def get_batch(self, batch_num):
@@ -198,7 +199,7 @@ class Dataset(object):
         test_cutoff = math.floor(len(inputs) * 0.1)
         test_inputs = inputs[:test_cutoff]
         test_labels = labels[:test_cutoff]
-        test = self.make_partition(test_inputs, test_labels)
+        test = self.make_partition(test_inputs, test_labels, len(test_labels))
         return inputs[test_cutoff:], labels[test_cutoff:], test
     # End of extract_test_partition()
 
@@ -231,7 +232,7 @@ class Dataset(object):
         self.extract_validation_partition()
     # End of next_iteration()
 
-    def make_partition(self, inputs, labels):
+    def make_partition(self, inputs, labels, num_sequences=None):
         """
         Creates a partition out of the given portion of the dataset. The partition will contain data broken into
         batches.
@@ -245,6 +246,6 @@ class Dataset(object):
         """
         x, y, sizes = batchmaker.make_batches(inputs, labels, self.settings.batch_size, self.settings.truncate,
                 self.token_to_index[constants.END_TOKEN])
-        return DataPartition(x, y, sizes)
+        return DataPartition(x, y, sizes, num_sequences)
     # End of make_partition()
 # End of Batches()

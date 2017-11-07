@@ -3,7 +3,7 @@ An RNN model implementation in tensorflow.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 31 October, 2017
+Date: 7 November, 2017
 """
 
 import numpy as np
@@ -49,6 +49,8 @@ class RNNModel(object):
         self.graph = tf.Graph()
         with self.graph.as_default():
             self.training()
+            self.validation_loss_op = self.validation_loss()
+            self.test_loss_op = self.test_loss()
             self.session = tf.Session(graph=self.graph)
             self.init_saver()
             self.session.run(tf.global_variables_initializer())
@@ -77,21 +79,34 @@ class RNNModel(object):
             labels_series = tf.unstack(self.batch_y_placeholder, name="unstack_labels_series")
             self.accuracy = calculate_accuracy(labels_series, self.predictions_series)
             minibatch_loss_op = calculate_minibatch_loss(logits_series, labels_series, row_lengths_series)
-            self.total_loss_op = self.calculate_loss()
         return minibatch_loss_op
     # End of performance_evaluation()
 
-    def calculate_loss(self):
+    def validation_loss(self):
         logits_shape = [len(self.dataset.inputs), self.dataset.max_length, self.dataset.vocabulary_size]
         labels_shape = [len(self.dataset.labels), self.dataset.max_length]
         sizes_shape = len(self.dataset.labels)
-        self.loss_logits = tf.placeholder_with_default(input=np.zeros(logits_shape, dtype=np.float32),
+        self.valid_logits = tf.placeholder_with_default(input=np.zeros(logits_shape, dtype=np.float32),
             shape=logits_shape, name="logits_placeholder")
-        self.loss_labels = tf.placeholder_with_default(input=np.zeros(labels_shape, dtype=np.int32),
+        self.valid_labels = tf.placeholder_with_default(input=np.zeros(labels_shape, dtype=np.int32),
             shape=labels_shape, name="labels_placeholder")
-        self.loss_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32), 
+        self.valid_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32),
             shape=sizes_shape, name="sizes_placeholder")
-        loss_op = calculate_loss_op(self.loss_logits, self.loss_labels, self.loss_sizes)
+        loss_op = calculate_loss_op(self.valid_logits, self.valid_labels, self.valid_sizes)
+        return loss_op
+    # End of calculate_loss()
+
+    def test_loss(self):
+        logits_shape = [self.dataset.test.num_sequences, self.dataset.max_length, self.dataset.vocabulary_size]
+        labels_shape = logits_shape[:2]
+        sizes_shape = logits_shape[0]
+        self.test_logits = tf.placeholder_with_default(input=np.zeros(logits_shape, dtype=np.float32),
+            shape=logits_shape, name="logits_placeholder")
+        self.test_labels = tf.placeholder_with_default(input=np.zeros(labels_shape, dtype=np.int32),
+            shape=labels_shape, name="labels_placeholder")
+        self.test_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32),
+            shape=sizes_shape, name="sizes_placeholder")
+        loss_op = calculate_loss_op(self.test_logits, self.test_labels, self.test_sizes)
         return loss_op
     # End of calculate_loss()
 
@@ -168,6 +183,6 @@ class RNNModel(object):
         """
         self.run_dir = saver.load_meta(self.model_path)
         self.summary_writer, self.summary_ops = tensorboard.init_tensorboard(self)
-        self.variables = ray.experimental.TensorFlowVariables(self.total_loss_op, self.session)
+        self.variables = ray.experimental.TensorFlowVariables(self.train_step_fun, self.session)
     # End of init_saver()
 # End of RNNModel()
