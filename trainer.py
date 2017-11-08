@@ -25,7 +25,6 @@ def train(model):
     model (model.RNNModel): The model to train
     """
     model.logger.info("Started training the model.")
-    # writer = tf.summary.FileWriter(model.model_path + "tensorboard", graph=model.session.graph)
     loss_list = []
 
     for epoch_num in range(1, model.settings.train.epochs + 1):
@@ -33,13 +32,7 @@ def train(model):
         loss_list.append(average_loss)
         # End of epoch training
 
-    validation_variables = PerformanceVariables(
-        max_length=model.dataset.max_length,
-        shapes=[np.shape(model.dataset.test.x[0]), np.shape(model.dataset.test.y[0])],
-        types=[np.float32, np.int32],
-        pad=model.dataset.token_to_index[constants.END_TOKEN])
-    test_step(model, validation_variables)
-    validation_variables.complete()
+    validation_variables = get_test_performance_data(model)
     test_loss = test_final(model, validation_variables)
 
     model.logger.info("Finished training the model. Final validation loss: %f. Final test loss: %f" %
@@ -62,12 +55,7 @@ def train_epoch(model, epoch_num):
     model.logger.info("Starting epoch: %d" % (epoch_num))
 
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
-    # Only the test partition will have been created by this point
-    validation_variables = PerformanceVariables(
-        max_length=model.dataset.max_length,
-        shapes=[np.shape(model.dataset.test.x[0]), np.shape(model.dataset.test.y[0])],
-        types=[np.float32, np.int32],
-        pad=model.dataset.token_to_index[constants.END_TOKEN])
+    validation_variables = create_performance_variables(model.dataset, "loss")
     for section in range(model.dataset.num_sections):
         model.dataset.next_iteration()
         train_step(model, epoch_num, current_state)
@@ -78,6 +66,30 @@ def train_epoch(model, epoch_num):
     model.logger.info("Finished epoch: %d | loss: %f" % (epoch_num, cross_validation_loss))
     return cross_validation_loss
 # End of train_epoch()
+
+def create_performance_variables(dataset, mode):
+    """
+    Sets up the PerformanceVariables using a given dataset.
+
+    Params:
+    dataset (dataset.Dataset): The dataset from which the PerformanceVariables object will be built
+    mode (string): Can be either "loss" or "accuracy" - denotes whether the object will store data needed to calculate
+                   loss or accuracy
+
+    Return:
+    variables (layers.performance_layer.PerformanceVariables): The variables needed to calculate loss or accuracy
+    """
+    if mode not in ['loss', 'accuracy']:
+        raise ValueError('The mode has to be one of "loss" and "accuracy".')
+    max_length = dataset.max_length
+    shapes = [np.shape(dataset.test.x[0]), np.shape(dataset.test.y[0])]
+    if mode == 'loss':
+        types = [np.float32, np.int32]
+    else:
+        types = [np.int32, np.int32]
+    pad = dataset.token_to_index[constants.END_TOKEN]
+    return PerformanceVariables(max_length, shapes, types, pad)
+# End of create_performance_variables()
 
 def train_step(model, epoch_num, current_state):
     """
@@ -181,24 +193,27 @@ def validate_epoch(model, variables, epoch_num):
     return epoch_loss
 # End of validate_epoch()
 
-def test_step(model, variables):
+def get_test_performance_data(model):
     """
     Finds the performance of the trained model on the testing partition of the dataset. Used as the definitive
     performance test for the model.
 
     Params:
     model (model.RNNModel): The trained model
-    variables (layers.performance_layer.PerformanceVariables): The object that builds up the minibatch data
 
     Return:
-    averate_test_loss (float): The average loss on the testing partition
+    variables (layers.performance_layer.PerformanceVariables): Container object for the data needed to perform a loss
+                                                               calculation on the test dataset partition
     """
+    validation_variables = create_performance_variables(model.dataset, "loss")
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
     total_test_loss = 0
     for batch_num in range(model.dataset.test.num_batches):
         # Debug log outside of function to reduce number of arguments.
         model.logger.debug("Testing minibatch : ", batch_num)
-        current_state = test_minibatch(model, batch_num, current_state, variables)
+        current_state = test_minibatch(model, batch_num, current_state, validation_variables)
+    validation_variables.complete()
+    return validation_variables
 # End of test_step()
 
 def test_minibatch(model, batch_num, current_state, variables):
