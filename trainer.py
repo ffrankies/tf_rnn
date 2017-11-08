@@ -215,7 +215,7 @@ def test_minibatch(model, batch_num, current_state, variables):
     minibatch_loss (float): The loss for this minibatch
     updated_state (np.ndarray): The updated hidden state of the model
     """
-    current_feed_dict = get_feed_dict(model, model.dataset.valid, batch_num, current_state)
+    current_feed_dict = get_feed_dict(model, model.dataset.test, batch_num, current_state)
 
     batch_logits, current_state = model.session.run(
         [model.logits_series, model.current_state],
@@ -224,10 +224,10 @@ def test_minibatch(model, batch_num, current_state, variables):
     batch_logits = [row.tolist() for row in batch_logits]
     variables.add_batch(
         inputs=batch_logits,
-        labels=model.dataset.valid.y[batch_num].tolist(),
-        sizes=model.dataset.valid.sizes[batch_num],
-        beginning=model.dataset.valid.beginning[batch_num],
-        ending=model.dataset.valid.ending[batch_num])
+        labels=model.dataset.test.y[batch_num].tolist(),
+        sizes=model.dataset.test.sizes[batch_num],
+        beginning=model.dataset.test.beginning[batch_num],
+        ending=model.dataset.test.ending[batch_num])
 
     return current_state
 # End of test_minibatch()
@@ -245,7 +245,7 @@ def test_final(model, variables):
             model.test_sizes:s
         })
 
-    return epoch_loss
+    return epoch_loss[0]
 # End of test_final()
 
 def get_feed_dict(model, dataset, batch_num, current_state):
