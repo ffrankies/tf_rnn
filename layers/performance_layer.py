@@ -203,8 +203,21 @@ class PerformanceVariables(object):
 # End of PerformanceVariables()
 
 def performance_op(logits_series, labels_series, sizes_series):
+    """
+    Calculates the loss at a given epoch.
+
+    Params:
+    logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
+    labels_series (tf.Tensor): True labels for each input
+    sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
+
+    Return:
+    tf.Tensor: The calculated average loss for the given logits
+    """
+    logits_series, labels_series, sizes_series = unstack_variables(logits_series, labels_series, sizes_series, True)
     loss_op = calculate_loss_op(logits_series, labels_series, sizes_series)
-    return loss_op
+    accuracy_op = calculate_accuracy(logits_series, labels_series, sizes_series)
+    return loss_op, accuracy_op
 # End of performance_op()
 
 def calculate_loss_op(logits_series, labels_series, sizes_series):
@@ -217,16 +230,35 @@ def calculate_loss_op(logits_series, labels_series, sizes_series):
     sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
 
     Return:
-    logits_series
-    tf.Tensor: The calculated average loss for this minibatch
+    tf.Tensor: The calculated average loss for the given logits
     """
     with tf.variable_scope(constants.LOSS_CALC):
-        logits_series = tf.unstack(logits_series)
-        labels_series = tf.unstack(labels_series)
-        sizes_series = tf.unstack(sizes_series)
         total_loss_op = calculate_minibatch_loss(logits_series, labels_series, sizes_series, constants.LOSS_CALC)
     return total_loss_op
 # End of calculate_loss()
+
+def unstack_variables(logits_series, labels_series, sizes_series, horizontal=True):
+    """
+    Unstacks the given logits, labels and sizes along the given orientation.
+
+    Params:
+    logits_series (tf.placeholder): The logits to be unstacked
+    labels_series (tf.placeholder): The labels to be unstacked
+    sizes_series (tf.placeholder): The row lengths to be unstacked
+    horizontal (boolean): If true, unstack along axis 0, otherwise along axis 1
+    """
+    if horizontal is True:
+        axis = 0
+        scope = "horizontal_unstack"
+    else:
+        axis = 1
+        scope = "vertical_unstack"
+    with tf.variable_scope(scope):
+        unstacked_logits = tf.unstack(logits_series, axis=axis, name="unstack_logits")
+        unstacked_labels = tf.unstack(labels_series, axis=axis, name="unstack_labels")
+        unstacked_sizes = tf.unstack(sizes_series, axis=axis, name="unstack_labels")
+    return unstacked_logits, unstacked_labels, unstacked_sizes
+# End of unstack_variables()
 
 def calculate_minibatch_loss(logits_series, labels_series, row_lengths_series, scope=constants.BATCH_LOSS_CALC):
     """
@@ -269,10 +301,17 @@ def calculate_accuracy(logits_series, labels_series, sizes_series):
     tf.Tensor: The average accuracy for each row in the minibatch
     """
     with tf.variable_scope(constants.ACCURACY):
-        accuracy = []
-        for predictions, labels in zip(predictions_series, labels_series):
-            labels = tf.to_int64(labels, "CastLabelsToInt")
-            predictions = tf.argmax(predictions, axis=1)
-            accuracy.append(tf.reduce_mean(tf.cast(tf.equal(predictions, labels), tf.float32)))
-    return accuracy
+        accuracy_sum = 0.0
+        for logits, labels, row_length in zip(logits_series, labels_series, sizes_series):
+            logits = logits[:row_length, :]
+            labels = labels[:row_length]
+            predictions = tf.nn.softmax(logits, dim=-1, name="logits_softmax")
+            predictions = tf.argmax(predictions, axis=-1, name="logits_argmax")
+            predictions = tf.to_int32(predictions, "CastPredictionsToInt32")
+            correct_predictions = tf.equal(predictions, labels)
+            correct_predictions = tf.cast(correct_predictions, tf.int32)
+            row_accuracy = tf.reduce_mean(correct_predictions)
+            accuracy_sum += row_accuracy
+        average_accuracy = accuracy_sum / len(row_lengths_series)
+    return average_accuracy
 # End of calculate_accuracy()

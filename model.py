@@ -3,7 +3,7 @@ An RNN model implementation in tensorflow.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 7 November, 2017
+Date: 9 November, 2017
 """
 
 import numpy as np
@@ -49,8 +49,8 @@ class RNNModel(object):
         self.graph = tf.Graph()
         with self.graph.as_default():
             self.training()
-            self.validation_loss_op = self.validation_loss()
-            self.test_loss_op = self.test_loss()
+            self.validation_loss_op, self.validation_accuracy_op = self.validation_loss()
+            self.test_loss_op, self.test_accuracy_op = self.test_loss()
             self.session = tf.Session(graph=self.graph)
             self.init_saver()
             self.session.run(tf.global_variables_initializer())
@@ -60,7 +60,7 @@ class RNNModel(object):
         """
         Creates tensorflow variables and operations needed for training.
         """
-        total_loss = self.performance_evaluation()
+        total_loss = self.loss_layer()
         with tf.variable_scope(constants.TRAINING):
             self.learning_rate = tf.Variable(
                 initial_value=self.settings.train.learn_rate,
@@ -69,7 +69,7 @@ class RNNModel(object):
             self.train_step_fun = tf.train.AdagradOptimizer(self.learning_rate).minimize(total_loss)
     # End of training()
 
-    def performance_evaluation(self):
+    def loss_layer(self):
         """
         Evaluates the performance of the network on a given minibatch.
         Creates the following instance variables:
@@ -104,14 +104,15 @@ class RNNModel(object):
         logits_shape = [len(self.dataset.inputs), self.dataset.max_length, self.dataset.vocabulary_size]
         labels_shape = [len(self.dataset.labels), self.dataset.max_length]
         sizes_shape = len(self.dataset.labels)
-        self.valid_logits = tf.placeholder_with_default(input=np.zeros(logits_shape, dtype=np.float32),
-            shape=logits_shape, name="logits_placeholder")
-        self.valid_labels = tf.placeholder_with_default(input=np.zeros(labels_shape, dtype=np.int32),
-            shape=labels_shape, name="labels_placeholder")
-        self.valid_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32),
-            shape=sizes_shape, name="sizes_placeholder")
-        loss_op = calculate_loss_op(self.valid_logits, self.valid_labels, self.valid_sizes)
-        return loss_op
+        with tf.variable_scope(constants.TRAINING_PERFORMANCE):
+            self.valid_logits = tf.placeholder_with_default(input=np.zeros(logits_shape, dtype=np.float32),
+                shape=logits_shape, name="logits_placeholder")
+            self.valid_labels = tf.placeholder_with_default(input=np.zeros(labels_shape, dtype=np.int32),
+                shape=labels_shape, name="labels_placeholder")
+            self.valid_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32),
+                shape=sizes_shape, name="sizes_placeholder")
+            loss_op, accuracy_op = performance_op(self.valid_logits, self.valid_labels, self.valid_sizes)
+        return loss_op, accuracy_op
     # End of validation_loss()
 
     def test_loss(self):
@@ -129,14 +130,15 @@ class RNNModel(object):
         logits_shape = [self.dataset.test.num_sequences, self.dataset.max_length, self.dataset.vocabulary_size]
         labels_shape = logits_shape[:2]
         sizes_shape = logits_shape[0]
-        self.test_logits = tf.placeholder_with_default(input=np.zeros(logits_shape, dtype=np.float32),
-            shape=logits_shape, name="logits_placeholder")
-        self.test_labels = tf.placeholder_with_default(input=np.zeros(labels_shape, dtype=np.int32),
-            shape=labels_shape, name="labels_placeholder")
-        self.test_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32),
-            shape=sizes_shape, name="sizes_placeholder")
-        loss_op = calculate_loss_op(self.test_logits, self.test_labels, self.test_sizes)
-        return loss_op
+        with tf.variable_scope(constants.TEST_PERFORMANCE):
+            self.test_logits = tf.placeholder_with_default(input=np.zeros(logits_shape, dtype=np.float32),
+                shape=logits_shape, name="logits_placeholder")
+            self.test_labels = tf.placeholder_with_default(input=np.zeros(labels_shape, dtype=np.int32),
+                shape=labels_shape, name="labels_placeholder")
+            self.test_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32),
+                shape=sizes_shape, name="sizes_placeholder")
+            loss_op, accuracy_op = performance_op(self.test_logits, self.test_labels, self.test_sizes)
+        return loss_op, accuracy_op
     # End of test_loss()
 
     def output_layer(self):

@@ -1,7 +1,7 @@
 """
 Utility class for creating tensorboard summaries.
 
-10 September, 2017
+9 November, 2017
 """
 import tensorflow as tf
 from . import constants
@@ -18,7 +18,8 @@ def init_tensorboard(model):
     """
     tensorboard_dir = model.model_path + constants.TENSORBOARD + model.run_dir
     with tf.variable_scope("summaries"):
-        tf.summary.scalar("total_loss", model.validation_loss_op)
+        tf.summary.scalar("training_loss", model.validation_loss_op)
+        tf.summary.scalar("training_accuracy", model.validation_accuracy_op)
         # summarize_variable(model.out_weights, "output_weights")
         # summarize_variable(model.out_bias, "output_bias")
         # summarize_variable(model.accuracy, "output_accuracy")
