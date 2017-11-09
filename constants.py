@@ -3,7 +3,7 @@ Contains constants for use within the project.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 21 October, 2017
+Date: 8 November, 2017
 """
 
 import time
@@ -39,11 +39,12 @@ RAW_DATA_DIR = "raw_data/"
 INPUT = "input_layer"
 HIDDEN = "hidden_layers"
 OUTPUT = "output_layer"
+LOSS_LAYER = "loss_layer"
+TRAINING = "training_layer"
 PERFORMANCE = "performance_evaluation"
 BATCH_LOSS_CALC = "minibatch_loss_calculation"
 LOSS_CALC = "loss_calculation"
 ACCURACY = "accuracy_calculation"
-TRAINING = "network_training"
 
 #########################################
 # TENSORBOARD SUMMARY NAMES

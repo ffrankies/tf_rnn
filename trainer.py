@@ -3,7 +3,7 @@ Tensorflow implementation of a training method to train a given model.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 7 November, 2017
+Date: 9 November, 2017
 """
 
 import numpy as np
@@ -27,13 +27,12 @@ def train(model):
     model.logger.info("Started training the model.")
     loss_list = []
 
-    for epoch_num in range(1, model.settings.train.epochs + 1):
+    for epoch_num in range(model.settings.train.epochs + 1):
         average_loss = train_epoch(model, epoch_num)
         loss_list.append(average_loss)
         # End of epoch training
 
-    validation_variables = get_test_performance_data(model)
-    test_loss = test_final(model, validation_variables)
+    test_loss = performance_eval(model)
 
     model.logger.info("Finished training the model. Final validation loss: %f. Final test loss: %f" %
             (average_loss, test_loss))
@@ -50,7 +49,6 @@ def train_epoch(model, epoch_num):
 
     Return:
     average_loss (float): The average incurred loss
-    latest_state (np.ndarray): The latest state of the hidden layer
     """
     model.logger.info("Starting epoch: %d" % (epoch_num))
 
@@ -58,10 +56,10 @@ def train_epoch(model, epoch_num):
     validation_variables = create_performance_variables(model.dataset, "loss")
     for section in range(model.dataset.num_sections):
         model.dataset.next_iteration()
-        train_step(model, epoch_num, current_state)
+        if epoch_num != 0: train_step(model, epoch_num, current_state)
         validation_step(model, epoch_num, current_state, validation_variables)
     validation_variables.complete()
-    cross_validation_loss = validate_epoch(model, validation_variables, epoch_num)
+    cross_validation_loss = intermediate_performance(model, validation_variables, epoch_num)
 
     model.logger.info("Finished epoch: %d | loss: %f" % (epoch_num, cross_validation_loss))
     return cross_validation_loss
@@ -142,10 +140,10 @@ def validation_step(model, epoch_num, current_state, variables):
     for batch_num in range(model.dataset.valid.num_batches):
         # Debug log outside of function to reduce number of arguments.
         model.logger.debug("Validating minibatch : ", batch_num, " | ", "epoch : ", epoch_num)
-        current_state = validate_minibatch(model, batch_num, current_state, variables)
+        current_state = validate_minibatch(model, model.dataset.valid, batch_num, current_state, variables)
 # End of validation_step()
 
-def validate_minibatch(model, batch_num, current_state, variables):
+def validate_minibatch(model, dataset_partition, batch_num, current_state, variables):
     """
     Calculates the performance of the network on one minibatch, logs the performance to tensorflow.
 
@@ -158,24 +156,51 @@ def validate_minibatch(model, batch_num, current_state, variables):
     minibatch_loss (float): The average loss over this minibatch
     updated_hidden_state (np.ndarray): The updated state of the hidden layer after validating
     """
-    current_feed_dict = get_feed_dict(model, model.dataset.valid, batch_num, current_state)
+    current_feed_dict = get_feed_dict(model, dataset_partition, batch_num, current_state)
 
     batch_logits, current_state = model.session.run(
         [model.logits_series, model.current_state],
         feed_dict=current_feed_dict
         )
     batch_logits = [row.tolist() for row in batch_logits]
-    variables.add_batch(
-        inputs=batch_logits,
-        labels=model.dataset.valid.y[batch_num].tolist(),
-        sizes=model.dataset.valid.sizes[batch_num],
-        beginning=model.dataset.valid.beginning[batch_num],
-        ending=model.dataset.valid.ending[batch_num])
+    add_performance_batch(variables, dataset_partition, batch_num, batch_logits)
 
     return current_state
 # End of validate_minibatch()
 
-def validate_epoch(model, variables, epoch_num):
+def add_performance_batch(variables, dataset_partition, batch_num, inputs):
+    """
+    Adds a batch to the specified PerformanceVariables object.
+    Note: The PerformanceVariables container contains calculated inputs, but the rest of the data is obtained from
+    the dataset.
+
+    Params:
+    variables (layers.performance_layer.PerformanceVariables): The container object to which to add the new batch
+    dataset_partition (dataset.DatasetPartition): The dataset partition containing the remainder of the batch data
+    batch_num (int): The index of the batch (within the dataset partition) that is being added to the container
+    inputs (np.ndarray): The inputs to be added to the container
+    """
+    variables.add_batch(
+        inputs=inputs,
+        labels=dataset_partition.y[batch_num].tolist(),
+        sizes=dataset_partition.sizes[batch_num],
+        beginning=dataset_partition.beginning[batch_num],
+        ending=dataset_partition.ending[batch_num])
+# End of add_performance_batch()
+
+def intermediate_performance(model, variables, epoch_num):
+    """
+    Calculates the network's performance at the end of a particular epoch. Writes performance data to the
+    summary.
+
+    Params:
+    model (model.RNNModel): The RNN model containing the operations and placeholders for the performance calculations
+    variables (layers.performance_layer.PerformanceVariables): The variables needed for the performance calculations
+    epoch_num (int): The epoch number for which the calculation is performed
+
+    Return:
+    average_loss (float): The average loss incurred for this epoch
+    """
     x = variables.inputs
     y = variables.labels
     s = variables.sizes
@@ -211,43 +236,22 @@ def get_test_performance_data(model):
     for batch_num in range(model.dataset.test.num_batches):
         # Debug log outside of function to reduce number of arguments.
         model.logger.debug("Testing minibatch : ", batch_num)
-        current_state = test_minibatch(model, batch_num, current_state, validation_variables)
+        current_state = validate_minibatch(model, model.dataset.test, batch_num, current_state, validation_variables)
     validation_variables.complete()
     return validation_variables
 # End of test_step()
 
-def test_minibatch(model, batch_num, current_state, variables):
+def performance_eval(model):
     """
-    Finds the average loss of a given minibatch for a trained network.
+    Performs a final performance evaluation on the test partition of the dataset.
 
     Params:
-    model (model.RNNModel): The model to test
-    batch_num (int): The current batch number
-    current_state (np.ndarray): The current hidden state of the model
-    variables (layers.performance_layer.PerformanceVariables): The object that builds up the minibatch data
+    model (model.RNNModel): The RNN model containing the session and tensorflow variable placeholders
 
     Return:
-    minibatch_loss (float): The loss for this minibatch
-    updated_state (np.ndarray): The updated hidden state of the model
+    loss (float): The calculated loss for the test partition of the dataset
     """
-    current_feed_dict = get_feed_dict(model, model.dataset.test, batch_num, current_state)
-
-    batch_logits, current_state = model.session.run(
-        [model.logits_series, model.current_state],
-        feed_dict=current_feed_dict
-        )
-    batch_logits = [row.tolist() for row in batch_logits]
-    variables.add_batch(
-        inputs=batch_logits,
-        labels=model.dataset.test.y[batch_num].tolist(),
-        sizes=model.dataset.test.sizes[batch_num],
-        beginning=model.dataset.test.beginning[batch_num],
-        ending=model.dataset.test.ending[batch_num])
-
-    return current_state
-# End of test_minibatch()
-
-def test_final(model, variables):
+    variables = get_test_performance_data(model)
     x = variables.inputs
     y = variables.labels
     s = variables.sizes

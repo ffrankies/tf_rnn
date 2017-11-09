@@ -20,6 +20,7 @@ class PerformanceVariables(object):
     - labels (list): The aggregated labels from all minibatches
     - sizes (list): The size of each sequence in the labels
     - max_length (int): The length of the longest sequence in the labels
+    - current_batch_size (int): The number of sequences in last appended minibatch that are not made of padding
     - input_shape (list/tuple): The shape of the input minibatches (used for padding)
     - label_shape (list/tuple): The shape of the label minibatches (used for padding)
     - input_type (type): The type of data stored in the inputs
@@ -76,7 +77,12 @@ class PerformanceVariables(object):
         Appends a batch that marks the beginning of a sequence to the variables data.
 
         Creates the following instance variables:
-        current_batch_size (int): The number of sequences in this minibatch that are not made of padding
+        - current_batch_size (int): The number of sequences in this minibatch that are not made of padding
+
+        Modifies the following instance variables:
+        - inputs
+        - labels
+        - sizes
 
         Params:
         inputs (list): The inputs for this minibatch
@@ -94,6 +100,10 @@ class PerformanceVariables(object):
     def extend_batch(self, inputs, labels, sizes):
         """
         Extends the variables data for the most recently appended sequences with the given minibatch.
+        Modifies the following instance variables:
+        - inputs
+        - labels
+        - sizes
 
         Params:
         inputs (list): The inputs for this minibatch
@@ -163,6 +173,10 @@ class PerformanceVariables(object):
     def complete(self):
         """
         Normalizes the data by reducing its dimensions to 2 (number of sequences, maximum sequence length).
+        Modifies the following instance variables:
+        - inputs
+        - labels
+        - sizes
         """
         self.inputs = self.breakdown(self.inputs)
         self.labels = self.breakdown(self.labels)
@@ -188,25 +202,31 @@ class PerformanceVariables(object):
     # End of breakdown()
 # End of PerformanceVariables()
 
-def calculate_accuracy(labels_series, predictions_series):
+def performance_op(logits_series, labels_series, sizes_series):
+    loss_op = calculate_loss_op(logits_series, labels_series, sizes_series)
+    return loss_op
+# End of performance_op()
+
+def calculate_loss_op(logits_series, labels_series, sizes_series):
     """
-    Tensorflow operation that calculates the model's accuracy on a given minibatch.
+    Calculates the loss at a given epoch.
 
     Params:
+    logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
     labels_series (tf.Tensor): True labels for each input
-    predictions_series (tf.Tensor): The predictions made by the RNN for each input
+    sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
 
     Return:
-    tf.Tensor: The average accuracy for each row in the minibatch
+    logits_series
+    tf.Tensor: The calculated average loss for this minibatch
     """
-    with tf.variable_scope(constants.ACCURACY):
-        accuracy = []
-        for predictions, labels in zip(predictions_series, labels_series):
-            labels = tf.to_int64(labels, "CastLabelsToInt")
-            predictions = tf.argmax(predictions, axis=1)
-            accuracy.append(tf.reduce_mean(tf.cast(tf.equal(predictions, labels), tf.float32)))
-    return accuracy
-# End of calculate_accuracy()
+    with tf.variable_scope(constants.LOSS_CALC):
+        logits_series = tf.unstack(logits_series)
+        labels_series = tf.unstack(labels_series)
+        sizes_series = tf.unstack(sizes_series)
+        total_loss_op = calculate_minibatch_loss(logits_series, labels_series, sizes_series, constants.LOSS_CALC)
+    return total_loss_op
+# End of calculate_loss()
 
 def calculate_minibatch_loss(logits_series, labels_series, row_lengths_series, scope=constants.BATCH_LOSS_CALC):
     """
@@ -237,23 +257,22 @@ def calculate_minibatch_loss(logits_series, labels_series, row_lengths_series, s
     return batch_loss_op
 # End of calculate_minibatch_loss()
 
-def calculate_loss_op(logits_series, labels_series, sizes_series):
+def calculate_accuracy(logits_series, labels_series, sizes_series):
     """
-    Calculates the loss at a given epoch.
+    Tensorflow operation that calculates the model's accuracy on a given minibatch.
 
     Params:
-    logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
     labels_series (tf.Tensor): True labels for each input
-    sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
+    predictions_series (tf.Tensor): The predictions made by the RNN for each input
 
     Return:
-    logits_series
-    tf.Tensor: The calculated average loss for this minibatch
+    tf.Tensor: The average accuracy for each row in the minibatch
     """
-    with tf.variable_scope(constants.LOSS_CALC):
-        logits_series = tf.unstack(logits_series)
-        labels_series = tf.unstack(labels_series)
-        sizes_series = tf.unstack(sizes_series)
-        total_loss_op = calculate_minibatch_loss(logits_series, labels_series, sizes_series, constants.LOSS_CALC)
-    return total_loss_op
-# End of calculate_loss()
+    with tf.variable_scope(constants.ACCURACY):
+        accuracy = []
+        for predictions, labels in zip(predictions_series, labels_series):
+            labels = tf.to_int64(labels, "CastLabelsToInt")
+            predictions = tf.argmax(predictions, axis=1)
+            accuracy.append(tf.reduce_mean(tf.cast(tf.equal(predictions, labels), tf.float32)))
+    return accuracy
+# End of calculate_accuracy()
