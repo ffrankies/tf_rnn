@@ -3,7 +3,7 @@ Contains functions for setting up the performance evaluation layer for a tensorf
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 6 November, 2017
+Date: 10 November, 2017
 """
 import tensorflow as tf
 import numpy as np
@@ -202,7 +202,7 @@ class PerformanceVariables(object):
     # End of breakdown()
 # End of PerformanceVariables()
 
-def performance_op(logits_series, labels_series, sizes_series):
+def performance_op(logits_series, labels_series, sizes_series, max_length):
     """
     Calculates the loss at a given epoch.
 
@@ -212,30 +212,16 @@ def performance_op(logits_series, labels_series, sizes_series):
     sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
 
     Return:
-    tf.Tensor: The calculated average loss for the given logits
+    average_loss (tf.Tensor): The calculated average loss for the given logits
+    average_accuracy (tf.Tensor): The calculated average accuracy for the given logits
     """
-    logits_series, labels_series, sizes_series = unstack_variables(logits_series, labels_series, sizes_series, True)
-    loss_op = calculate_loss_op(logits_series, labels_series, sizes_series)
-    accuracy_op = calculate_accuracy(logits_series, labels_series, sizes_series)
-    return loss_op, accuracy_op
+    logits_h, labels_h, sizes_h = unstack_variables(logits_series, labels_series, sizes_series, True)
+    loss_op = calculate_minibatch_loss(logits_h, labels_h, sizes_h, constants.LOSS_CALC)
+    masked_predictions, timestep_lengths = predict_and_mask(logits_series, labels_series, sizes_series, max_length)
+    accuracy_op = overall_accuracy(masked_predictions, sizes_series)
+    timestep_accuracies_op = timestep_accuracy(masked_predictions, timestep_lengths)
+    return loss_op, accuracy_op, timestep_accuracies_op
 # End of performance_op()
-
-def calculate_loss_op(logits_series, labels_series, sizes_series):
-    """
-    Calculates the loss at a given epoch.
-
-    Params:
-    logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
-    labels_series (tf.Tensor): True labels for each input
-    sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
-
-    Return:
-    tf.Tensor: The calculated average loss for the given logits
-    """
-    with tf.variable_scope(constants.LOSS_CALC):
-        total_loss_op = calculate_minibatch_loss(logits_series, labels_series, sizes_series, constants.LOSS_CALC)
-    return total_loss_op
-# End of calculate_loss()
 
 def unstack_variables(logits_series, labels_series, sizes_series, horizontal=True):
     """
@@ -289,7 +275,49 @@ def calculate_minibatch_loss(logits_series, labels_series, row_lengths_series, s
     return batch_loss_op
 # End of calculate_minibatch_loss()
 
-def calculate_accuracy(logits_series, labels_series, sizes_series):
+def predict_and_mask(logits_series, labels_series, sizes_series, max_row_length):
+    """
+    Finds the correct predictions made across the given logits, and applies a mask so that it only contains
+    valid predictions.
+
+    Params:
+    logits_series (tf.Tensor): Calculated probabilities for each class for each input
+    labels_series (tf.Tensor): True labels for each input
+    sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
+    max_row_length (int): The maximum row length
+
+    Return:
+    masked_predictions (tf.Tensor): The correct predictions, after the mask has been applied to them
+    timestep_lengths (tf.Tensor): The number of valid predictions at each timestep
+    """
+    with tf.variable_scope(constants.PREDICTIONS_MASK):
+        mask, timestep_lengths = row_length_mask(sizes_series, max_row_length)
+        predictions = tf.nn.softmax(logits_series, dim=-1, name="logits_softmax")
+        predictions = tf.argmax(predictions, axis=-1, name="logits_argmax", output_type=tf.int32)
+        correct_predictions = tf.equal(predictions, labels_series)
+        correct_predictions = tf.cast(correct_predictions, tf.float32)
+        correct_predictions_masked = tf.multiply(correct_predictions, mask)
+    return correct_predictions_masked, timestep_lengths
+# End of predict_and_mask()
+
+def row_length_mask(sizes_series, max_row_length):
+    """
+    Constructs a mask out of the row lengths series.
+
+    Params:
+    sizes_series (tf.Tensor): The length of each sequence (row) in the data
+    max_row_length (int): The maximum length of sequences in the data
+
+    Return:
+    mask (tf.Tensor): A mask containing 1s where the logits are valid, 0 where they are not
+    timestep_lengths (tf.Tensor): The number of valid logits at each timestep in the data
+    """
+    mask = tf.sequence_mask(sizes_series, maxlen=max_row_length, dtype=tf.float32, name="row_length_mask")
+    timestep_lengths = tf.reduce_sum(mask, axis=0, name="timestep_lengths")
+    return mask, timestep_lengths
+# End of row_length_mask()
+
+def overall_accuracy(masked_predictions, sizes_series):
     """
     Tensorflow operation that calculates the model's accuracy on a given minibatch.
 
@@ -301,17 +329,43 @@ def calculate_accuracy(logits_series, labels_series, sizes_series):
     tf.Tensor: The average accuracy for each row in the minibatch
     """
     with tf.variable_scope(constants.ACCURACY):
-        accuracy_sum = 0.0
-        for logits, labels, row_length in zip(logits_series, labels_series, sizes_series):
-            logits = logits[:row_length, :]
-            labels = labels[:row_length]
-            predictions = tf.nn.softmax(logits, dim=-1, name="logits_softmax")
-            predictions = tf.argmax(predictions, axis=-1, name="logits_argmax")
-            predictions = tf.to_int32(predictions, "CastPredictionsToInt32")
-            correct_predictions = tf.equal(predictions, labels)
-            correct_predictions = tf.cast(correct_predictions, tf.int32)
-            row_accuracy = tf.reduce_mean(correct_predictions)
-            accuracy_sum += row_accuracy
-        average_accuracy = accuracy_sum / len(row_lengths_series)
+        row_sums = tf.reduce_sum(masked_predictions, axis=1, name="correct_predictions_per_sequence")
+        sizes_series = tf.cast(sizes_series, tf.float32, name="cast_row_lengths_to_float32")
+        row_accuracies = tf.divide(row_sums, sizes_series, name="row_accuracies")
+        row_accuracies = tf.where(tf.is_nan(row_accuracies), sizes_series, row_accuracies)
+        average_accuracy = tf.reduce_mean(row_accuracies, name="average_accuracy")
+        # accuracy_sum = 0.0
+        # for logits, labels, row_length in zip(logits_series, labels_series, sizes_series):
+        #     logits = logits[:row_length, :]
+        #     labels = labels[:row_length]
+        #     predictions = tf.nn.softmax(logits, dim=-1, name="logits_softmax")
+        #     predictions = tf.argmax(predictions, axis=-1, name="logits_argmax")
+        #     predictions = tf.to_int32(predictions, "CastPredictionsToInt32")
+        #     correct_predictions = tf.equal(predictions, labels)
+        #     correct_predictions = tf.cast(correct_predictions, tf.float32)
+        #     row_accuracy = tf.reduce_mean(correct_predictions)
+        #     accuracy_sum += row_accuracy
+        # average_accuracy = accuracy_sum / len(sizes_series)
     return average_accuracy
-# End of calculate_accuracy()
+# End of overall_accuracy()
+
+def timestep_accuracy(masked_predictions, timestep_lengths):
+    """
+    Calculates the prediction accuracy for every timestep.
+    Where the accuracy is NaN, the accuracy is replaced with 0. This should only happen in epochs where the given
+    calculation is not done (eg. test_accuracy_op during training)
+
+    Params:
+    masked_predictions (tf.Tensor): The correct predictions, masked such that only valid predictions are present
+    timestep_lengths (tf.Tensor): The number of possible valid predictions at each timestep
+
+    Return:
+    timestep_accuracies (tf.Tensor): The average accuracy for each timestep
+    """
+    with tf.variable_scope(constants.TIMESTEP_ACCURACY):
+        timestep_predictions = tf.reduce_sum(masked_predictions, axis=0, name="sum_correct_predictions")
+        timestep_accuracies = tf.divide(timestep_predictions, timestep_lengths, name="timestep_accuracies")
+        timestep_accuracies = tf.where(tf.is_nan(timestep_accuracies), timestep_lengths, timestep_accuracies)
+        timestep_accuracies = tf.unstack(timestep_accuracies, name="unstack_timestep_accuracies")
+    return timestep_accuracies
+# End of timestep_accuracy()

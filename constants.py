@@ -45,7 +45,9 @@ TRAINING_PERFORMANCE = "training_performance"
 TEST_PERFORMANCE = "test_performance"
 BATCH_LOSS_CALC = "minibatch_loss_calculation"
 LOSS_CALC = "loss_calculation"
+PREDICTIONS_MASK = "predict_and_mask"
 ACCURACY = "accuracy_calculation"
+TIMESTEP_ACCURACY = "timestep_accuracy_calculation"
 
 #########################################
 # TENSORBOARD SUMMARY NAMES

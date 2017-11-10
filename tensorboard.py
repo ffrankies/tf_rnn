@@ -18,8 +18,12 @@ def init_tensorboard(model):
     """
     tensorboard_dir = model.model_path + constants.TENSORBOARD + model.run_dir
     with tf.variable_scope("summaries"):
-        tf.summary.scalar("training_loss", model.validation_loss_op)
-        tf.summary.scalar("training_accuracy", model.validation_accuracy_op)
+        tf.summary.scalar("validation_loss", model.validation_loss_op)
+        tf.summary.scalar("validation_accuracy", model.validation_accuracy_op)
+        summarize_timesteps("validation_accuracy", model.validation_timesteps_op)
+        tf.summary.scalar("test_loss", model.test_loss_op)
+        tf.summary.scalar("test_accuracy", model.test_accuracy_op)
+        summarize_timesteps("test_accuracy", model.test_timesteps_op)
         # summarize_variable(model.out_weights, "output_weights")
         # summarize_variable(model.out_bias, "output_bias")
         # summarize_variable(model.accuracy, "output_accuracy")
@@ -28,13 +32,7 @@ def init_tensorboard(model):
     return writer, merged_summary_ops
 # End of init_tensorboard()
 
-def summarize_variable(variable, variable_name):
-    with tf.variable_scope(variable_name):
-        mean = tf.reduce_mean(variable)
-        tf.summary.scalar('mean', mean)
-        with tf.name_scope('stddev'):
-            stddev = tf.sqrt(tf.reduce_mean(tf.square(variable - mean)))
-        tf.summary.scalar('stddev', stddev)
-        tf.summary.scalar('max', tf.reduce_max(variable))
-        tf.summary.scalar('min', tf.reduce_min(variable))
-        tf.summary.histogram('histogram', variable)
+def summarize_timesteps(name, timestep_accuracy_op):
+    for timestep, accuracy in enumerate(timestep_accuracy_op):
+        tf.summary.scalar(name + '_timestep_' + str(timestep+1), accuracy)
+    tf.summary.histogram(name, timestep_accuracy_op)

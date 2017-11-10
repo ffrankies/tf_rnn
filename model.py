@@ -49,8 +49,8 @@ class RNNModel(object):
         self.graph = tf.Graph()
         with self.graph.as_default():
             self.training()
-            self.validation_loss_op, self.validation_accuracy_op = self.validation_loss()
-            self.test_loss_op, self.test_accuracy_op = self.test_loss()
+            self.validation_loss_op, self.validation_accuracy_op, self.validation_timesteps_op = self.validation_loss()
+            self.test_loss_op, self.test_accuracy_op, self.test_timesteps_op = self.test_loss()
             self.session = tf.Session(graph=self.graph)
             self.init_saver()
             self.session.run(tf.global_variables_initializer())
@@ -111,8 +111,9 @@ class RNNModel(object):
                 shape=labels_shape, name="labels_placeholder")
             self.valid_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32),
                 shape=sizes_shape, name="sizes_placeholder")
-            loss_op, accuracy_op = performance_op(self.valid_logits, self.valid_labels, self.valid_sizes)
-        return loss_op, accuracy_op
+            loss_op, accuracy_op, timestep_accuracy_op = performance_op(self.valid_logits, self.valid_labels,
+                self.valid_sizes, self.dataset.max_length)
+        return loss_op, accuracy_op, timestep_accuracy_op
     # End of validation_loss()
 
     def test_loss(self):
@@ -137,8 +138,9 @@ class RNNModel(object):
                 shape=labels_shape, name="labels_placeholder")
             self.test_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32),
                 shape=sizes_shape, name="sizes_placeholder")
-            loss_op, accuracy_op = performance_op(self.test_logits, self.test_labels, self.test_sizes)
-        return loss_op, accuracy_op
+            loss_op, accuracy_op, timestep_accuracy_op = performance_op(self.test_logits, self.test_labels,
+                self.test_sizes, self.dataset.max_length)
+        return loss_op, accuracy_op, timestep_accuracy_op
     # End of test_loss()
 
     def output_layer(self):
