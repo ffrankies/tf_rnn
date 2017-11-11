@@ -49,8 +49,8 @@ class RNNModel(object):
         self.graph = tf.Graph()
         with self.graph.as_default():
             self.training()
-            self.validation_loss_op, self.validation_accuracy_op, self.validation_timesteps_op = self.validation_loss()
-            self.test_loss_op, self.test_accuracy_op, self.test_timesteps_op = self.test_loss()
+            self.setup_validation_performance()
+            self.setup_test_performance()
             self.session = tf.Session(graph=self.graph)
             self.init_saver()
             self.session.run(tf.global_variables_initializer())
@@ -88,7 +88,7 @@ class RNNModel(object):
         return minibatch_loss_op
     # End of performance_evaluation()
 
-    def validation_loss(self):
+    def setup_validation_performance(self):
         """
         Creates the tensorflow operation that calculates the loss for the validation partition of the dataset.
         Also creates the placeholders for this operation.
@@ -96,10 +96,10 @@ class RNNModel(object):
         - valid_logits (tf.placeholder_with_default): Placeholder for the logits for the validation partition
         - valid_labels (tf.placeholder_with_default): Placeholder for the labels for the validation partition
         - valid_sizes (tf.placeholder_with_default): Placeholder for the row lengths for the validation partition
-
-        Return:
-        validation_loss_op (tf.Tensor): The operation that calculates the loss for the validation partition of the
-                                        dataset
+        - validation_loss_op (tf.Tensor): Operation that calculates the average validation loss
+        - validation_accuracy_op (tf.Tensor): Operation that calculates the average validation accuracy
+        - validation_timestep_accuracy_op (tf.Tensor): Operation that calculates the average validation accuracy for
+                                                       each timestep
         """
         logits_shape = [len(self.dataset.inputs), self.dataset.max_length, self.dataset.vocabulary_size]
         labels_shape = [len(self.dataset.labels), self.dataset.max_length]
@@ -111,12 +111,14 @@ class RNNModel(object):
                 shape=labels_shape, name="labels_placeholder")
             self.valid_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32),
                 shape=sizes_shape, name="sizes_placeholder")
-            loss_op, accuracy_op, timestep_accuracy_op = performance_op(self.valid_logits, self.valid_labels,
-                self.valid_sizes, self.dataset.max_length)
-        return loss_op, accuracy_op, timestep_accuracy_op
-    # End of validation_loss()
+            validation_ops = performance_op(self.valid_logits, self.valid_labels, self.valid_sizes, 
+                self.dataset.max_length)
+            self.validation_loss_op = validation_ops[0]
+            self.validation_accuracy_op = validation_ops[1]
+            self.validation_timestep_accuracy_op = validation_ops[2]
+    # End of validation_performance()
 
-    def test_loss(self):
+    def setup_test_performance(self):
         """
         Creates the tensorflow operation that calculates the loss for the test partition of the dataset.
         Also creates the placeholders for this operation.
@@ -124,9 +126,9 @@ class RNNModel(object):
         - test_logits (tf.placeholder_with_default): Placeholder for the logits for the test partition
         - test_labels (tf.placeholder_with_default): Placeholder for the labels for the test partition
         - test_sizes (tf.placeholder_with_default): Placeholder for the row lengths for the test partition
-
-        Return:
-        test_loss_op (tf.Tensor): The operation that calculates the loss for the test partition of the dataset
+        - test_loss_op (tf.Tensor): Operation that calculates the average test loss
+        - test_accuracy_op (tf.Tensor): Operation that calculates the average test accuracy
+        - test_timestep_accuracy_op (tf.Tensor): Operation that calculates the average test accuracy for each timestep
         """
         logits_shape = [self.dataset.test.num_sequences, self.dataset.max_length, self.dataset.vocabulary_size]
         labels_shape = logits_shape[:2]
@@ -138,10 +140,11 @@ class RNNModel(object):
                 shape=labels_shape, name="labels_placeholder")
             self.test_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32),
                 shape=sizes_shape, name="sizes_placeholder")
-            loss_op, accuracy_op, timestep_accuracy_op = performance_op(self.test_logits, self.test_labels,
-                self.test_sizes, self.dataset.max_length)
-        return loss_op, accuracy_op, timestep_accuracy_op
-    # End of test_loss()
+            test_ops = performance_op(self.test_logits, self.test_labels, self.test_sizes, self.dataset.max_length)
+            self.test_loss_op = test_ops[0]
+            self.test_accuracy_op = test_ops[1]
+            self.test_timestep_accuracy_op = test_ops[2]
+    # End of test_performance()
 
     def output_layer(self):
         """

@@ -20,10 +20,10 @@ def init_tensorboard(model):
     with tf.variable_scope("summaries"):
         tf.summary.scalar("validation_loss", model.validation_loss_op)
         tf.summary.scalar("validation_accuracy", model.validation_accuracy_op)
-        summarize_timesteps("validation_accuracy", model.validation_timesteps_op)
+        summarize_timesteps("validation_accuracy", model.validation_timestep_accuracy_op)
         tf.summary.scalar("test_loss", model.test_loss_op)
         tf.summary.scalar("test_accuracy", model.test_accuracy_op)
-        summarize_timesteps("test_accuracy", model.test_timesteps_op)
+        summarize_timesteps("test_accuracy", model.test_timestep_accuracy_op)
         # summarize_variable(model.out_weights, "output_weights")
         # summarize_variable(model.out_bias, "output_bias")
         # summarize_variable(model.accuracy, "output_accuracy")
@@ -35,4 +35,3 @@ def init_tensorboard(model):
 def summarize_timesteps(name, timestep_accuracy_op):
     for timestep, accuracy in enumerate(timestep_accuracy_op):
         tf.summary.scalar(name + '_timestep_' + str(timestep+1), accuracy)
-    tf.summary.histogram(name, timestep_accuracy_op)

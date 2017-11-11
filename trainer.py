@@ -3,7 +3,7 @@ Tensorflow implementation of a training method to train a given model.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 9 November, 2017
+Date: 11 November, 2017
 """
 
 import numpy as np
@@ -32,7 +32,7 @@ def train(model):
         loss_list.append(average_loss)
         # End of epoch training
 
-    test_loss = performance_eval(model)
+    test_loss = performance_eval(model, epoch_num+1)
 
     model.logger.info("Finished training the model. Final validation loss: %f. Final test loss: %f" %
             (average_loss, test_loss))
@@ -241,12 +241,13 @@ def get_test_performance_data(model):
     return validation_variables
 # End of test_step()
 
-def performance_eval(model):
+def performance_eval(model, epoch_num):
     """
     Performs a final performance evaluation on the test partition of the dataset.
 
     Params:
     model (model.RNNModel): The RNN model containing the session and tensorflow variable placeholders
+    epoch_num (int): Total number of epochs + 1 (only used so that the performance summary shows up in tensorboard)
 
     Return:
     loss (float): The calculated loss for the test partition of the dataset
@@ -256,15 +257,17 @@ def performance_eval(model):
     y = variables.labels
     s = variables.sizes
 
-    epoch_loss = model.session.run(
-        [model.test_loss_op],
+    epoch_loss, summary_ops = model.session.run(
+        [model.test_loss_op, model.summary_ops],
         feed_dict={
             model.test_logits:x,
             model.test_labels:y,
             model.test_sizes:s
         })
 
-    return epoch_loss[0]
+    model.summary_writer.add_summary(summary_ops, epoch_num)
+
+    return epoch_loss
 # End of test_final()
 
 def get_feed_dict(model, dataset, batch_num, current_state):
@@ -326,15 +329,21 @@ def build_feed_dict(model, batch, current_state):
 
 def plot(model, loss_list):
     """
-    Plots a grminibatch_loss, aph of epochs against losses. Saves the plot to file in <model_path>/graph.png.
+    Plots a graph of epochs against losses. Saves the plot to file in <model_path>/graph.png.
+
+    Params:
+    model (model.RNNModel): The model containing the path where the figure will be saved
+    loss_list (list): The list of incurred losses
+
+    Return:
 
     :type model: RNNModel()
-    :param model: the model whose loss graph will be plotted.
-
-    :type loss_list: list()
-    :param loss_list: the losses incurred during training.
     """
-    plt.plot(range(1, len(loss_list) + 1), loss_list)
+    plt.subplot(211)
+    plt.plot(range(0, len(loss_list) + 1), loss_list)
+    plt.xlabel('Epoch')
+    plt.ylabel('Average Validation Loss')
+    plt.title('Visualizing validation loss')
     plt.savefig(model.model_path + model.run_dir + constants.PLOT)
     plt.show()
 # End of plot()
