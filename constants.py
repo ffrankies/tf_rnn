@@ -3,7 +3,7 @@ Contains constants for use within the project.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 9 November, 2017
+Date: 11 November, 2017
 """
 
 import time
@@ -42,6 +42,7 @@ OUTPUT = "output_layer"
 LOSS_LAYER = "loss_layer"
 TRAINING = "training_layer"
 TRAINING_PERFORMANCE = "training_performance"
+VALIDATION_PERFORMANCE = "validation_performance"
 TEST_PERFORMANCE = "test_performance"
 BATCH_LOSS_CALC = "minibatch_loss_calculation"
 LOSS_CALC = "loss_calculation"

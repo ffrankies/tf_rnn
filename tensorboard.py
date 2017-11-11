@@ -24,9 +24,9 @@ def init_tensorboard(model):
         tf.summary.scalar("test_loss", model.test_loss_op)
         tf.summary.scalar("test_accuracy", model.test_accuracy_op)
         summarize_timesteps("test_accuracy", model.test_timestep_accuracy_op)
-        # summarize_variable(model.out_weights, "output_weights")
-        # summarize_variable(model.out_bias, "output_bias")
-        # summarize_variable(model.accuracy, "output_accuracy")
+        tf.summary.scalar("training_loss", model.training_loss_op)
+        tf.summary.scalar("training_accuracy", model.training_accuracy_op)
+        summarize_timesteps("training_accuracy", model.training_timestep_accuracy_op)
     merged_summary_ops = tf.summary.merge_all()
     writer = tf.summary.FileWriter(tensorboard_dir, graph=model.session.graph)
     return writer, merged_summary_ops
