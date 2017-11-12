@@ -3,7 +3,7 @@ Tensorflow implementation of a training method to train a given model.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 9 November, 2017
+Date: 11 November, 2017
 """
 
 import numpy as np
@@ -25,18 +25,20 @@ def train(model):
     model (model.RNNModel): The model to train
     """
     model.logger.info("Started training the model.")
-    loss_list = []
+    training_losses = []
+    validation_losses = []
 
     for epoch_num in range(model.settings.train.epochs + 1):
-        average_loss = train_epoch(model, epoch_num)
-        loss_list.append(average_loss)
+        training_loss, validation_loss = train_epoch(model, epoch_num)
+        training_losses.append(training_loss)
+        validation_losses.append(validation_loss)
         # End of epoch training
 
-    test_loss = performance_eval(model)
+    test_loss, test_accuracy, test_timestep_accuracy = performance_eval(model, epoch_num+1)
 
-    model.logger.info("Finished training the model. Final validation loss: %f. Final test loss: %f" %
-            (average_loss, test_loss))
-    plot(model, loss_list)
+    model.logger.info("Finished training the model. Final validation loss: %f. Final test loss: %f"
+                      "Final test accuracy: %f" % (validation_loss, test_loss, test_accuracy))
+    plot(model, (training_losses, validation_losses), test_accuracy, test_timestep_accuracy)
 # End of train()
 
 def train_epoch(model, epoch_num):
@@ -48,48 +50,45 @@ def train_epoch(model, epoch_num):
     epoch_num (int): The number of the current epoch
 
     Return:
-    average_loss (float): The average incurred loss
+    average_training_loss (float): The average incurred loss for training partition
+    average_validation_loss (float): The average incurred loss for the validation partition
     """
     model.logger.info("Starting epoch: %d" % (epoch_num))
 
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
-    validation_variables = create_performance_variables(model.dataset, "loss")
+    train_variables = create_performance_variables(model.dataset)
+    validation_variables = create_performance_variables(model.dataset)
     for section in range(model.dataset.num_sections):
         model.dataset.next_iteration()
-        if epoch_num != 0: train_step(model, epoch_num, current_state)
+        train_step(model, epoch_num, current_state, train_variables)
         validation_step(model, epoch_num, current_state, validation_variables)
+    train_variables.complete()
     validation_variables.complete()
-    cross_validation_loss = intermediate_performance(model, validation_variables, epoch_num)
+    training_loss, validation_loss = intermediate_performance(model, train_variables, validation_variables, epoch_num)
 
-    model.logger.info("Finished epoch: %d | loss: %f" % (epoch_num, cross_validation_loss))
-    return cross_validation_loss
+    model.logger.info("Finished epoch: %d | training_loss: %f | validation_loss: %f" % 
+        (epoch_num, training_loss, validation_loss))
+    return training_loss, validation_loss
 # End of train_epoch()
 
-def create_performance_variables(dataset, mode):
+def create_performance_variables(dataset):
     """
     Sets up the PerformanceVariables using a given dataset.
 
     Params:
     dataset (dataset.Dataset): The dataset from which the PerformanceVariables object will be built
-    mode (string): Can be either "loss" or "accuracy" - denotes whether the object will store data needed to calculate
-                   loss or accuracy
 
     Return:
     variables (layers.performance_layer.PerformanceVariables): The variables needed to calculate loss or accuracy
     """
-    if mode not in ['loss', 'accuracy']:
-        raise ValueError('The mode has to be one of "loss" and "accuracy".')
     max_length = dataset.max_length
     shapes = [np.shape(dataset.test.x[0]), np.shape(dataset.test.y[0])]
-    if mode == 'loss':
-        types = [np.float32, np.int32]
-    else:
-        types = [np.int32, np.int32]
+    types = [np.float32, np.int32]
     pad = dataset.token_to_index[constants.END_TOKEN]
     return PerformanceVariables(max_length, shapes, types, pad)
 # End of create_performance_variables()
 
-def train_step(model, epoch_num, current_state):
+def train_step(model, epoch_num, current_state, variables):
     """
     Trains the model on the dataset's training partition.
 
@@ -101,10 +100,13 @@ def train_step(model, epoch_num, current_state):
     for batch_num in range(model.dataset.train.num_batches):
         # Debug log outside of function to reduce number of arguments.
         model.logger.debug("Training minibatch : ", batch_num, " | ", "epoch : ", epoch_num)
-        current_state = train_minibatch(model, batch_num, current_state)
+        if epoch_num == 0:
+            validate_minibatch(model, model.dataset.train, batch_num, current_state, variables)
+        else:
+            current_state = train_minibatch(model, batch_num, current_state, variables)
 # End of train_step()
 
-def train_minibatch(model, batch_num, current_state):
+def train_minibatch(model, batch_num, current_state, variables):
     """
     Trains one minibatch.
 
@@ -118,9 +120,12 @@ def train_minibatch(model, batch_num, current_state):
     """
     current_feed_dict = get_feed_dict(model, model.dataset.train, batch_num, current_state)
 
-    train_step, current_state = model.session.run(
-        [model.train_step_fun, model.current_state],
+    batch_logits, train_step, current_state = model.session.run(
+        [model.logits_series, model.train_step_fun, model.current_state],
         feed_dict=current_feed_dict)
+    
+    batch_logits = [row.tolist() for row in batch_logits]
+    add_performance_batch(variables, model.dataset.train, batch_num, batch_logits)
 
     return current_state
 # End of train_minibatch()
@@ -188,7 +193,7 @@ def add_performance_batch(variables, dataset_partition, batch_num, inputs):
         ending=dataset_partition.ending[batch_num])
 # End of add_performance_batch()
 
-def intermediate_performance(model, variables, epoch_num):
+def intermediate_performance(model, train_variables, validation_variables, epoch_num):
     """
     Calculates the network's performance at the end of a particular epoch. Writes performance data to the
     summary.
@@ -201,21 +206,29 @@ def intermediate_performance(model, variables, epoch_num):
     Return:
     average_loss (float): The average loss incurred for this epoch
     """
-    x = variables.inputs
-    y = variables.labels
-    s = variables.sizes
+    model.logger.debug("Evaluating the model's performance after training for an epoch")
+    t_x = train_variables.inputs
+    t_y = train_variables.labels
+    t_s = train_variables.sizes
 
-    epoch_loss, summary = model.session.run(
-        [model.validation_loss_op, model.summary_ops],
+    v_x = validation_variables.inputs
+    v_y = validation_variables.labels
+    v_s = validation_variables.sizes
+
+    training_loss, validation_loss, summary = model.session.run(
+        [model.training_loss_op, model.validation_loss_op, model.summary_ops],
         feed_dict={
-            model.valid_logits:x,
-            model.valid_labels:y,
-            model.valid_sizes:s
+            model.train_logits:t_x,
+            model.train_labels:t_y,
+            model.train_sizes:t_s,
+            model.valid_logits:v_x,
+            model.valid_labels:v_y,
+            model.valid_sizes:v_s
         })
 
     model.summary_writer.add_summary(summary, epoch_num)
 
-    return epoch_loss
+    return training_loss, validation_loss
 # End of validate_epoch()
 
 def get_test_performance_data(model):
@@ -230,7 +243,8 @@ def get_test_performance_data(model):
     variables (layers.performance_layer.PerformanceVariables): Container object for the data needed to perform a loss
                                                                calculation on the test dataset partition
     """
-    validation_variables = create_performance_variables(model.dataset, "loss")
+    model.logger.debug("Building the PerformanceVariables object for evaluating performance on the test partition")
+    validation_variables = create_performance_variables(model.dataset)
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
     total_test_loss = 0
     for batch_num in range(model.dataset.test.num_batches):
@@ -241,30 +255,34 @@ def get_test_performance_data(model):
     return validation_variables
 # End of test_step()
 
-def performance_eval(model):
+def performance_eval(model, epoch_num):
     """
     Performs a final performance evaluation on the test partition of the dataset.
 
     Params:
     model (model.RNNModel): The RNN model containing the session and tensorflow variable placeholders
+    epoch_num (int): Total number of epochs + 1 (only used so that the performance summary shows up in tensorboard)
 
     Return:
     loss (float): The calculated loss for the test partition of the dataset
     """
+    model.logger.debug("Performing a performance evaluation after training")
     variables = get_test_performance_data(model)
     x = variables.inputs
     y = variables.labels
     s = variables.sizes
 
-    epoch_loss = model.session.run(
-        [model.test_loss_op],
+    test_loss, test_accuracy, test_timestep_accuracy, summary_ops = model.session.run(
+        [model.test_loss_op, model.test_accuracy_op, model.test_timestep_accuracy_op, model.summary_ops],
         feed_dict={
             model.test_logits:x,
             model.test_labels:y,
             model.test_sizes:s
         })
 
-    return epoch_loss[0]
+    model.summary_writer.add_summary(summary_ops, epoch_num)
+
+    return test_loss, test_accuracy, test_timestep_accuracy
 # End of test_final()
 
 def get_feed_dict(model, dataset, batch_num, current_state):
@@ -324,17 +342,82 @@ def build_feed_dict(model, batch, current_state):
     return feed_dict
 # End of build_feed_dict()
 
-def plot(model, loss_list):
+def plot(model, loss_list, accuracy, timestep_accuracy):
     """
-    Plots a grminibatch_loss, aph of epochs against losses. Saves the plot to file in <model_path>/graph.png.
+    Plots a graph of epochs against losses. Saves the plot to file in <model_path>/graph.png.
 
-    :type model: RNNModel()
-    :param model: the model whose loss graph will be plotted.
-
-    :type loss_list: list()
-    :param loss_list: the losses incurred during training.
+    Params:
+    model (model.RNNModel): The model containing the path where the figure will be saved
+    loss_list (list): The list of incurred losses
+    accuracy (float): The average accuracy on the test dataset partition
+    timestep_accuracy (list): The average accuracy for each timestep on the test dataset partition
     """
-    plt.plot(range(1, len(loss_list) + 1), loss_list)
+    model.logger.info("Plotting results for visualization")
+    plt.figure(num=1, figsize=(10, 10))
+    loss_axis = plt.subplot(311)
+    plot_loss(loss_list, loss_axis)
+    accuracy_axis = plt.subplot(312)
+    plot_accuracy(accuracy, accuracy_axis)
+    bar_chart_axis = plt.subplot(313)
+    plot_bar_chart(timestep_accuracy, bar_chart_axis)
+    plt.tight_layout()
     plt.savefig(model.model_path + model.run_dir + constants.PLOT)
     plt.show()
 # End of plot()
+
+def plot_loss(loss_list, axis):
+    """
+    Plots the training and validation losses on a sublot.
+
+    Params:
+    loss_list (tuple):
+    - training_losses (list): The training losses to plot
+    - validation_losses (list): The validation losses to plot
+    axis (matplotlib.axes.Axes): The axis on which to plot the validation loss
+    """
+    x = range(0, len(loss_list[0]))
+    axis.plot(x, loss_list[0], '-b', label='Training Loss (final=%.2f)' % loss_list[0][-1])
+    axis.plot(x, loss_list[1], '-r', label='Validation Loss (final=%.2f)' % loss_list[1][-1])
+    axis.legend(loc='upper right')
+    axis.set_xlabel('Epoch')
+    axis.set_ylabel('Average Loss')
+    axis.set_title('Visualizing loss during training')
+# End of plot_loss()
+
+def plot_accuracy(accuracy, axis):
+    """
+    Plots the average accuracy on a separate subplot.
+
+    Params:
+    accuracy (float): The average accuracy of predictions for the test dataset partition
+    axis (matplotlib.axes.Axes): The axis on which to plot the validation loss
+    """
+    accuracy = accuracy * 100
+    axis.pie([accuracy, 100 - accuracy], labels=['Correct predictions', 'Incorrect predictions'], autopct='%.2f%%')
+    axis.axis('equal')
+    axis.set_title('Average accuracy for the test partition')
+# End of plot_accuracy()
+
+def plot_bar_chart(timestep_accuracy, axis):
+    """
+    Plots the average accuracy for each timestep as a bar chart on a separate subplot.
+
+    Params:
+    timestep_accuracy (list): The average accuracy of predictions for each timestep on the test dataset partition
+    axis (matplotlib.axes.Axes): The axis on which to plot the validation loss
+    """
+    print(timestep_accuracy)
+    timestep_accuracy = [x * 100.0 for x in timestep_accuracy]
+    bar_chart = axis.bar(range(1, len(timestep_accuracy) + 1), timestep_accuracy)
+    axis.set_xlabel('Timestep')
+    axis.set_ylabel('Average Accuracy (%)')
+    axis.set_title('Average accuracy of each timestep for the test partition')
+    # from https://matplotlib.org/gallery/api/barchart.html#sphx-glr-gallery-api-barchart-py
+    # Couldn't find a better way to label the bar chart, unfortunately
+    for bar, accuracy in zip(bar_chart, timestep_accuracy):
+        x_pos = bar.get_x() + bar.get_width()/2.
+        height = bar.get_height()
+        y_pos = height - 20.0
+        if height <= 30.0 : y_pos = height + 10.0
+        axis.text(x_pos, y_pos, "%.1f" % accuracy, ha='center', va='bottom', rotation=90)
+# End of plot_bar_chart()

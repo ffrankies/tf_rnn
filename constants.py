@@ -3,7 +3,7 @@ Contains constants for use within the project.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 8 November, 2017
+Date: 11 November, 2017
 """
 
 import time
@@ -41,10 +41,14 @@ HIDDEN = "hidden_layers"
 OUTPUT = "output_layer"
 LOSS_LAYER = "loss_layer"
 TRAINING = "training_layer"
-PERFORMANCE = "performance_evaluation"
+TRAINING_PERFORMANCE = "training_performance"
+VALIDATION_PERFORMANCE = "validation_performance"
+TEST_PERFORMANCE = "test_performance"
 BATCH_LOSS_CALC = "minibatch_loss_calculation"
 LOSS_CALC = "loss_calculation"
+PREDICTIONS_MASK = "predict_and_mask"
 ACCURACY = "accuracy_calculation"
+TIMESTEP_ACCURACY = "timestep_accuracy_calculation"
 
 #########################################
 # TENSORBOARD SUMMARY NAMES
