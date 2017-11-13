@@ -3,7 +3,7 @@ Tensorflow implementation of a training method to train a given model.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 11 November, 2017
+Date: 12 November, 2017
 """
 
 import numpy as np
@@ -106,7 +106,7 @@ def train_minibatch(model, batch_num, current_state, accumulator):
     performance_data, train_step, current_state = model.session.run(
         [model.performance_ops, model.train_step_fun, model.current_state],
         feed_dict=current_feed_dict)
-    add_performance_batch(accumulator, model.dataset.train, batch_num, performance_data)
+    update_accumulator(accumulator, model.dataset.train, batch_num, performance_data)
     return current_state
 # End of train_minibatch()
 
