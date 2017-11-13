@@ -3,7 +3,7 @@ Contains functions for setting up the performance evaluation layer for a tensorf
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 10 November, 2017
+Date: 12 November, 2017
 """
 import tensorflow as tf
 import numpy as np
@@ -11,269 +11,213 @@ from copy import deepcopy
 
 from .. import constants
 
-class PerformanceVariables(object):
+class Accumulator(object):
     """
-    Stores and builds the variables needed for calculating performance at the end of an epoch.
+    Stores the data needed to evaluate the performance of the model on a given partition of the dataset.
 
-    Instance variables:
-    - inputs (list): The aggregated inputs from all minibatches
-    - labels (list): The aggregated labels from all minibatches
-    - sizes (list): The size of each sequence in the labels
-    - max_length (int): The length of the longest sequence in the labels
-    - current_batch_size (int): The number of sequences in last appended minibatch that are not made of padding
-    - input_shape (list/tuple): The shape of the input minibatches (used for padding)
-    - label_shape (list/tuple): The shape of the label minibatches (used for padding)
-    - input_type (type): The type of data stored in the inputs
-    - label_type (type): The type of data stored in the inputs
-    - pad_value (label_type): The element of data to be used for padding
+    Instance Variables:
+    - logger (logging.Logger): The logger used by the RNN model
+    - max_sequence_length (int): The maximum sequence length for this dataset
+    - loss (float): The cumulative average loss for every minibatch
+    - accuracy (float): The cumulative average accuracy for every minibatch
+    - elements (float): The cumulative total number of valid elements seen so far
+    - timestep_accuracies (list): The cumulative average accuracy for each timestep
+    - timestep_elements (list): The cumulative number of valid elements for each timestep
+    - Temporary instance variables:
+        - next_timestep_accuracies (list): Incoming average accuracies per timestep
+        - next_timestep_elements (list): Incoming number of valid elements per timestep
     """
 
-    def __init__(self, max_length, shapes, types, pad):
+    def __init__(self, logger, max_sequence_length):
         """
-        Creates a PerformanceVariables object.
+        Creates a new PerformanceData object.
 
         Params:
-        max_length (int): The maximum length of each sequence in the data
-        shapes (list/tuple):
-            - input_shape (list/tuple): The shape of the inputs in this data
-            - label_shape (list/tuple): The shape of the labels in this data
-        types (list/tuple):
-            - input_type (type): The type of data stored in the inputs
-            - label_type (type): The type of data stored in the labels
-        pad (label_type): The element of data to be used for padding
+        max_sequence_length (int): The maximum sequence length for this dataset
         """
-        self.inputs = list()
-        self.labels = list()
-        self.sizes = list()
-        self.max_length = max_length
-        self.input_shape = shapes[0]
-        self.label_shape = shapes[1]
-        self.input_type = types[0]
-        self.label_type = types[1]
-        self.pad_value = pad
+        self.logger = logger
+        self.logger.debug('Creating a PerformanceData object')
+        self.max_sequence_length = max_sequence_length
+        self.loss = self.accuracy = 0.0
+        self.elements = 0
+        self.timestep_accuracies = [0.0] * self.max_sequence_length
+        self.timestep_elements = [0] * self.max_sequence_length
+        self.next_timestep_accuracies = list()
+        self.next_timestep_elements = list()
     # End of __init__()
 
-    def add_batch(self, inputs, labels, sizes, beginning, ending):
+    def add_data(self, data, beginning, ending):
         """
-        Adds a given minibatch to the validation variables data.
+        Adds the performance data from a given minibatch to the PerformanceData object.
 
         Params:
-        inputs (list): The inputs for this minibatch
-        labels (list): The labels for this minibatch
-        sizes (list): The true size of each sequence for this minibatch
-        beginning (boolean): True if this minibatch marks the beginning of a sequence
-        ending (boolean): True if this minibatch marks the ending of a sequence
+        data (tuple/list): The performance data for the given minibatch
+        - loss (float): The average loss for the given minibatch
+        - accuracy (float): The average accuracy for the given minibatch
+        - size (int): The number of valid elements in this minibatch
+        - timestep_accuracies (list): The average accuracy for each timestep in this minibatch
+        - timestep_elements (list): The number of valid elements for each timestep in this minibatch
+        beginning (boolean): True if this minibatch marks the start of a sequence
+        ending (boolean): True if this minibatch maarks the end of a sequence
         """
-        if beginning is True:
-            self.append_batch(inputs, labels, sizes)
-        else:
-            self.extend_batch(inputs, labels, sizes)
+        self.logger.debug('Adding performance data for a new batch')
+        loss, accuracy, size, timestep_accuracies, timestep_elements = data
+        self.loss = self.update_average(self.loss, self.elements, loss, size)
+        self.accuracy = self.update_average(self.accuracy, self.elements, accuracy, size)
+        self.elements += size
+        self.loss = ((self.loss * self.elements) + (loss * size)) / (self.elements + size)
+        self.extend_timesteps(timestep_accuracies, timestep_elements)
         if ending is True:
-            self.pad_batch()
-    # End of add_batch()
+            self.merge_timesteps()
+    # End of add_data()
 
-    def append_batch(self, inputs, labels, sizes):
+    def update_average(self, old_avg, old_num, new_avg, new_num):
         """
-        Appends a batch that marks the beginning of a sequence to the variables data.
-
-        Creates the following instance variables:
-        - current_batch_size (int): The number of sequences in this minibatch that are not made of padding
-
-        Modifies the following instance variables:
-        - inputs
-        - labels
-        - sizes
+        Updates the old average with new data.
 
         Params:
-        inputs (list): The inputs for this minibatch
-        labels (list): The labels for this minibatch
-        sizes (list): The true size of each sequence for this minibatch
+        old_avg (float): The current average value
+        old_num (int): The number of elements contributing to the current average
+        new_avg (float): The new average value
+        new_num (int): The number of elements contributing to the new average
         """
-        x, y, s = self.copy_batch(inputs, labels, sizes)
-        # Do not append padded rows from batches
-        self.current_batch_size = len(list(filter(lambda x : x > 0, sizes)))
-        self.inputs.append(x[:self.current_batch_size])
-        self.labels.append(y[:self.current_batch_size])
-        self.sizes.append(s[:self.current_batch_size])
-    # End of append_batch()
+        self.logger.debug('Updating average')
+        old_sum = old_avg * old_num
+        new_sum = new_avg * new_num
+        updated_sum = old_sum + new_sum
+        updated_num = old_num + new_num
+        updated_avg = updated_sum / updated_num
+        return updated_avg
+    # End of update_average()
 
-    def extend_batch(self, inputs, labels, sizes):
+    def extend_timesteps(self, accuracies, sizes):
         """
-        Extends the variables data for the most recently appended sequences with the given minibatch.
-        Modifies the following instance variables:
-        - inputs
-        - labels
-        - sizes
+        Appends the timestep accuracies and timestep sizes to the next_timestep_elements list.
 
         Params:
-        inputs (list): The inputs for this minibatch
-        labels (list): The labels for this minibatch
-        sizes (list): The true size of each sequence for this minibatch
+        accuracies (list): The list of accuracies for each timestep in the minibatch
+        sizes (list): The list of the number of valid elements for each timestep in the minibatch
         """
-        if len(inputs) != len(labels) or len(inputs) != len(sizes):
-            raise ValueError("Members of batch must all have the same first dimension (number of rows) "
-                            "inputs=%s | labels=%s | sizes=%s" % (np.shape(inputs), np.shape(labels), np.shape(sizes)))
-        x, y, s = self.copy_batch(inputs, labels, sizes)
-        for index in range(self.current_batch_size, 0, -1):
-            self.inputs[-1][-index].extend(x[-index])
-            self.labels[-1][-index].extend(y[-index])
-            self.sizes[-1][-index] += s[-index]
-    # End of extend_batch()
+        self.logger.debug('Extending incoming timestep accuracies')
+        if len(accuracies) != len(sizes):
+            error_msg = ("Timestep accuracies and elements for each minibatch must be of same size."
+                             "Accuracies: %d, Elements: %d" % (len(accuracies), len(sizes)))
+            self.logger.error(error_msg)
+            raise ValueError(error_msg)
+        self.next_timestep_accuracies.extend(accuracies)
+        self.next_timestep_elements.extend(sizes)
+    # End of extend_timesteps()
 
-    def copy_batch(self, inputs, labels, sizes):
+    def merge_timesteps(self):
         """
-        Makes a copy of the given minibatch, so that changes to it do not affect the real dataset values.
-
-        Params:
-        inputs (list): The inputs for this minibatch
-        labels (list): The labels for this minibatch
-        sizes (list): The true size of each sequence for this minibatch
-
-        Return:
-        inputs (list): The copy of inputs for this minibatch
-        labels (list): The copy of labels for this minibatch
-        sizes (list): The copy of true size of each sequence for this minibatch
+        Updates the cumulative timestep accuracies.
         """
-        x = deepcopy(inputs)
-        y = deepcopy(labels)
-        s = deepcopy(sizes)
-        return x, y, s
-    # End of copy_batch()
+        self.logger.debug('Merging cumulative timestep accuracies with incoming timestep accuracies')
+        self.next_timestep_accuracies = self.next_timestep_accuracies[:self.max_sequence_length]
+        for index in range(len(self.next_timestep_accuracies)):
+            old_avg = self.timestep_accuracies[index]
+            old_num = self.timestep_elements[index]
+            new_avg = self.next_timestep_accuracies[index]
+            new_num = self.next_timestep_elements[index]
+            self.timestep_accuracies[index] = self.update_average(old_avg, old_num, new_avg, new_num)
+            self.timestep_elements[index] += new_num
+        self.next_timestep_accuracies = list()
+        self.next_timestep_elements = list()
+    # End of merge_timesteps()
+# End of PerformanceData()
 
-    def pad_batch(self):
-        """
-        Pads the variable data for the most recently appended sequences until they are of the same length.
-        """
-        x_pad = self.batch_padding(self.input_shape, self.input_type)
-        y_pad = self.batch_padding(self.label_shape, self.label_type)
-        sizes = [0 for s in range(len(y_pad))]
-        while len(self.labels[-1][-1]) < self.max_length: # Doesn't matter if using inputs or labels here
-            self.extend_batch(x_pad, y_pad, sizes)
-    # End of pad_batch()
-
-    def batch_padding(self, shape, pad_type, alt_pad_value=None):
-        """
-        Creates a full batch made entirely of padding data.
-
-        Params:
-        shape (list): The shape of the batch to be created
-        pad_type (type): The type of the elements in the minibatch to be created
-        alt_pad_value (type): The value the minibatch is to be filled with. Defaults to self.pad_value
-
-        Return:
-        padding_batch (list): The padding batch
-        """
-        if alt_pad_value is None:
-            batch = np.full(shape=shape, fill_value=self.pad_value, dtype=pad_type)
-        else:
-            batch = np.full(shape=shape, fill_value=alt_pad_value, dtype=pad_type)
-        return batch.tolist()
-    # End of batch_padding()
-
-    def complete(self):
-        """
-        Normalizes the data by reducing its dimensions to 2 (number of sequences, maximum sequence length).
-        Modifies the following instance variables:
-        - inputs
-        - labels
-        - sizes
-        """
-        self.inputs = self.breakdown(self.inputs)
-        self.labels = self.breakdown(self.labels)
-        self.sizes = self.breakdown(self.sizes)
-        self.inputs = [row[:self.max_length] for row in self.inputs]
-        self.labels = [row[:self.max_length] for row in self.labels]
-    # End of complete()
-
-    def breakdown(self, batched_values):
-        """
-        Normalizes a given potion of the data by removing the separation between minibatches of separate sequences.
-
-        Params:
-        batched_values (list): The values that have separation between minibatch sequences
-
-        Return:
-        unbatched_values (list): The values without the separation between minibatch sequences
-        """
-        values = list()
-        for batch in batched_values:
-            values.extend(batch)
-        return values
-    # End of breakdown()
-# End of PerformanceVariables()
-
-def performance_op(logits_series, labels_series, sizes_series, max_length):
+class PerformancePlaceholders(object):
     """
-    Calculates the loss at a given epoch.
+    Holds the placeholders for feeding in performance information for a given dataset partition.
+
+    Instance variables:
+    - average_loss (tf.placeholder_with_default): The average loss for the partition
+    - average_accuracy (tf.placeholder_with_default): The average accuracy for the partition
+    - timestep_accuracies (tf.placeholder_with_default): The average accuracy for each timestep for the partition
+    """
+
+    def __init__(self, max_timesteps):
+        """
+        Creates a new PerformancePlaceholders object
+        """
+        self.average_loss = tf.placeholder_with_default(input=0.0, shape=(), name="average_loss")
+        self.average_accuracy = tf.placeholder_with_default(input=0.0, shape=(), name="average_accuracy")
+        zero_accuracies = np.zeros([max_timesteps], np.float32)
+        self.timestep_accuracies = tf.placeholder_with_default(input=zero_accuracies, shape=np.shape(zero_accuracies),
+            name="timestep_accuracies")
+    # End of __init__()
+# End of PerformancePlaceholders()
+
+def performance_ops(logits_series, labels_series, sizes_series, truncate):
+    """
+    Performs all the performance calculations for a given minibatch
 
     Params:
     logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
     labels_series (tf.Tensor): True labels for each input
     sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
+    truncate (int): The maximum sequence length for each minibatch
 
     Return:
-    average_loss (tf.Tensor): The calculated average loss for the given logits
-    average_accuracy (tf.Tensor): The calculated average accuracy for the given logits
+    loss (float): The average loss for the given minibatch
+    accuracy (float): The average accuracy for the given minibatch
+    size (int): The number of valid elements in this minibatch
+    timestep_accuracies (list): The average accuracy for each timestep in this minibatch
+    timestep_elements (list): The number of valid elements for each timestep in this minibatch
     """
-    logits_h, labels_h, sizes_h = unstack_variables(logits_series, labels_series, sizes_series, True)
-    loss_op = calculate_minibatch_loss(logits_h, labels_h, sizes_h, constants.LOSS_CALC)
-    masked_predictions, timestep_lengths = predict_and_mask(logits_series, labels_series, sizes_series, max_length)
-    accuracy_op = overall_accuracy(masked_predictions, sizes_series)
-    timestep_accuracies_op = timestep_accuracy(masked_predictions, timestep_lengths)
-    return loss_op, accuracy_op, timestep_accuracies_op
-# End of performance_op()
+    # calculate loss and accuracies for a minibatch
+    avg_loss, batch_size = average_loss(logits_series, labels_series, sizes_series, truncate)
+    avg_acc, timestep_accs, timestep_sizes = average_accuracy(logits_series, labels_series, sizes_series, truncate)
+    return avg_loss, avg_acc, batch_size, timestep_accs, timestep_sizes
+# End of performance_ops()
 
-def unstack_variables(logits_series, labels_series, sizes_series, horizontal=True):
+def average_loss(logits_series, labels_series, sizes_series, truncate):
     """
-    Unstacks the given logits, labels and sizes along the given orientation.
-
-    Params:
-    logits_series (tf.placeholder): The logits to be unstacked
-    labels_series (tf.placeholder): The labels to be unstacked
-    sizes_series (tf.placeholder): The row lengths to be unstacked
-    horizontal (boolean): If true, unstack along axis 0, otherwise along axis 1
-    """
-    if horizontal is True:
-        axis = 0
-        scope = "horizontal_unstack"
-    else:
-        axis = 1
-        scope = "vertical_unstack"
-    with tf.variable_scope(scope):
-        unstacked_logits = tf.unstack(logits_series, axis=axis, name="unstack_logits")
-        unstacked_labels = tf.unstack(labels_series, axis=axis, name="unstack_labels")
-        unstacked_sizes = tf.unstack(sizes_series, axis=axis, name="unstack_labels")
-    return unstacked_logits, unstacked_labels, unstacked_sizes
-# End of unstack_variables()
-
-def calculate_minibatch_loss(logits_series, labels_series, row_lengths_series, scope=constants.BATCH_LOSS_CALC):
-    """
-    Calculates the loss at a given minibatch.
+    Calculates the average loss for a given minibatch.
 
     Params:
     logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
     labels_series (tf.Tensor): True labels for each input
-    row_lengths_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
-    scope (string): The scope under which the operation will appear on the tensorflow graph
+    sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
+    truncate (int): The maximum sequence length for the minibatch
 
     Return:
-    tf.Tensor: The calculated average loss for this minibatch
+    loss (tf.Tensor): The average loss for this minibatch
+    size (tf.Tensor): The total number of elements in this minibatch
     """
-    with tf.variable_scope(scope):
-        loss_sum = 0.0
-        num_valid_rows = 0.0
-        for logits, labels, row_length in zip(logits_series, labels_series, row_lengths_series):
-            # row_length = tf.to_int32(row_length, name="CastRowLengthToInt")
-            ans = tf.greater(row_length, 0)
-            num_valid_rows = tf.cond(ans, lambda: num_valid_rows + 1, lambda: num_valid_rows + 0)
-            logits = logits[:row_length, :]
-            labels = tf.to_int32(labels[:row_length], "CastLabelsToInt")
-            row_losses = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels)
-            mean_loss = tf.cond(ans, lambda: tf.reduce_mean(row_losses[:row_length]), lambda: 0.0)
-            loss_sum += mean_loss
-        batch_loss_op = loss_sum / num_valid_rows # Can't use reduce_mean because there will be 0s there
-    return batch_loss_op
-# End of calculate_minibatch_loss()
+    with tf.variable_scope(constants.LOSS_CALC):
+        mask, _ = row_length_mask(sizes_series, truncate) # Copied in here so that it can be used for training
+        ce_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits_series, labels=labels_series, 
+            name="ce_losses")
+        ce_loss = tf.multiply(ce_loss, mask, name="mask_losses") # Mask out invalid portions of the calculated losses
+        total_batch_loss = tf.reduce_sum(ce_loss, axis=None, name="sum_losses")
+        total_batch_size = tf.reduce_sum(sizes_series, axis=None, name="sum_sizes")
+        total_batch_size = tf.cast(total_batch_size, dtype=tf.float32, name="cast_sizes_sum_to_float")
+        average_loss = total_batch_loss / total_batch_size
+    return average_loss, total_batch_size
+# End of average_loss()
+
+def average_accuracy(logits_series, labels_series, sizes_series, truncate):
+    """
+    Calculates the average accuracy for a given minibatch.
+
+    Params:
+    logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
+    labels_series (tf.Tensor): True labels for each input
+    sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
+    truncate (int): The maximum sequence length for the minibatch
+
+    Return:
+    accuracy (tf.Tensor): The average loss for this minibatch
+    timestep_accuracies (tf.Tensor): The average accuracy for each timestep in the given minibatch
+    timestep_sizes (tf.Tensor): The valid number of elements for each timestep in the given minibatch
+    """
+    with tf.variable_scope(constants.ACCURACY):
+        masked_predictions, timestep_lengths = predict_and_mask(logits_series, labels_series, sizes_series, truncate)
+        avg_accuracy = overall_accuracy(masked_predictions, sizes_series)
+        timestep_accuracies = timestep_accuracy(masked_predictions, timestep_lengths)
+    return avg_accuracy, timestep_accuracies, timestep_lengths
+# End of average_loss()
 
 def predict_and_mask(logits_series, labels_series, sizes_series, max_row_length):
     """
@@ -334,18 +278,6 @@ def overall_accuracy(masked_predictions, sizes_series):
         row_accuracies = tf.divide(row_sums, sizes_series, name="row_accuracies")
         row_accuracies = tf.where(tf.is_nan(row_accuracies), sizes_series, row_accuracies)
         average_accuracy = tf.reduce_mean(row_accuracies, name="average_accuracy")
-        # accuracy_sum = 0.0
-        # for logits, labels, row_length in zip(logits_series, labels_series, sizes_series):
-        #     logits = logits[:row_length, :]
-        #     labels = labels[:row_length]
-        #     predictions = tf.nn.softmax(logits, dim=-1, name="logits_softmax")
-        #     predictions = tf.argmax(predictions, axis=-1, name="logits_argmax")
-        #     predictions = tf.to_int32(predictions, "CastPredictionsToInt32")
-        #     correct_predictions = tf.equal(predictions, labels)
-        #     correct_predictions = tf.cast(correct_predictions, tf.float32)
-        #     row_accuracy = tf.reduce_mean(correct_predictions)
-        #     accuracy_sum += row_accuracy
-        # average_accuracy = accuracy_sum / len(sizes_series)
     return average_accuracy
 # End of overall_accuracy()
 

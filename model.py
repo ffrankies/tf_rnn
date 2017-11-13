@@ -3,7 +3,7 @@ An RNN model implementation in tensorflow.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 11 November, 2017
+Date: 12 November, 2017
 """
 
 import numpy as np
@@ -49,9 +49,7 @@ class RNNModel(object):
         self.graph = tf.Graph()
         with self.graph.as_default():
             self.training()
-            self.setup_training_performance()
-            self.setup_validation_performance()
-            self.setup_test_performance()
+            self.performance_evaluation()
             self.session = tf.Session(graph=self.graph)
             self.init_saver()
             self.session.run(tf.global_variables_initializer())
@@ -76,116 +74,61 @@ class RNNModel(object):
         Creates the following instance variables:
         - accuracy (tf.Tensor): The operation that calculates the average accuracy for the predictions on a given
                                 minibatch
+        - performance_ops (tf.Tensor): The operations that evaluate the performance of the network on a given minibatch
 
         Return:
         minibatch_loss_op (tf.Tensor): The operation that calculates the loss for the current minibatch
         """
         logits_series = self.output_layer()
         with tf.variable_scope(constants.LOSS_LAYER):
-            row_lengths_series = tf.unstack(self.batch_sizes, name="unstack_batch_sizes")
-            labels_series = tf.unstack(self.batch_y_placeholder, name="unstack_labels_series")
+            # row_lengths_series = tf.unstack(self.batch_sizes, name="unstack_batch_sizes")
+            # labels_series = tf.unstack(self.batch_y_placeholder, name="unstack_labels_series")
             # self.accuracy = calculate_accuracy(labels_series, self.predictions_series)
-            minibatch_loss_op = calculate_minibatch_loss(logits_series, labels_series, row_lengths_series)
+            minibatch_loss_op, _ = average_loss(logits_series, self.batch_y_placeholder, self.batch_sizes, 
+                self.settings.train.truncate)
+            self.performance_ops = performance_ops(logits_series, self.batch_y_placeholder, self.batch_sizes, 
+                self.settings.train.truncate)
         return minibatch_loss_op
     # End of performance_evaluation()
 
-    def setup_training_performance(self):
+    def performance_evaluation(self):
         """
-        Creates the tensorflow operation that calculates the loss for the training partition of the dataset.
-        Also creates the placeholders for this operation.
+        Creates variables for performance evaluation.
+
         Creates the following instance variables:
-        - train_logits (tf.placeholder_with_default): Placeholder for the logits for the training partition
-        - train_labels (tf.placeholder_with_default): Placeholder for the labels for the training partition
-        - train_sizes (tf.placeholder_with_default): Placeholder for the row lengths for the training partition
-        - training_loss_op (tf.Tensor): Operation that calculates the average training loss
-        - training_accuracy_op (tf.Tensor): Operation that calculates the average training accuracy
-        - training_timestep_accuracy_op (tf.Tensor): Operation that calculates the average training accuracy for
-                                                       each timestep
+        - train_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating training
+                                                                                performance
+        - validation_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating 
+                                                                                     validation performance
+        - test_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating test 
+                                                                               performance
         """
-        logits_shape = [len(self.dataset.inputs)*9, self.dataset.max_length, self.dataset.vocabulary_size]
-        labels_shape = logits_shape[:2]
-        sizes_shape = logits_shape[0]
+        max_length = self.dataset.max_length
         with tf.variable_scope(constants.TRAINING_PERFORMANCE):
-            self.train_logits = tf.placeholder_with_default(input=np.zeros(logits_shape, dtype=np.float32),
-                shape=logits_shape, name="logits_placeholder")
-            self.train_labels = tf.placeholder_with_default(input=np.zeros(labels_shape, dtype=np.int32),
-                shape=labels_shape, name="labels_placeholder")
-            self.train_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32),
-                shape=sizes_shape, name="sizes_placeholder")
-            training_ops = performance_op(self.train_logits, self.train_labels, self.train_sizes, 
-                self.dataset.max_length)
-            self.training_loss_op = training_ops[0]
-            self.training_accuracy_op = training_ops[1]
-            self.training_timestep_accuracy_op = training_ops[2]
-    # End of setup_training_performance()
-
-    def setup_validation_performance(self):
-        """
-        Creates the tensorflow operation that calculates the loss for the validation partition of the dataset.
-        Also creates the placeholders for this operation.
-        Creates the following instance variables:
-        - valid_logits (tf.placeholder_with_default): Placeholder for the logits for the validation partition
-        - valid_labels (tf.placeholder_with_default): Placeholder for the labels for the validation partition
-        - valid_sizes (tf.placeholder_with_default): Placeholder for the row lengths for the validation partition
-        - validation_loss_op (tf.Tensor): Operation that calculates the average validation loss
-        - validation_accuracy_op (tf.Tensor): Operation that calculates the average validation accuracy
-        - validation_timestep_accuracy_op (tf.Tensor): Operation that calculates the average validation accuracy for
-                                                       each timestep
-        """
-        logits_shape = [len(self.dataset.inputs), self.dataset.max_length, self.dataset.vocabulary_size]
-        labels_shape = [len(self.dataset.labels), self.dataset.max_length]
-        sizes_shape = len(self.dataset.labels)
+            self.train_performance = PerformancePlaceholders(max_length)
         with tf.variable_scope(constants.VALIDATION_PERFORMANCE):
-            self.valid_logits = tf.placeholder_with_default(input=np.zeros(logits_shape, dtype=np.float32),
-                shape=logits_shape, name="logits_placeholder")
-            self.valid_labels = tf.placeholder_with_default(input=np.zeros(labels_shape, dtype=np.int32),
-                shape=labels_shape, name="labels_placeholder")
-            self.valid_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32),
-                shape=sizes_shape, name="sizes_placeholder")
-            validation_ops = performance_op(self.valid_logits, self.valid_labels, self.valid_sizes, 
-                self.dataset.max_length)
-            self.validation_loss_op = validation_ops[0]
-            self.validation_accuracy_op = validation_ops[1]
-            self.validation_timestep_accuracy_op = validation_ops[2]
-    # End of setup_validation_performance()
-
-    def setup_test_performance(self):
-        """
-        Creates the tensorflow operation that calculates the loss for the test partition of the dataset.
-        Also creates the placeholders for this operation.
-        Creates the following instance variables:
-        - test_logits (tf.placeholder_with_default): Placeholder for the logits for the test partition
-        - test_labels (tf.placeholder_with_default): Placeholder for the labels for the test partition
-        - test_sizes (tf.placeholder_with_default): Placeholder for the row lengths for the test partition
-        - test_loss_op (tf.Tensor): Operation that calculates the average test loss
-        - test_accuracy_op (tf.Tensor): Operation that calculates the average test accuracy
-        - test_timestep_accuracy_op (tf.Tensor): Operation that calculates the average test accuracy for each timestep
-        """
-        logits_shape = [self.dataset.test.num_sequences, self.dataset.max_length, self.dataset.vocabulary_size]
-        labels_shape = logits_shape[:2]
-        sizes_shape = logits_shape[0]
+            self.validation_performance = PerformancePlaceholders(max_length)
         with tf.variable_scope(constants.TEST_PERFORMANCE):
-            self.test_logits = tf.placeholder_with_default(input=np.zeros(logits_shape, dtype=np.float32),
-                shape=logits_shape, name="logits_placeholder")
-            self.test_labels = tf.placeholder_with_default(input=np.zeros(labels_shape, dtype=np.int32),
-                shape=labels_shape, name="labels_placeholder")
-            self.test_sizes = tf.placeholder_with_default(input=np.zeros(sizes_shape, dtype=np.int32),
-                shape=sizes_shape, name="sizes_placeholder")
-            test_ops = performance_op(self.test_logits, self.test_labels, self.test_sizes, self.dataset.max_length)
-            self.test_loss_op = test_ops[0]
-            self.test_accuracy_op = test_ops[1]
-            self.test_timestep_accuracy_op = test_ops[2]
-    # End of setup_test_performance()
+            self.test_performance = PerformancePlaceholders(max_length)
+    # End of performance_evaluation()
 
     def output_layer(self):
         """
         Creates the tensorflow variables and operations needed to compute the network outputs.
+        Creates the following instance variables:
+        - batch_y_placeholder (tf.placeholder): The placeholder for the labels
+        - out_weights (tf.Variable): The output layer weights
+        - out_bias (tf.Variable): The output layer bias
+        - predictions_series (tf.Tensor): The predictions on a given minibatch
+
+        Return:
+        logits_series (tf.Tensor): The calculated probabilities of each class for each input in the minibatch
         """
         states_series = self.hidden_layer()
         with tf.variable_scope(constants.OUTPUT):
             states_series = tf.unstack(states_series, axis=1, name="unstack_states_series")
             self.batch_y_placeholder = tf.placeholder(
-                dtype=tf.float32,
+                dtype=tf.int32,
                 shape=np.shape(self.batch_x_placeholder),
                 name="output_placeholder")
             self.out_weights = tf.Variable(
@@ -199,10 +142,11 @@ class RNNModel(object):
             logits_series = [
                 tf.nn.xw_plus_b(state, self.out_weights, self.out_bias, name="state_times_out_weights")
                 for state in states_series] #Broadcasted addition
-            self.logits_series = tf.unstack(logits_series, axis=1, name="unstack_logits_series")
+            logits_series = tf.unstack(logits_series, axis=1, name="unstack_logits_series")
         with tf.variable_scope("predictions"):
-            self.predictions_series = [tf.nn.softmax(logits) for logits in self.logits_series]
-        return self.logits_series
+            self.predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
+            logits_series = tf.stack(logits_series, axis=0, name="stack_logits_series")
+        return logits_series
     # End of output_layer()
 
     def hidden_layer(self):
