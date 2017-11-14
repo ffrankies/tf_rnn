@@ -3,7 +3,7 @@ Utility class for setting up an RNN.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 21 October, 2017
+Date: 14 November, 2017
 """
 
 # Specify documentation format
@@ -97,8 +97,8 @@ def add_general_arguments(parser):
     Arguments added:
     --model_name
 
-    :type parser: argparse.ArgumentParser
-    :param parser: The argument parser to which to add the logger arguments.
+    Params:
+    parser (argparse.ArgumentParser): The argument parser to which to add the general arguments
     """
     parser.add_argument("-m", "--model_name", default=constants.MODEL_NAME,
                         help="The previously trained model to load on init.")
@@ -111,16 +111,19 @@ def add_log_arguments(parser):
     --log_name
     --log_filename
     --log_dir
+    --log_level
 
-    :type parser: argparse.ArgumentParser
-    :param parser: The argument parser to which to add the logger arguments.
+    Params:
+    parser (argparse.ArgumentParser): The argument parser to which to add the logger arguments
     """
-    parser.add_argument("-ln", "--log_name", default=constants.LOG_NAME,
+    parser.add_argument('-ln', '--log_name', default=constants.LOG_NAME,
                         help="The name of the logger to be used. Defaults to %s" % constants.LOG_NAME)
-    parser.add_argument("-lf", "--log_filename", default=constants.LOG_FILENAME,
+    parser.add_argument('-lf', '--log_filename', default=constants.LOG_FILENAME,
                         help="The name of the file to which the logging will be done.")
-    parser.add_argument("-ld", "--log_dir", default=constants.LOG_DIR,
+    parser.add_argument('-ld', '--log_dir', default=constants.LOG_DIR,
                         help="The path to the directory where the log file will be stored.")
+    parser.add_argument('-ll', '--log_level', default=constants.LOG_LEVEL,
+                        help="The level at which the logger logs data.")
 # End of add_log_arguments()
 
 def add_rnn_arguments(parser):
@@ -133,8 +136,8 @@ def add_rnn_arguments(parser):
     --layers
     --dropout
 
-    :type parser: argparse.ArgumentParser
-    :param parser: The argument parser to which to add the logger arguments.
+    Params:
+    parser (argparse.ArgumentParser): The argument parser to which to add the RNN arguments
     """
     parser.add_argument("-d", "--dataset", default=constants.DATASET,
                         help="The path to the dataset to be used for training.")
@@ -160,8 +163,8 @@ def add_train_arguments(parser):
     --truncate
     --batch_size
 
-    :type parser: argparse.ArgumentParser
-    :param parser: The argument parser to which to add the logger arguments.
+    Params:
+    parser (argparse.ArgumentParser): The argument parser to which to add the training arguments
     """
     parser.add_argument("-e", "--epochs", default=constants.EPOCHS, type=int,
                         help="The number of epochs for which to train the RNN.")
@@ -235,10 +238,10 @@ def setup_logger(args, logger_dir):
     logger_dir (string): The directory where the logs will be saved
 
     Return:
-    logging.Logger: The logger created with the given settings
+    logger (logging.Logger): The logger created with the given settings
     """
     logger = logging.getLogger(args.log_name)
-    logger.setLevel(logging.INFO)
+    logger.setLevel(constants.LOG_LEVELS[args.log_level])
     create_dir(logger_dir)
 
     # Logger will use up to 5 files for logging, 'rotating' the data between them as they get filled up.

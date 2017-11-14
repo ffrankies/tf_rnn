@@ -3,11 +3,12 @@ Contains constants for use within the project.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 11 November, 2017
+Date: 14 November, 2017
 """
 
 import time
 import math
+import logging
 
 ##########################################
 # TOKENS
@@ -72,6 +73,7 @@ MODEL_NAME_STR = 'model_name'
 LOG_NAME_STR = 'log_name'
 LOG_DIR_STR = 'log_dir'
 LOG_FILENAME_STR = 'log_filename'
+LOG_LEVEL_STR = 'log_level'
 # RNN
 DATASET_STR = 'dataset'
 EMBED_SIZE_STR = 'embed_size'
@@ -100,6 +102,12 @@ TOKEN_LEVEL_STR = 'token_level'
 #########################################
 # ARG CHOICES
 #########################################
+LOG_LEVELS = { 
+    'critical' : logging.CRITICAL,
+    'error' : logging.ERROR,
+    'info' : logging.INFO,
+    'debug' : logging.DEBUG
+    }
 TYPE_CHOICES = ['text', 'number']
 MODE_CHOICES = ['sentences', 'paragraphs', 'stories']
 TOKEN_LEVEL_CHOICES = ['words', 'characters']
@@ -113,6 +121,7 @@ MODEL_NAME = time.strftime("%d%m%y%H")
 LOG_NAME = 'TERRY'
 LOG_DIR = 'logging/'
 LOG_FILENAME = 'logging.log'
+LOG_LEVEL = 'info'
 # RNN
 DATASET = 'test.pkl'
 EMBED_SIZE = 100
@@ -146,7 +155,8 @@ GENERAL_ARGS = {
 LOGGING_ARGS = {
     LOG_NAME_STR : LOG_NAME,
     LOG_DIR_STR : LOG_DIR,
-    LOG_FILENAME_STR : LOG_FILENAME }
+    LOG_FILENAME_STR : LOG_FILENAME,
+    LOG_LEVEL_STR : LOG_LEVEL }
 RNN_ARGS = {
     DATASET_STR : DATASET,
     EMBED_SIZE_STR : EMBED_SIZE,

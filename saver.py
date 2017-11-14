@@ -4,7 +4,7 @@ tensorflow model to file.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 10 September, 2017
+Date: 14 November, 2017
 """
 
 import tensorflow as tf
@@ -14,6 +14,24 @@ import os
 from .constants import MODEL_DIR
 from . import constants
 from . import setup
+
+class Saver(object):
+    """
+    Class for saving and loading the RNN model.
+    """
+
+    def __init__(self, logger, settings):
+        """
+        Instantiates a Saver object.
+
+        Params:
+        logger (logging.Logger): The RNN's model
+        settings (settings.SettingsNamespace): The settings needed for saving and loading the model
+        """
+        self.logger = logger
+        self.logger.debug('Creating a saver object')
+    # End of __init__()
+# End of Saver()
 
 def create_model_dir(model_name):
     """

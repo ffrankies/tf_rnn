@@ -82,7 +82,7 @@ def train_step(model, epoch_num, current_state, accumulator):
     """
     for batch_num in range(model.dataset.train.num_batches):
         # Debug log outside of function to reduce number of arguments.
-        model.logger.debug("Training minibatch : ", batch_num, " | ", "epoch : ", epoch_num)
+        model.logger.debug("Training minibatch : %d | epoch : %d" % (batch_num, epoch_num))
         if epoch_num == 0:
             validate_minibatch(model, model.dataset.train, batch_num, current_state, accumulator)
         else:
@@ -179,7 +179,7 @@ def validation_step(model, epoch_num, current_state, accumulator):
     """
     for batch_num in range(model.dataset.valid.num_batches):
         # Debug log outside of function to reduce number of arguments.
-        model.logger.debug("Validating minibatch : ", batch_num, " | ", "epoch : ", epoch_num)
+        model.logger.debug("Validating minibatch : %d | epoch : %d" % (batch_num, epoch_num))
         current_state = validate_minibatch(model, model.dataset.valid, batch_num, current_state, accumulator)
 # End of validation_step()
 
@@ -234,7 +234,7 @@ def log_intermediate_performance(model, train_accumulator, valid_accumulator, ep
     valid_accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
     epoch_num (int): The epoch number for which the calculation is performed
     """
-    model.logger.debug("Evaluating the model's performance after training for an epoch")
+    model.logger.debug('Evaluating the model\'s performance after training for an epoch')
     summary = model.session.run(
         [model.summary_ops],
         feed_dict={
@@ -260,12 +260,12 @@ def test_step(model):
     variables (layers.performance_layer.PerformanceVariables): Container object for the data needed to perform a loss
                                                                calculation on the test dataset partition
     """
-    model.logger.debug("Evaluating the model's performance on the test partition")
+    model.logger.debug('Evaluating the model\'s performance on the test partition')
     test_accumulator = Accumulator(model.logger, model.dataset.max_length)
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
     for batch_num in range(model.dataset.test.num_batches):
         # Debug log outside of function to reduce number of arguments.
-        model.logger.debug("Testing minibatch : ", batch_num)
+        model.logger.debug("Testing minibatch : %d" % batch_num)
         current_state = validate_minibatch(model, model.dataset.test, batch_num, current_state, test_accumulator)
     return test_accumulator
 # End of test_step()
@@ -283,7 +283,7 @@ def performance_eval(model, epoch_num):
     accuracy (float): The calculated accuracy for the test partition of the dataset
     timestep_accuracies (list): The calculated accuracies for each timestep for the test partition of the dataset
     """
-    model.logger.debug("Performing a performance evaluation after training")
+    model.logger.debug('Performing a performance evaluation after training')
     test_accumulator = test_step(model)
     summary = model.session.run(
         [model.summary_ops],

@@ -3,7 +3,7 @@ Contains functions for setting up the performance evaluation layer for a tensorf
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 12 November, 2017
+Date: 14 November, 2017
 """
 import tensorflow as tf
 import numpy as np
@@ -60,8 +60,8 @@ class Accumulator(object):
         beginning (boolean): True if this minibatch marks the start of a sequence
         ending (boolean): True if this minibatch maarks the end of a sequence
         """
-        self.logger.debug('Adding performance data for a new batch')
         loss, accuracy, size, timestep_accuracies, timestep_elements = data
+        self.logger.debug("Minibatch loss: %.2f | Minibatch accuracy: %.2f" % (loss, accuracy))
         self.loss = self.update_average(self.loss, self.elements, loss, size)
         self.accuracy = self.update_average(self.accuracy, self.elements, accuracy, size)
         self.elements += size
@@ -69,6 +69,7 @@ class Accumulator(object):
         self.extend_timesteps(timestep_accuracies, timestep_elements)
         if ending is True:
             self.merge_timesteps()
+        self.logger.debug("Updated loss: %.2f | Updated accuracy: %.2f" % (self.loss, self.accuracy))
     # End of add_data()
 
     def update_average(self, old_avg, old_num, new_avg, new_num):
@@ -81,7 +82,6 @@ class Accumulator(object):
         new_avg (float): The new average value
         new_num (int): The number of elements contributing to the new average
         """
-        self.logger.debug('Updating average')
         old_sum = old_avg * old_num
         new_sum = new_avg * new_num
         updated_sum = old_sum + new_sum
