@@ -3,7 +3,7 @@ A Python3 collection of Namespaces for the different model settings.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 16 September, 2017
+Date: 14 November, 2017
 """
 
 import yaml
@@ -88,7 +88,12 @@ class Settings(object):
         config_file (string): The path to the config file from which to load settings
 
         Return:
-        tuple(dict): A list of dictionaries, each representing a different section of the settings
+        settings_dictionaries (tuple): 
+        - general (dict): The dictionary containing general settings
+        - logging (dict): The dictionary containing logging settings
+        - rnn (dict): The dictionary containing RNN settings
+        - train (dict): The dictionary containing training settings
+        - data (dict): The dictionary containing dataset settings
         """
         yaml_settings = self.read_yml(config_file)
         # Break settings into categories

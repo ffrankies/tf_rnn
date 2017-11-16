@@ -96,12 +96,16 @@ def add_general_arguments(parser):
     Adds general model arguments to the given argument parser.
     Arguments added:
     --model_name
+    --reuse_last
+    --load_from
 
     Params:
     parser (argparse.ArgumentParser): The argument parser to which to add the general arguments
     """
-    parser.add_argument("-m", "--model_name", default=constants.MODEL_NAME,
-                        help="The previously trained model to load on init.")
+    parser.add_argument('-m', '--model_name', default=constants.MODEL_NAME,
+                        help='The previously trained model to load on init.')
+    parser.add_argument('-n', '--new_run', action='store_true',
+                        help='Provide this option if you want to train the same model from the beginning')
 # End of add_general_arguments()
 
 def add_log_arguments(parser):

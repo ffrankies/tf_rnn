@@ -3,7 +3,7 @@ Contains constants for use within the project.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 14 November, 2017
+Date: 15 November, 2017
 """
 
 import time
@@ -69,6 +69,7 @@ META = "meta.pkl"
 #########################################
 # GENERAL
 MODEL_NAME_STR = 'model_name'
+NEW_MODEL_STR = 'new_model'
 # LOGGING
 LOG_NAME_STR = 'log_name'
 LOG_DIR_STR = 'log_dir'
@@ -117,6 +118,7 @@ TOKEN_LEVEL_CHOICES = ['words', 'characters']
 #########################################
 # GENERAL
 MODEL_NAME = time.strftime("%d%m%y%H")
+NEW_MODEL = False
 # LOGGING
 LOG_NAME = 'TERRY'
 LOG_DIR = 'logging/'
@@ -151,7 +153,8 @@ TOKEN_LEVEL = TOKEN_LEVEL_CHOICES[0]
 # ARG DEFAULTS
 #########################################
 GENERAL_ARGS = {
-    MODEL_NAME_STR : MODEL_NAME }
+    MODEL_NAME_STR : MODEL_NAME,
+    NEW_MODEL_STR : NEW_MODEL }
 LOGGING_ARGS = {
     LOG_NAME_STR : LOG_NAME,
     LOG_DIR_STR : LOG_DIR,

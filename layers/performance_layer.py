@@ -65,7 +65,6 @@ class Accumulator(object):
         self.loss = self.update_average(self.loss, self.elements, loss, size)
         self.accuracy = self.update_average(self.accuracy, self.elements, accuracy, size)
         self.elements += size
-        self.loss = ((self.loss * self.elements) + (loss * size)) / (self.elements + size)
         self.extend_timesteps(timestep_accuracies, timestep_elements)
         if ending is True:
             self.merge_timesteps()
@@ -101,7 +100,7 @@ class Accumulator(object):
         self.logger.debug('Extending incoming timestep accuracies')
         if len(accuracies) != len(sizes):
             error_msg = ("Timestep accuracies and elements for each minibatch must be of same size."
-                             "Accuracies: %d, Elements: %d" % (len(accuracies), len(sizes)))
+                         "Accuracies: %d, Elements: %d" % (len(accuracies), len(sizes)))
             self.logger.error(error_msg)
             raise ValueError(error_msg)
         self.next_timestep_accuracies.extend(accuracies)
@@ -270,7 +269,7 @@ def overall_accuracy(masked_predictions, sizes_series):
     predictions_series (tf.Tensor): The predictions made by the RNN for each input
 
     Return:
-    tf.Tensor: The average accuracy for each row in the minibatch
+    average_accuracy (tf.Tensor): The average accuracy for each row in the minibatch
     """
     with tf.variable_scope(constants.ACCURACY):
         row_sums = tf.reduce_sum(masked_predictions, axis=1, name="correct_predictions_per_sequence")
