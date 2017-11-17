@@ -1,10 +1,10 @@
 """
-Provides an interface for saving and loading various aspects of the 
+Provides an interface for saving and loading various aspects of the
 tensorflow model to file.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 14 November, 2017
+Date: 17 November, 2017
 """
 
 import tensorflow as tf
@@ -26,7 +26,7 @@ class MetaInfo(object):
         - 'epoch' (int): The number of epochs for which the model has been trained
         - 'train_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
                                                                      metrics
-        - 'valid_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition 
+        - 'valid_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
                                                                      performance metrics
         - 'test_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
                                                                     metrics
@@ -62,7 +62,7 @@ class MetaInfo(object):
 
     def latest(self):
         '''
-        Grabs the information for the latest run. If the latest run has no information associated with it, creates 
+        Grabs the information for the latest run. If the latest run has no information associated with it, creates
         an empty dictionary for it in run_info.
 
         Return:
@@ -86,7 +86,7 @@ class MetaInfo(object):
         print("Latest run info: " % self.latest())
     # End of increment_run()
 
-    def update(self, new_info): 
+    def update(self, new_info):
         '''
         Updates meta info with latest info.
 
@@ -95,7 +95,7 @@ class MetaInfo(object):
         - epoch (int): The number of epochs for which the model has been trained
         - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
                                                                      metrics
-        - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition 
+        - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
                                                                      performance metrics
         - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
                                                                     metrics
@@ -130,6 +130,8 @@ class Saver(object):
         self.meta_path = constants.MODEL_DIR + self.settings.model_name + '/' + constants.META
         self.variables = variables
         self.meta = self.load_meta(settings)
+        if settings.new_model is False:
+            self.load_model(settings.best_model)
     # End of __init__()
 
     def load_meta(self, settings):
@@ -142,7 +144,7 @@ class Saver(object):
         if os.path.isfile(self.meta_path):
             with open(meta_path, 'rb') as meta_file: # Read current meta info from file
                 meta_info = pickle.load(meta_file)
-        else: 
+        else:
             meta_info = MetaInfo(self.settings) # New model, so create new meta info
             self.save_meta(0, meta_info)
         return meta_info
@@ -157,7 +159,7 @@ class Saver(object):
         - epoch (int): The number of epochs for which the model has been trained
         - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
                                                                      metrics
-        - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition 
+        - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
                                                                      performance metrics
         - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
                                                                     metrics
@@ -185,19 +187,23 @@ class Saver(object):
     # End of save_model()
 
     def load_model(self, best_weights=False):
-        """
+        '''
         Load the given model, and updates the meta info accordingly.
 
         Params:
         best_weights (boolean): True if the model should load the best weights, as opposed to the latest weights
-        """
+        '''
         if best_weights is True:
-            weights_path = self.meta.model_path + constants.LATEST_WEIGHTS
+            self.logger.info('Loading the weights that produced the best accuracy')
+            weights_path = self.meta.latest()[constants.DIR] + constants.BEST_WEIGHTS
         elif best_weights is False:
-            weights_path = self.meta.run_dir + constants.WEIGHTS
-        with open(weights_path, "rb") as weights_file:
-            weights = pickle.load(weights_file)
-            self.variables.set_weights(weights)
+            self.logger.info('Loading the latest saved weights')
+            weights_path = self.meta.latest()[constants.DIR] + constants.LATEST_WEIGHTS
+        if os.path.isfile(weights_path) is True:
+            with open(weights_path, 'rb') as weights_file:
+                weights = pickle.load(weights_file)
+                self.variables.set_weights(weights)
+        else:
+            self.logger.info('Could not load weights: Weights not found')
     # End of load_model()
 # End of Saver()
-    
