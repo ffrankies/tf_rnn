@@ -192,8 +192,8 @@ class RNNModel(object):
         """
         Creates the variables needed to save the model weights and tensorboard summaries.
         """
-        self.run_dir = saver.load_meta(self.model_path)
+        variables = ray.experimental.TensorFlowVariables(self.train_step_fun, self.session)
+        self.saver = saver.Saver(self.logger, self.settings.general, variables)
         self.summary_writer, self.summary_ops = tensorboard.init_tensorboard(self)
-        self.variables = ray.experimental.TensorFlowVariables(self.train_step_fun, self.session)
     # End of init_saver()
 # End of RNNModel()

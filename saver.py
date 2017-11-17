@@ -20,9 +20,16 @@ class MetaInfo(object):
 
     Instance Variables:
     - run (int): The current run (variant) of the model
-    - epoch (int): The number of epochs for which the model has been trained
     - model_path (string): The path to the model's directory
-    - run_dir (string): The directory in which to save off the model
+    - run_info (dict): Dictionary mapping runs to their information. Dictionary contains the following information:
+        - 'dir' (string): The directory in which to save off the model
+        - 'epoch' (int): The number of epochs for which the model has been trained
+        - 'train_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
+                                                                     metrics
+        - 'valid_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition 
+                                                                     performance metrics
+        - 'test_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
+                                                                    metrics
     '''
 
     def __init__(self, settings):
@@ -33,13 +40,13 @@ class MetaInfo(object):
         settings (settings.SettingsNamespace): The settings needed for saving and loading the model
         '''
         self.run = 0
-        self.epoch = 0
         self.model_path = self.create_model_dir(settings.model_name)
+        self.run_info = dict()
         self.increment_run() # Set run to 1
     # End of __init__()
 
     def create_model_dir(self, model_name):
-        """
+        '''
         Creates the directory in which to save the model.
 
         Params:
@@ -47,23 +54,60 @@ class MetaInfo(object):
 
         Return:
         model_path (string): The path to the created directory
-        """
+        '''
         model_path = constants.MODEL_DIR + model_name + "/"
         setup.create_dir(model_path)
         return model_path
     # End of create_model_dir()
 
+    def latest(self):
+        '''
+        Grabs the information for the latest run. If the latest run has no information associated with it, creates 
+        an empty dictionary for it in run_info.
+
+        Return:
+        latest_info (dict): The information for the latest run
+        '''
+        if self.run not in self.run_info.keys():
+            self.run_info[self.run] = dict()
+        return self.run_info[self.run]
+    # End of latest()
+
     def increment_run(self):
         '''
-        Increments the run number for this model, and updates the run_dir with the new run number.
-
-        Creates the following instance variables (if they don't already exist):
-        - run_dir (string): The directory in which to save the model's weights and graphs
+        Increments the run number for this model, creates a directory for saving off weights for the new run, and
+        creates an initial dictionary for the run information.
         '''
         self.run += 1
-        self.run_dir = self.model_path + 'run_' + str(self.run) + '/'
-        setup.create_dir(self.run_dir)
+        latest = self.latest()
+        latest[constants.DIR] = self.model_path + 'run_' + str(self.run) + '/'
+        setup.create_dir(latest[constants.DIR])
+        self.update((0, None, None, None))
+        print("Latest run info: " % self.latest())
     # End of increment_run()
+
+    def update(self, new_info): 
+        '''
+        Updates meta info with latest info.
+
+        Params:
+        new_info (list/tuple): The new info with which to update the meta info
+        - epoch (int): The number of epochs for which the model has been trained
+        - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
+                                                                     metrics
+        - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition 
+                                                                     performance metrics
+        - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
+                                                                    metrics
+        '''
+        latest = self.latest()
+        epoch, train_acc, valid_acc, test_acc = new_info
+        latest[constants.EPOCH] = epoch
+        latest[constants.TRAIN] = train_acc
+        latest[constants.VALID] = valid_acc
+        latest[constants.TEST] = test_acc
+        print("Latest run info: " % self.latest())
+    # End of update()
 # End of MetaInfo()
 
 class Saver(object):
@@ -104,21 +148,23 @@ class Saver(object):
         return meta_info
     # End of load_meta()
 
-    def save_meta(self, epoch, best_weights=False):
+    def save_meta(self, new_info):
         '''
-        Saves the current meta info to the model's current run directory. 
-        If the model's current iteration has the best weights, also saves it to the model's home directory.
+        Updates meta info with latest info, and saves it.
 
         Params:
-        epoch (int): The number of epochs for which the model has trained
-        best_weights (boolean): True if the weights correspond to the best accuracy trained so far
+        new_info (list/tuple): The new info with which to update the meta info
+        - epoch (int): The number of epochs for which the model has been trained
+        - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
+                                                                     metrics
+        - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition 
+                                                                     performance metrics
+        - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
+                                                                    metrics
         '''
-        self.meta.epoch = epoch
-        with open(meta_info.run_dir + constants.META, 'wb') as meta_file:
+        self.update(new_info)
+        with open(self.meta_path, 'wb') as meta_file:
             pickle.dump(self.meta, meta_file)
-        if best_weights is True:
-            with open(meta_path, 'wb') as meta_file:
-                pickle.dump(self.meta, meta_file)
     # End of save_meta()
 
     def save_model(self, epoch, best_weights=False):

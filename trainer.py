@@ -25,13 +25,13 @@ def train(model):
     model (model.RNNModel): The model to train
     """
     model.logger.info("Started training the model.")
-    training_losses = []
-    validation_losses = []
+
+    # Create accumulators, pass them to the training, validation and testing steps
+    train_accumulator = valid_accumulator = test_accumulator = Accumulator(model.logger, model.dataset.max_length)
 
     for epoch_num in range(model.settings.train.epochs + 1):
-        training_loss, validation_loss = train_epoch(model, epoch_num)
-        training_losses.append(training_loss)
-        validation_losses.append(validation_loss)
+        train_epoch(model, epoch_num, train_accumulator, valid_accumulator)
+        
         # End of epoch training
 
     test_loss, test_accuracy, test_timestep_accuracy = performance_eval(model, epoch_num+1)
@@ -41,33 +41,30 @@ def train(model):
     plot(model, (training_losses, validation_losses), test_accuracy, test_timestep_accuracy)
 # End of train()
 
-def train_epoch(model, epoch_num):
+def train_epoch(model, epoch_num, train_accumulator, valid_accumulator):
     """
     Trains one full epoch.
 
     Params:
     model (model.RNNModel): The model to train
     epoch_num (int): The number of the current epoch
-
-    Return:
-    average_training_loss (float): The average incurred loss for training partition
-    average_validation_loss (float): The average incurred loss for the validation partition
+    train_accumulator (layers.performance_layer.Accumulator): The accumulator for training performance
+    valid_accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
     """
     model.logger.info("Starting epoch: %d" % (epoch_num))
 
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
-    train_accumulator = Accumulator(model.logger, model.dataset.max_length)
-    valid_accumulator = Accumulator(model.logger, model.dataset.max_length)
     for section in range(model.dataset.num_sections):
         model.dataset.next_iteration()
         train_step(model, epoch_num, current_state, train_accumulator)
         validation_step(model, epoch_num, current_state, valid_accumulator)
 
     log_intermediate_performance(model, train_accumulator, valid_accumulator, epoch_num)
+    model.logger.info("Finished epoch: %d | training_loss: %.2f | validation_loss: %.2f | validation_accuracy: %.2f" % 
+        (epoch_num, train_accumulator.loss, valid_accumulator.loss, valid_accumulator.accuracy))
 
-    model.logger.info("Finished epoch: %d | training_loss: %f | validation_loss: %f" % 
-        (epoch_num, train_accumulator.loss, valid_accumulator.loss))
-    return train_accumulator.loss, valid_accumulator.loss
+    train_accumulator.next_epoch()
+    valid_accumulator.next_epoch()
 # End of train_epoch()
 
 def train_step(model, epoch_num, current_state, accumulator):

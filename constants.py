@@ -35,6 +35,15 @@ TENSORBOARD = "tensorboard/"
 RAW_DATA_DIR = "raw_data/"
 
 #########################################
+# META INFO KEYS
+#########################################
+EPOCH = 'epoch'
+DIR = 'dir'
+TRAIN = 'training_accumulator'
+VALID = 'validation_accumulator'
+TEST = 'test_accumulator'
+
+#########################################
 # VARIABLE SCOPES FOR TENSORBOARD
 #########################################
 INPUT = "input_layer"
@@ -60,7 +69,7 @@ TIMESTEP_ACCURACY = "timestep_accuracy_calculation"
 # DEFAULT FILENAMES
 #########################################
 LATEST_WEIGHTS = "latest_weights.pkl"
-WEIGHTS = "/weights.pkl"
+BEST_WEIGHTS = "best_weights.pkl"
 PLOT = "/loss_plot.png"
 META = "meta.pkl"
 

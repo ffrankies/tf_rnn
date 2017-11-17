@@ -12,7 +12,7 @@ from copy import deepcopy
 from .. import constants
 
 class Accumulator(object):
-    """
+    '''
     Stores the data needed to evaluate the performance of the model on a given partition of the dataset.
 
     Instance Variables:
@@ -23,10 +23,13 @@ class Accumulator(object):
     - elements (float): The cumulative total number of valid elements seen so far
     - timestep_accuracies (list): The cumulative average accuracy for each timestep
     - timestep_elements (list): The cumulative number of valid elements for each timestep
+    - losses (list): List of losses for every epoch
+    - accuracies (list): List of accuracies for every epoch
+    - latest_timestep_accuracies (list): The latest timestep accuracies
     - Temporary instance variables:
         - next_timestep_accuracies (list): Incoming average accuracies per timestep
         - next_timestep_elements (list): Incoming number of valid elements per timestep
-    """
+    '''
 
     def __init__(self, logger, max_sequence_length):
         """
@@ -38,12 +41,14 @@ class Accumulator(object):
         self.logger = logger
         self.logger.debug('Creating a PerformanceData object')
         self.max_sequence_length = max_sequence_length
-        self.loss = self.accuracy = 0.0
-        self.elements = 0
-        self.timestep_accuracies = [0.0] * self.max_sequence_length
-        self.timestep_elements = [0] * self.max_sequence_length
+        # self.loss = self.accuracy = 0.0
+        # self.elements = 0
+        # self.timestep_accuracies = [0.0] * self.max_sequence_length
+        # self.timestep_elements = [0] * self.max_sequence_length
+        self.losses = self.accuracies = self.latest_timestep_accuracies = list()
         self.next_timestep_accuracies = list()
         self.next_timestep_elements = list()
+        self.reset_metrics()
     # End of __init__()
 
     def add_data(self, data, beginning, ending):
@@ -123,6 +128,33 @@ class Accumulator(object):
         self.next_timestep_accuracies = list()
         self.next_timestep_elements = list()
     # End of merge_timesteps()
+
+    def next_epoch(self):
+        '''
+        Creates space for storing performance data for the next epoch. Also resets metrics for the next epoch.
+        '''
+        self.losses.append(self.loss)
+        self.accuracies.append(self.accuracy)
+        self.latest_timestep_accuracies = deepcopy(self.timestep_accuracies)
+        self.reset_metrics()
+    # End of next_epoch()
+
+    def reset_metrics(self):
+        '''
+        Resets the performance metrics for the next epoch.
+
+        Creates the following instance variables, if they haven't already been created:
+        - loss (float): The cumulative average loss for every minibatch
+        - accuracy (float): The cumulative average accuracy for every minibatch
+        - elements (float): The cumulative total number of valid elements seen so far
+        - timestep_accuracies (list): The cumulative average accuracy for each timestep
+        - timestep_elements (list): The cumulative number of valid elements for each timestep
+        '''
+        self.loss = self.accuracy = 0.0
+        self.elements = 0
+        self.timestep_accuracies = [0.0] * self.max_sequence_length
+        self.timestep_elements = [0] * self.max_sequence_length
+    # End of reset_metrics()
 # End of PerformanceData()
 
 class PerformancePlaceholders(object):
