@@ -35,8 +35,8 @@ def train(model):
     for epoch_num in range(model.saver.meta.latest()[constants.EPOCH]+1, model.settings.train.epochs+1):
         train_epoch(model, epoch_num, train_accumulator, valid_accumulator)
         best_weights = valid_accumulator.accuracies[-1] > best_accuracy
-        print("Best_weights? ", best_weights)
-        if best_weights is True: best_accuracy = valid_accumulator.accuracies[-1]
+        print("Best_weights? ", best_weights, " | accuracy: ", valid_accumulator.accuracies[-1])
+        if best_weights == True: best_accuracy = valid_accumulator.accuracies[-1]
         print("Best_accuracy: ", best_accuracy)
         model.saver.save_model([epoch_num, train_accumulator, valid_accumulator, test_accumulator], best_weights)
         # End of epoch training

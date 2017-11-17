@@ -160,11 +160,6 @@ class Saver(object):
                                                                     metrics
         '''
         self.meta.update(new_info)
-        # dill.loads(dill.dumps(self.meta))
-        # dill.detect.badobjects(self.meta, depth=0)
-        # dill.detect.badobjects(self.meta, depth=1)
-        # dill.detect.badobjects(self.meta, depth=2)
-        # dill.detect.badobjects(self.meta, depth=3)
         with open(self.meta_path, 'wb') as meta_file:
             dill.dump(obj=self.meta, file=meta_file)
     # End of save_meta()
@@ -187,7 +182,7 @@ class Saver(object):
         self.save_meta(meta_info)
         weights = self.variables.get_weights()
         run_dir = self.meta.latest()[constants.DIR]
-        if best_weights is True:
+        if best_weights == True:
             with open(run_dir + constants.BEST_WEIGHTS, 'wb') as weights_file:
                 pickle.dump(weights, weights_file)
         with open(run_dir + constants.LATEST_WEIGHTS, 'wb') as weights_file:
