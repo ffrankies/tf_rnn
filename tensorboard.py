@@ -1,27 +1,28 @@
-"""
+'''
 Utility class for creating tensorboard summaries.
 
-12 November, 2017
-"""
+17 November, 2017
+'''
 import tensorflow as tf
 from . import constants
 
 def init_tensorboard(model):
-    """
+    '''
     Initialize tensorboard event writer, and add variable summaries to it.
 
-    :type model: RNNModel()
-    :param model: the model for which summaries should be made.
+    Params:
+    model (model.RNNModel): The model for which summaries should be made.
 
-    :type return: tuple(tf.summary.FileWriter(), tf.Tensor(dtype=String))
-    :param return: the tensorboard summary writer and a Tensor containing summarized tensorflow operations
-    """
-    tensorboard_dir = model.model_path + constants.TENSORBOARD + model.run_dir
-    with tf.variable_scope("summaries"):
+    Return:
+    summary_writer (tf.summary.FileWriter): The tensorboard summary writer
+    summary_ops (tf.Tensor): The tensorflow operations that produce the tensorboard summaries
+    '''
+    tensorboard_dir = model.saver.meta.latest()[constants.DIR]
+    with tf.variable_scope('summaries'):
         max_timesteps = model.dataset.max_length
-        summarize_partition("training", model.train_performance, max_timesteps)
-        summarize_partition("validation", model.validation_performance, max_timesteps)
-        summarize_partition("test", model.test_performance, max_timesteps)
+        summarize_partition('training', model.train_performance, max_timesteps)
+        summarize_partition('validation', model.validation_performance, max_timesteps)
+        summarize_partition('test', model.test_performance, max_timesteps)
     merged_summary_ops = tf.summary.merge_all()
     writer = tf.summary.FileWriter(tensorboard_dir, graph=model.session.graph)
     return writer, merged_summary_ops

@@ -1,10 +1,10 @@
-"""
+'''
 Contains functions for setting up the performance evaluation layer for a tensorflow-based RNN.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 14 November, 2017
-"""
+Date: 17 November, 2017
+'''
 import tensorflow as tf
 import numpy as np
 from copy import deepcopy
@@ -32,27 +32,26 @@ class Accumulator(object):
     '''
 
     def __init__(self, logger, max_sequence_length):
-        """
+        '''
         Creates a new PerformanceData object.
 
         Params:
+        logger (logging.Logger): The logger from the model
         max_sequence_length (int): The maximum sequence length for this dataset
-        """
+        '''
         self.logger = logger
         self.logger.debug('Creating a PerformanceData object')
         self.max_sequence_length = max_sequence_length
-        # self.loss = self.accuracy = 0.0
-        # self.elements = 0
-        # self.timestep_accuracies = [0.0] * self.max_sequence_length
-        # self.timestep_elements = [0] * self.max_sequence_length
-        self.losses = self.accuracies = self.latest_timestep_accuracies = list()
+        self.losses = list()
+        self.accuracies = list()
+        self.latest_timestep_accuracies = list()
         self.next_timestep_accuracies = list()
         self.next_timestep_elements = list()
         self.reset_metrics()
     # End of __init__()
 
     def add_data(self, data, beginning, ending):
-        """
+        '''
         Adds the performance data from a given minibatch to the PerformanceData object.
 
         Params:
@@ -64,7 +63,7 @@ class Accumulator(object):
         - timestep_elements (list): The number of valid elements for each timestep in this minibatch
         beginning (boolean): True if this minibatch marks the start of a sequence
         ending (boolean): True if this minibatch maarks the end of a sequence
-        """
+        '''
         loss, accuracy, size, timestep_accuracies, timestep_elements = data
         self.logger.debug("Minibatch loss: %.2f | Minibatch accuracy: %.2f" % (loss, accuracy))
         self.loss = self.update_average(self.loss, self.elements, loss, size)
@@ -77,7 +76,7 @@ class Accumulator(object):
     # End of add_data()
 
     def update_average(self, old_avg, old_num, new_avg, new_num):
-        """
+        '''
         Updates the old average with new data.
 
         Params:
@@ -85,7 +84,7 @@ class Accumulator(object):
         old_num (int): The number of elements contributing to the current average
         new_avg (float): The new average value
         new_num (int): The number of elements contributing to the new average
-        """
+        '''
         old_sum = old_avg * old_num
         new_sum = new_avg * new_num
         updated_sum = old_sum + new_sum
@@ -95,13 +94,13 @@ class Accumulator(object):
     # End of update_average()
 
     def extend_timesteps(self, accuracies, sizes):
-        """
+        '''
         Appends the timestep accuracies and timestep sizes to the next_timestep_elements list.
 
         Params:
         accuracies (list): The list of accuracies for each timestep in the minibatch
         sizes (list): The list of the number of valid elements for each timestep in the minibatch
-        """
+        '''
         self.logger.debug('Extending incoming timestep accuracies')
         if len(accuracies) != len(sizes):
             error_msg = ("Timestep accuracies and elements for each minibatch must be of same size."
@@ -113,9 +112,9 @@ class Accumulator(object):
     # End of extend_timesteps()
 
     def merge_timesteps(self):
-        """
+        '''
         Updates the cumulative timestep accuracies.
-        """
+        '''
         self.logger.debug('Merging cumulative timestep accuracies with incoming timestep accuracies')
         self.next_timestep_accuracies = self.next_timestep_accuracies[:self.max_sequence_length]
         for index in range(len(self.next_timestep_accuracies)):
@@ -150,7 +149,8 @@ class Accumulator(object):
         - timestep_accuracies (list): The cumulative average accuracy for each timestep
         - timestep_elements (list): The cumulative number of valid elements for each timestep
         '''
-        self.loss = self.accuracy = 0.0
+        self.loss = 0.0
+        self.accuracy = 0.0
         self.elements = 0
         self.timestep_accuracies = [0.0] * self.max_sequence_length
         self.timestep_elements = [0] * self.max_sequence_length
@@ -218,7 +218,7 @@ def average_loss(logits_series, labels_series, sizes_series, truncate):
     """
     with tf.variable_scope(constants.LOSS_CALC):
         mask, _ = row_length_mask(sizes_series, truncate) # Copied in here so that it can be used for training
-        ce_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits_series, labels=labels_series, 
+        ce_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits_series, labels=labels_series,
             name="ce_losses")
         ce_loss = tf.multiply(ce_loss, mask, name="mask_losses") # Mask out invalid portions of the calculated losses
         total_batch_loss = tf.reduce_sum(ce_loss, axis=None, name="sum_losses")
