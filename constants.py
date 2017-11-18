@@ -1,10 +1,8 @@
-"""
+'''
 Contains constants for use within the project.
-
 Copyright (c) 2017 Frank Derry Wanye
-
-Date: 14 November, 2017
-"""
+Date: 18 November, 2017
+'''
 
 import time
 import math
@@ -35,6 +33,15 @@ TENSORBOARD = "tensorboard/"
 RAW_DATA_DIR = "raw_data/"
 
 #########################################
+# META INFO KEYS
+#########################################
+EPOCH = 'epoch'
+DIR = 'dir'
+TRAIN = 'training_accumulator'
+VALID = 'validation_accumulator'
+TEST = 'test_accumulator'
+
+#########################################
 # VARIABLE SCOPES FOR TENSORBOARD
 #########################################
 INPUT = "input_layer"
@@ -60,8 +67,8 @@ TIMESTEP_ACCURACY = "timestep_accuracy_calculation"
 # DEFAULT FILENAMES
 #########################################
 LATEST_WEIGHTS = "latest_weights.pkl"
-WEIGHTS = "/weights.pkl"
-PLOT = "/loss_plot.png"
+BEST_WEIGHTS = "best_weights.pkl"
+PLOT = "loss_plot.png"
 META = "meta.pkl"
 
 #########################################
@@ -69,6 +76,8 @@ META = "meta.pkl"
 #########################################
 # GENERAL
 MODEL_NAME_STR = 'model_name'
+NEW_MODEL_STR = 'new_model'
+BEST_MODEL_STR = 'best_model'
 # LOGGING
 LOG_NAME_STR = 'log_name'
 LOG_DIR_STR = 'log_dir'
@@ -102,7 +111,7 @@ TOKEN_LEVEL_STR = 'token_level'
 #########################################
 # ARG CHOICES
 #########################################
-LOG_LEVELS = { 
+LOG_LEVELS = {
     'critical' : logging.CRITICAL,
     'error' : logging.ERROR,
     'info' : logging.INFO,
@@ -117,18 +126,19 @@ TOKEN_LEVEL_CHOICES = ['words', 'characters']
 #########################################
 # GENERAL
 MODEL_NAME = time.strftime("%d%m%y%H")
+NEW_MODEL = False
+BEST_MODEL = False
 # LOGGING
 LOG_NAME = 'TERRY'
 LOG_DIR = 'logging/'
 LOG_FILENAME = 'logging.log'
 LOG_LEVEL = 'info'
-# RNN
+# TRAIN
 DATASET = 'test.pkl'
 EMBED_SIZE = 100
 HIDDEN_SIZE = 100
 LAYERS = 2
 DROPOUT = 0.5
-# TRAIN
 BATCH_SIZE = 5
 PATIENCE = 100000 # Probably going to be deprecated
 LEARN_RATE = 0.005
@@ -151,7 +161,9 @@ TOKEN_LEVEL = TOKEN_LEVEL_CHOICES[0]
 # ARG DEFAULTS
 #########################################
 GENERAL_ARGS = {
-    MODEL_NAME_STR : MODEL_NAME }
+    MODEL_NAME_STR : MODEL_NAME,
+    NEW_MODEL_STR : NEW_MODEL,
+    BEST_MODEL_STR : BEST_MODEL }
 LOGGING_ARGS = {
     LOG_NAME_STR : LOG_NAME,
     LOG_DIR_STR : LOG_DIR,
