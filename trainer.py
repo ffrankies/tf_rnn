@@ -330,7 +330,6 @@ def plot_accuracy_line(accuracy_list, axis):
     - validation_accuracies (list): The validation accuracies to plot
     axis (int): The axis on which to plot the validation loss
     '''
-    print("Accuracy list: ", accuracy_list)
     axis = plt.subplot(axis)
     axis.clear()
     x = range(0, len(accuracy_list[0]))
