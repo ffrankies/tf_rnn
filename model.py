@@ -64,7 +64,7 @@ class RNNModel(object):
             self.learning_rate = tf.Variable(
                 initial_value=self.settings.train.learn_rate,
                 dtype=tf.float32,
-                name="learning_rate")
+                name='learning_rate')
             self.train_step_fun = tf.train.AdagradOptimizer(self.learning_rate).minimize(total_loss)
     # End of training()
 

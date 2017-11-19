@@ -4,6 +4,7 @@ Copyright (c) 2017 Frank Derry Wanye
 Date: 18 November, 2017
 '''
 
+import math
 import numpy as np
 import tensorflow as tf
 import matplotlib
@@ -27,20 +28,20 @@ def train(model):
     train_accumulator = model.saver.meta.latest()[constants.TRAIN]
     valid_accumulator = model.saver.meta.latest()[constants.VALID]
     test_accumulator = model.saver.meta.latest()[constants.TEST]
-    if len(valid_accumulator.accuracies) == 0:
-        best_accuracy = 0.0
-    else:
-        best_accuracy = valid_accumulator.accuracies[-1]
 
     for epoch_num in range(model.saver.meta.latest()[constants.EPOCH]+1, model.settings.train.epochs+1):
         train_epoch(model, epoch_num, train_accumulator, valid_accumulator)
-        best_weights = valid_accumulator.accuracies[-1] > best_accuracy
-        if best_weights == True: best_accuracy = valid_accumulator.accuracies[-1]
-        # print("Best_accuracy: ", best_accuracy)
-        model.saver.save_model(model, [epoch_num, train_accumulator, valid_accumulator, test_accumulator], best_weights)
+        model.saver.save_model(
+            model, 
+            [epoch_num, train_accumulator, valid_accumulator, test_accumulator], 
+            valid_accumulator.is_best_accuracy)
+        if early_stop(valid_accumulator, epoch_num, model.settings.train.epochs) == True:
+            model.logger.info('Stopping early because validation partition no longer showing improvement')
+            break
+        plot(model, train_accumulator, valid_accumulator, test_accumulator)
         # End of epoch training
 
-    performance_eval(model, model.settings.train.epochs+1, test_accumulator)
+    performance_eval(model, epoch_num+1, test_accumulator)
 
     model.logger.info("Finished training the model. Final validation loss: %f | Final test loss: %f | "
                       "Final test accuracy: %f" %
@@ -60,8 +61,6 @@ def train_epoch(model, epoch_num, train_accumulator, valid_accumulator):
     model.logger.info("Starting epoch: %d" % (epoch_num))
 
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
-    # for section in range(model.dataset.num_sections):
-        # model.dataset.next_iteration()
     train_step(model, epoch_num, current_state, train_accumulator)
     validation_step(model, epoch_num, current_state, valid_accumulator)
 
@@ -161,6 +160,23 @@ def build_feed_dict(model, batch, current_state):
     return feed_dict
 # End of build_feed_dict()
 
+def update_accumulator(accumulator, dataset_partition, batch_num, performance_data):
+    '''
+    Adds a batch's performance data to the specified Accumulator object.
+    Note: The Accumulator contains calculated inputs, but the rest of the data is obtained from
+    the dataset.
+    Params:
+    accumulator (layers.performance_layer.Accumulator): The accumulator to update with new performance data
+    dataset_partition (dataset.DatasetPartition): The dataset partition containing the remainder of the batch data
+    batch_num (int): The index of the batch (within the dataset partition) that is being added to the container
+    performance_data (list): The performance data for the given batch
+    '''
+    accumulator.add_data(
+        data=performance_data,
+        beginning=dataset_partition.beginning[batch_num],
+        ending=dataset_partition.ending[batch_num])
+# End of update_accumulator()
+
 def validation_step(model, epoch_num, current_state, accumulator):
     '''
     Performs performance calculations on the dataset's validation partition.
@@ -195,23 +211,6 @@ def validate_minibatch(model, dataset_partition, batch_num, current_state, accum
     update_accumulator(accumulator, dataset_partition, batch_num, performance_data)
     return current_state
 # End of validate_minibatch()
-
-def update_accumulator(accumulator, dataset_partition, batch_num, performance_data):
-    '''
-    Adds a batch's performance data to the specified Accumulator object.
-    Note: The Accumulator contains calculated inputs, but the rest of the data is obtained from
-    the dataset.
-    Params:
-    accumulator (layers.performance_layer.Accumulator): The accumulator to update with new performance data
-    dataset_partition (dataset.DatasetPartition): The dataset partition containing the remainder of the batch data
-    batch_num (int): The index of the batch (within the dataset partition) that is being added to the container
-    performance_data (list): The performance data for the given batch
-    '''
-    accumulator.add_data(
-        data=performance_data,
-        beginning=dataset_partition.beginning[batch_num],
-        ending=dataset_partition.ending[batch_num])
-# End of update_accumulator()
 
 def log_intermediate_performance(model, train_accumulator, valid_accumulator, epoch_num):
     '''
@@ -290,13 +289,12 @@ def plot(model, train_accumulator, valid_accumulator, test_accumulator):
     test_accumulator (layers.performance_layer.Accumulator): The accumulator for test performance
     '''
     model.logger.info('Plotting results for visualization')
-    plt.figure(num=1, figsize=(10, 10))
-    loss_axis = plt.subplot(311)
-    plot_loss((train_accumulator.losses, valid_accumulator.losses), loss_axis)
-    accuracy_axis = plt.subplot(312)
-    plot_accuracy(test_accumulator.accuracies[-1], accuracy_axis)
-    bar_chart_axis = plt.subplot(313)
-    plot_bar_chart(test_accumulator.latest_timestep_accuracies, bar_chart_axis)
+    plt.figure(num=1, figsize=(10, 20))
+    plot_loss((train_accumulator.losses, valid_accumulator.losses), 411)
+    plot_accuracy_line((train_accumulator.accuracies, valid_accumulator.accuracies), 412)
+    if len(test_accumulator.accuracies) > 0:
+        plot_accuracy_pie_chart(test_accumulator.accuracies[-1], 413)
+    plot_bar_chart(test_accumulator.latest_timestep_accuracies, 414)
     plt.tight_layout()
     plt.savefig(model.run_dir + constants.PLOT)
     plt.show()
@@ -309,8 +307,10 @@ def plot_loss(loss_list, axis):
     loss_list (tuple):
     - training_losses (list): The training losses to plot
     - validation_losses (list): The validation losses to plot
-    axis (matplotlib.axes.Axes): The axis on which to plot the validation loss
+    axis (int): The axis on which to plot the validation loss
     '''
+    axis = plt.subplot(axis)
+    axis.clear()
     x = range(0, len(loss_list[0]))
     axis.plot(x, loss_list[0], '-b', label="Training Loss (final=%.2f)" % loss_list[0][-1])
     axis.plot(x, loss_list[1], '-r', label="Validation Loss (final=%.2f)" % loss_list[1][-1])
@@ -320,26 +320,51 @@ def plot_loss(loss_list, axis):
     axis.set_title('Visualizing loss during training')
 # End of plot_loss()
 
-def plot_accuracy(accuracy, axis):
+def plot_accuracy_line(accuracy_list, axis):
     '''
-    Plots the average accuracy on a separate subplot.
+    Plots the average accuracy during training as a line graph a separate subplot.
+
+    Params:
+    accuracy_list (tuple): 
+    - training_accuracies (list): The training accuracies to plot
+    - validation_accuracies (list): The validation accuracies to plot
+    axis (int): The axis on which to plot the validation loss
+    '''
+    print("Accuracy list: ", accuracy_list)
+    axis = plt.subplot(axis)
+    axis.clear()
+    x = range(0, len(accuracy_list[0]))
+    axis.plot(x, accuracy_list[0], '-b', label="Training Accuracy (final=%.2f)" % accuracy_list[0][-1])
+    axis.plot(x, accuracy_list[1], '-r', label="Validation Accuracy (final=%.2f)" % accuracy_list[1][-1])
+    axis.legend(loc='upper left')
+    axis.set_xlabel('Epoch')
+    axis.set_ylabel('Average Accuracy of Predictions')
+    axis.set_title('Visualizing accuracy of predictions during training')
+# End of plot_accuracy_line()
+
+def plot_accuracy_pie_chart(accuracy, axis):
+    '''
+    Plots the average accuracy on the test partition as a pie chart on a separate subplot.
+
     Params:
     accuracy (float): The average accuracy of predictions for the test dataset partition
-    axis (matplotlib.axes.Axes): The axis on which to plot the validation loss
+    axis (int): The axis on which to plot the validation loss
     '''
+    axis = plt.subplot(axis)
     accuracy = accuracy * 100
     axis.pie([accuracy, 100 - accuracy], labels=['Correct predictions', 'Incorrect predictions'], autopct='%.2f%%')
     axis.axis('equal')
     axis.set_title('Average accuracy for the test partition')
-# End of plot_accuracy()
+# End of plot_accuracy_pie_chart()
 
 def plot_bar_chart(timestep_accuracy, axis):
     '''
     Plots the average accuracy for each timestep as a bar chart on a separate subplot.
     Params:
     timestep_accuracy (list): The average accuracy of predictions for each timestep on the test dataset partition
-    axis (matplotlib.axes.Axes): The axis on which to plot the validation loss
+    axis (int): The axis on which to plot the validation loss
     '''
+    axis = plt.subplot(axis)
     timestep_accuracy = [x * 100.0 for x in timestep_accuracy]
     bar_chart = axis.bar(range(1, len(timestep_accuracy) + 1), timestep_accuracy)
     axis.set_xlabel('Timestep')
@@ -354,3 +379,25 @@ def plot_bar_chart(timestep_accuracy, axis):
         if height <= 30.0 : y_pos = height + 10.0
         axis.text(x_pos, y_pos, "%.1f" % accuracy, ha='center', va='bottom', rotation=90)
 # End of plot_bar_chart()
+
+def early_stop(valid_accumulator, epoch_num, num_epochs):
+    '''
+    Checks whether or not the model should stop training because it has started to over-fit the data.
+
+    Params:
+    valid_accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
+    epoch_num (int): The number of epochs the model has trained for
+    num_epochs (int): The maximum number of epochs the model is set to train for
+
+    Return:
+    should_stop (boolean): True if the model has started to overfit the data
+    '''
+    should_stop = False
+    one_tenth = math.ceil(num_epochs/10)
+    if epoch_num >= one_tenth:
+        maximum = max(valid_accumulator.accuracies[-one_tenth:])
+        last_accuracy = valid_accumulator.accuracies[-1]
+        if maximum < valid_accumulator.best_accuracy and last_accuracy < valid_accumulator.best_accuracy*0.98:
+            should_stop = True
+    return should_stop
+# End of early_stop

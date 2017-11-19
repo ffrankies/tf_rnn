@@ -17,6 +17,8 @@ class Accumulator(object):
     - max_sequence_length (int): The maximum sequence length for this dataset
     - loss (float): The cumulative average loss for every minibatch
     - accuracy (float): The cumulative average accuracy for every minibatch
+    - best_accuracy (float): The best accuracy produced so far
+    - is_best_accuracy (boolean): True if the latest produced accuracy is the best accuracy
     - elements (float): The cumulative total number of valid elements seen so far
     - timestep_accuracies (list): The cumulative average accuracy for each timestep
     - timestep_elements (list): The cumulative number of valid elements for each timestep
@@ -38,6 +40,8 @@ class Accumulator(object):
         self.logger = logger
         self.logger.debug('Creating a PerformanceData object')
         self.max_sequence_length = max_sequence_length
+        self.best_accuracy = 0.0
+        self.is_best_accuracy = False
         self.losses = list()
         self.accuracies = list()
         self.latest_timestep_accuracies = list()
@@ -125,6 +129,11 @@ class Accumulator(object):
         '''
         Creates space for storing performance data for the next epoch. Also resets metrics for the next epoch.
         '''
+        if self.accuracy >= self.best_accuracy:
+            self.best_accuracy = self.accuracy
+            self.is_best_accuracy = True
+        else:
+            self.is_best_accuracy = False
         self.losses.append(self.loss)
         self.accuracies.append(self.accuracy)
         self.latest_timestep_accuracies = deepcopy(self.timestep_accuracies)
