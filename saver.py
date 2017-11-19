@@ -1,11 +1,11 @@
-"""
+'''
 Provides an interface for saving and loading various aspects of the 
 tensorflow model to file.
 
 Copyright (c) 2017 Frank Derry Wanye
 
 Date: 18 November, 2017
-"""
+'''
 
 import tensorflow as tf
 import pickle
@@ -102,7 +102,6 @@ class MetaInfo(object):
         latest[constants.TRAIN] = train_acc
         latest[constants.VALID] = valid_acc
         latest[constants.TEST] = test_acc
-        print("Latest run info: %s" % self.latest())
     # End of update()
 # End of MetaInfo()
 
@@ -157,7 +156,6 @@ class Saver(object):
         - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
                                                                     metrics
         '''
-        print(self.meta)
         self.meta.update(new_info)
         with open(self.meta_path, 'wb') as meta_file:
             dill.dump(obj=self.meta, file=meta_file)
