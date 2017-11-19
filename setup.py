@@ -1,7 +1,7 @@
 '''
 Utility class for setting up an RNN.
 Copyright (c) 2017 Frank Derry Wanye
-Date: 17 November, 2017
+Date: 18 November, 2017
 '''
 
 # Specify documentation format
@@ -95,12 +95,13 @@ def add_general_arguments(parser):
     Params:
     parser (argparse.ArgumentParser): The argument parser to which to add the general arguments
     '''
-    parser.add_argument('-m', '--model_name', default=constants.MODEL_NAME,
-                        help='The previously trained model to load on init.')
-    parser.add_argument('-n', '--new_model', action='store_true',
-                        help='Provide this option if you want to train the same model from the beginning')
-    parser.add_argument('-bm', '--best_model', action='store_true',
-                        help='Provide this option if you want to load the weights that produced the best accuracy')
+    group = parser.add_argument_group('General Args')
+    group.add_argument('-m', '--model_name', default=constants.MODEL_NAME,
+                       help='The previously trained model to load on init.')
+    group.add_argument('-n', '--new_model', action='store_true',
+                       help='Provide this option if you want to train the same model from the beginning')
+    group.add_argument('-o', '--best_model', action='store_true',
+                       help='Provide this option if you want to load the weights that produced the best accuracy')
 # End of add_general_arguments()
 
 def add_log_arguments(parser):
@@ -114,14 +115,15 @@ def add_log_arguments(parser):
     Params:
     parser (argparse.ArgumentParser): The argument parser to which to add the logger arguments
     '''
-    parser.add_argument('-ln', '--log_name', default=constants.LOG_NAME,
-                        help="The name of the logger to be used. Defaults to %s" % constants.LOG_NAME)
-    parser.add_argument('-lf', '--log_filename', default=constants.LOG_FILENAME,
-                        help='The name of the file to which the logging will be done.')
-    parser.add_argument('-ld', '--log_dir', default=constants.LOG_DIR,
-                        help='The path to the directory where the log file will be stored.')
-    parser.add_argument('-ll', '--log_level', default=constants.LOG_LEVEL,
-                        help='The level at which the logger logs data.')
+    group = parser.add_argument_group('Logging Args')
+    group.add_argument('-ln', '--log_name', default=constants.LOG_NAME,
+                       help="The name of the logger to be used. Defaults to %s" % constants.LOG_NAME)
+    group.add_argument('-lf', '--log_filename', default=constants.LOG_FILENAME,
+                       help='The name of the file to which the logging will be done.')
+    group.add_argument('-ld', '--log_dir', default=constants.LOG_DIR,
+                       help='The path to the directory where the log file will be stored.')
+    group.add_argument('-ll', '--log_level', default=constants.LOG_LEVEL,
+                       help='The level at which the logger logs data.')
 # End of add_log_arguments()
 
 def add_rnn_arguments(parser):
@@ -136,16 +138,17 @@ def add_rnn_arguments(parser):
     Params:
     parser (argparse.ArgumentParser): The argument parser to which to add the RNN arguments
     '''
-    parser.add_argument('-d', '--dataset', default=constants.DATASET,
-                        help='The path to the dataset to be used for training.')
-    parser.add_argument('-hs', '--hidden_size', type=int, default=constants.HIDDEN_SIZE,
-                        help='The size of the hidden layers in the RNN.')
-    parser.add_argument('-es', '--embed_size', type=int, default=constants.EMBED_SIZE,
-                        help='The size of the embedding layer in the RNN.')
-    parser.add_argument('-y', '--layers', type=int, default=constants.LAYERS,
-                        help='The number of layers in the RNN.')
-    parser.add_argument('-r', '--dropout', type=float, default=constants.DROPOUT,
-                        help='The dropout to be applied at each RNN layer.')
+    group = parser.add_argument_group('RNN Args')
+    group.add_argument('-d', '--dataset', default=constants.DATASET,
+                       help='The path to the dataset to be used for training.')
+    group.add_argument('-s', '--hidden_size', type=int, default=constants.HIDDEN_SIZE,
+                       help='The size of the hidden layers in the RNN.')
+    group.add_argument('-z', '--embed_size', type=int, default=constants.EMBED_SIZE,
+                       help='The size of the embedding layer in the RNN.')
+    group.add_argument('-y', '--layers', type=int, default=constants.LAYERS,
+                       help='The number of layers in the RNN.')
+    group.add_argument('-r', '--dropout', type=float, default=constants.DROPOUT,
+                       help='The dropout to be applied at each RNN layer.')
 # End of add_rnn_arguments()
 
 def add_train_arguments(parser):
@@ -162,18 +165,19 @@ def add_train_arguments(parser):
     Params:
     parser (argparse.ArgumentParser): The argument parser to which to add the training arguments
     '''
-    parser.add_argument('-e', '--epochs', default=constants.EPOCHS, type=int,
-                        help='The number of epochs for which to train the RNN.')
-    parser.add_argument('-p', '--patience', default=constants.PATIENCE, type=int,
-                        help='The number of examples to train before evaluating loss.')
-    parser.add_argument('-l', '--learn_rate', default=constants.LEARN_RATE, type=float,
-                        help='The learning rate to be used in training.')
-    parser.add_argument('-a', '--anneal', type=float, default=constants.ANNEAL,
-                        help='The minimum possible learning rate.')
-    parser.add_argument('-t', '--truncate', type=int, default=constants.TRUNCATE,
-                        help='The backpropagate truncate value.')
-    parser.add_argument('-b', '--batch_size', type=int, default=constants.BATCH_SIZE,
-                        help='The size of the batches into which to split the training data.')
+    group = parser.add_argument_group('Training Args')
+    group.add_argument('-e', '--epochs', default=constants.EPOCHS, type=int,
+                       help='The number of epochs for which to train the RNN.')
+    group.add_argument('-p', '--patience', default=constants.PATIENCE, type=int,
+                       help='The number of examples to train before evaluating loss.')
+    group.add_argument('-l', '--learn_rate', default=constants.LEARN_RATE, type=float,
+                       help='The learning rate to be used in training.')
+    group.add_argument('-a', '--anneal', type=float, default=constants.ANNEAL,
+                       help='The minimum possible learning rate.')
+    group.add_argument('-t', '--truncate', type=int, default=constants.TRUNCATE,
+                       help='The backpropagate truncate value.')
+    group.add_argument('-b', '--batch_size', type=int, default=constants.BATCH_SIZE,
+                       help='The size of the batches into which to split the training data.')
 # End of add_train_arguments()
 
 def create_dir(dirPath):
@@ -224,9 +228,11 @@ def get_arg(settings, argument, asInt=False, asBoolean=False, asFloat=False, che
 def setup_logger(args, logger_dir):
     '''
     Sets up a logger
+
     Params:
     args (settings.SettingsNamespace): The logging settings
     logger_dir (string): The directory where the logs will be saved
+
     Return:
     logger (logging.Logger): The logger created with the given settings
     '''
@@ -236,17 +242,13 @@ def setup_logger(args, logger_dir):
 
     # Logger will use up to 5 files for logging, 'rotating' the data between them as they get filled up.
     handler = logging.handlers.RotatingFileHandler(
-        filename=logger_dir + args.log_filename,
+        filename=logger_dir+args.log_filename,
         maxBytes=1024*512,
         backupCount=5
     )
 
-    formatter = logging.Formatter(
-        "%(asctime)s-%(name)s-%(levelname)s-%(message)s"
-    )
-
+    formatter = logging.Formatter("%(asctime)s-%(name)s-%(levelname)s-%(message)s")
     handler.setFormatter(formatter)
-
     logger.addHandler(handler)
     logger.info('Logger successfully set up.')
     return logger
