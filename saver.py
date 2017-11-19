@@ -118,7 +118,6 @@ class Saver(object):
         Params:
         logger (logging.Logger): The RNN's model
         settings (settings.SettingsNamespace): The settings needed for saving and loading the model
-        variables (ray.experimental.TensorFlowVariables): The tensorflow variables present in the model's graph
         max_length (int): The maximum sequence size in the model's dataset
         '''
         self.logger = logger
@@ -181,7 +180,7 @@ class Saver(object):
         best_weights (boolean): True if the weights correspond to the best accuracy trained so far
         '''
         self.save_meta(meta_info)
-        weights = ray.experimental.TensorFlowVariables(model.train_step_fun, model.session).get_weights()
+        weights = model.variables.get_weights()
         run_dir = self.meta.latest()[constants.DIR]
         if best_weights == True:
             with open(run_dir + constants.BEST_WEIGHTS, 'wb') as weights_file:
@@ -207,7 +206,7 @@ class Saver(object):
         if os.path.isfile(weights_path) is True:
             with open(weights_path, 'rb') as weights_file:
                 weights = pickle.load(weights_file)
-                ray.experimental.TensorFlowVariables(model.train_step_fun, model.session).set_weights(weights)
+                model.variables.set_weights(weights)
         else:
             self.logger.info('Could not load weights: Weights not found')
     # End of load_model()

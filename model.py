@@ -1,10 +1,10 @@
-"""
+'''
 An RNN model implementation in tensorflow.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 12 November, 2017
-"""
+Date: 18 November, 2017
+'''
 
 import numpy as np
 import tensorflow as tf
@@ -25,40 +25,40 @@ from .layers.hidden_layer import *
 from .layers.performance_layer import *
 
 class RNNModel(object):
-    """
+    '''
     A basic RNN implementation in tensorflow.
-    """
+    '''
 
     def __init__(self):
-        """
+        '''
         Constructor for an RNN Model.
-        """
+        '''
         self.settings = settings.Settings()
         self.model_path = saver.create_model_dir(self.settings.general.model_name)
         self.logger = setup.setup_logger(self.settings.logging, self.model_path)
         self.logger.info("RNN settings: %s" % self.settings)
-        self.dataset = dataset.Dataset(self.logger, self.settings.rnn.dataset, self.settings.train)
+        self.dataset = dataset.SimpleDataset(self.logger, self.settings.rnn.dataset, self.settings.train)
         self.create_graph()
     # End of __init__()
 
     def create_graph(self):
-        """
+        '''
         Creates all internal tensorflow operations and variables inside a local graph and session.
-        """
+        '''
         self.logger.info("Creating the computational graph")
         self.graph = tf.Graph()
         with self.graph.as_default():
             self.training()
             self.performance_evaluation()
             self.session = tf.Session(graph=self.graph)
-            self.init_saver()
             self.session.run(tf.global_variables_initializer())
+            self.init_saver()
     # End of create_graph()
 
     def training(self):
-        """
+        '''
         Creates tensorflow variables and operations needed for training.
-        """
+        '''
         total_loss = self.loss_layer()
         with tf.variable_scope(constants.TRAINING):
             self.learning_rate = tf.Variable(
@@ -69,7 +69,7 @@ class RNNModel(object):
     # End of training()
 
     def loss_layer(self):
-        """
+        '''
         Evaluates the performance of the network on a given minibatch.
         Creates the following instance variables:
         - accuracy (tf.Tensor): The operation that calculates the average accuracy for the predictions on a given
@@ -78,21 +78,21 @@ class RNNModel(object):
 
         Return:
         minibatch_loss_op (tf.Tensor): The operation that calculates the loss for the current minibatch
-        """
+        '''
         logits_series = self.output_layer()
         with tf.variable_scope(constants.LOSS_LAYER):
             # row_lengths_series = tf.unstack(self.batch_sizes, name="unstack_batch_sizes")
             # labels_series = tf.unstack(self.batch_y_placeholder, name="unstack_labels_series")
             # self.accuracy = calculate_accuracy(labels_series, self.predictions_series)
-            minibatch_loss_op, _ = average_loss(logits_series, self.batch_y_placeholder, self.batch_sizes, 
+            self.minibatch_loss_op, _ = average_loss(logits_series, self.batch_y_placeholder, self.batch_sizes, 
                 self.settings.train.truncate)
             self.performance_ops = performance_ops(logits_series, self.batch_y_placeholder, self.batch_sizes, 
                 self.settings.train.truncate)
-        return minibatch_loss_op
+        return self.minibatch_loss_op
     # End of performance_evaluation()
 
     def performance_evaluation(self):
-        """
+        '''
         Creates variables for performance evaluation.
 
         Creates the following instance variables:
@@ -102,7 +102,7 @@ class RNNModel(object):
                                                                                      validation performance
         - test_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating test 
                                                                                performance
-        """
+        '''
         max_length = self.dataset.max_length
         with tf.variable_scope(constants.TRAINING_PERFORMANCE):
             self.train_performance = PerformancePlaceholders(max_length)
@@ -113,7 +113,7 @@ class RNNModel(object):
     # End of performance_evaluation()
 
     def output_layer(self):
-        """
+        '''
         Creates the tensorflow variables and operations needed to compute the network outputs.
         Creates the following instance variables:
         - batch_y_placeholder (tf.placeholder): The placeholder for the labels
@@ -123,7 +123,7 @@ class RNNModel(object):
 
         Return:
         logits_series (tf.Tensor): The calculated probabilities of each class for each input in the minibatch
-        """
+        '''
         states_series = self.hidden_layer()
         with tf.variable_scope(constants.OUTPUT):
             states_series = tf.unstack(states_series, axis=1, name="unstack_states_series")
@@ -150,9 +150,9 @@ class RNNModel(object):
     # End of output_layer()
 
     def hidden_layer(self):
-        """
+        '''
         Creates the tensorflow variables and operations needed to compute the hidden layer state.
-        """
+        '''
         inputs_series = self.input_layer()
         with tf.variable_scope(constants.HIDDEN):
             self.batch_sizes = tf.placeholder(
@@ -171,9 +171,9 @@ class RNNModel(object):
     # End of hidden_layer()
 
     def input_layer(self):
-        """
+        '''
         Creates the tensorflow variables and operations needed to perform the embedding lookup.
-        """
+        '''
         with tf.variable_scope(constants.INPUT):
             self.batch_x_placeholder = tf.placeholder(
                 dtype=tf.int32,
@@ -189,13 +189,13 @@ class RNNModel(object):
     # End of input_layer()
 
     def init_saver(self):
-        """
+        '''
         Creates the variables needed to save the model weights and tensorboard summaries.
-        """
+        '''
         self.saver = saver.Saver(self.logger, self.settings.general, self.dataset.max_length)
         self.run_dir = self.saver.meta.latest()[constants.DIR]
         self.summary_writer, self.summary_ops = tensorboard.init_tensorboard(self)
-        if self.settings.general.new_model == True: self.saver.load_model(self, self.settings.general.best_model)
-        # self.variables = ray.experimental.TensorFlowVariables(self.train_step_fun, self.session)
+        self.variables = ray.experimental.TensorFlowVariables(self.minibatch_loss_op, self.session)
+        if self.settings.general.new_model == False: self.saver.load_model(self, self.settings.general.best_model)
     # End of init_saver()
 # End of RNNModel()

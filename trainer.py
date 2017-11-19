@@ -1,7 +1,7 @@
 '''
 Tensorflow implementation of a training method to train a given model.
 Copyright (c) 2017 Frank Derry Wanye
-Date: 17 November, 2017
+Date: 18 November, 2017
 '''
 
 import numpy as np
@@ -60,10 +60,10 @@ def train_epoch(model, epoch_num, train_accumulator, valid_accumulator):
     model.logger.info("Starting epoch: %d" % (epoch_num))
 
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
-    for section in range(model.dataset.num_sections):
-        model.dataset.next_iteration()
-        train_step(model, epoch_num, current_state, train_accumulator)
-        validation_step(model, epoch_num, current_state, valid_accumulator)
+    # for section in range(model.dataset.num_sections):
+        # model.dataset.next_iteration()
+    train_step(model, epoch_num, current_state, train_accumulator)
+    validation_step(model, epoch_num, current_state, valid_accumulator)
 
     log_intermediate_performance(model, train_accumulator, valid_accumulator, epoch_num)
     model.logger.info("Finished epoch: %d | training_loss: %.2f | validation_loss: %.2f | validation_accuracy: %.2f" %
