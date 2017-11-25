@@ -48,7 +48,7 @@ def get_settings():
     If non-dataset arguments are provided, prints error and exits script.
 
     Return:
-    settings.Settings: The settings needed for creating a dataset
+    - settings (settings.Settings): The settings needed for creating a dataset
     '''
     settings_obj = settings.Settings()
     required_keys = constants.DATA_ARGS.keys()
@@ -66,8 +66,8 @@ def save_dataset(logger, settings):
     Saves the created dataset to a specified file.
 
     Params:
-    logger (logging.Logger): The logger used in this run of the script
-    settings (settings.SettingsNamespace): The dataset creation settings
+    - logger (logging.Logger): The logger used in this run of the script
+    - settings (settings.SettingsNamespace): The dataset creation settings
     '''
     path = constants.DATASETS_DIR
     filename = settings.dataset_name
@@ -83,11 +83,18 @@ def create_dataset(logger, settings):
     Creates a dataset using tokenized data.
 
     Params:
-    logger (logging.Logger): The logger used in this run of the script
-    settings (settings.SettingsNamespace): The dataset creation settings
+    - logger (logging.Logger): The logger used in this run of the script
+    - settings (settings.SettingsNamespace): The dataset creation settings
 
     Return:
-    tuple: (vocabulary as List, index_to_word as List, token_to_index as Dict, x_train as List, y_train as List)
+    - dataset (tuple): 
+      - type (string): The type of dataset ('text' or 'number')
+      - token_level (string): The level of tokenization ('sentences', 'paragraphs', or 'stories')
+      - vocabulary (list): The vocabulary used in the dataset
+      - index_to_token (list): Converts indexes to tokens
+      - token_to_index (dict): Converts tokens to indexes
+      - x_train (list): Training inputs
+      - y_train (list): Training outputs
     '''
     dataset = create_text_dataset(logger, settings, None)
     dataset = create_numeric_dataset(logger, settings, dataset)
@@ -100,13 +107,19 @@ def create_text_dataset(logger, settings, dataset):
     of the dataset parameter, unchanged.
 
     Params:
-    logger (logging.Logger): The logger used in this run of the script
-    settings (settings.SettingsNamespace): The dataset creation settings
-    dataset (tuple): The previously created dataset, if any
+    - logger (logging.Logger): The logger used in this run of the script
+    - settings (settings.SettingsNamespace): The dataset creation settings
+    - dataset (tuple): The previously created dataset, if any
 
     Return:
-    tuple: (type, token_level, vocabulary: List, index_to_word: List, token_to_index: Dict, x_train: List,
-            y_train: List)
+    - dataset (tuple): 
+      - type (string): The type of dataset. 'text', in this case
+      - token_level (string): The level of tokenization ('sentences', 'paragraphs', or 'stories')
+      - vocabulary (list): The vocabulary used in the dataset
+      - index_to_token (list): Converts indexes to tokens
+      - token_to_index (dict): Converts tokens to indexes
+      - x_train (list): Training inputs
+      - y_train (list): Training outputs
     '''
     if settings.type != constants.TYPE_CHOICES[0]: # type = 'text'
         return dataset
@@ -132,15 +145,15 @@ def create_numeric_dataset(logger, settings, dataset):
     of the dataset parameter, unchanged.
 
     Params:
-    logger (logging.Logger): The logger used in this run of the script
-    settings (settings.SettingsNamespace): The dataset creation settings
-    dataset (tuple): The previously created dataset, if any
+    - logger (logging.Logger): The logger used in this run of the script
+    - settings (settings.SettingsNamespace): The dataset creation settings
+    - dataset (tuple): The previously created dataset, if any
 
     Return:
-    dataset (tuple):
-    - type (string): 'number'
-    - x_train (list): The input data
-    - y_train (list): The output data
+    - dataset (tuple):
+      - type (string): 'number'
+      - x_train (list): The input data
+      - y_train (list): The output data
     '''
     if settings.type != constants.TYPE_CHOICES[1]: # type = 'number'
         return dataset
@@ -153,11 +166,11 @@ def tokenize_data(logger, settings):
     Creates a dataset using tokenized data.
 
     Params:
-    logger (logging.Logger): The logger used in this run of the script
-    settings (settings.SettingsNamespace): The dataset creation settings
+    - logger (logging.Logger): The logger used in this run of the script
+    - settings (settings.SettingsNamespace): The dataset creation settings
 
     Return:
-    list: The tokenized data
+    - tokenized_data (list): The tokenized data
     '''
     mode = settings.mode
     if mode == 'sentences':
@@ -176,19 +189,17 @@ def tokenize_sentences(logger, settings):
     end tokens to each sentence.
 
     Params:
-    logger (logging.Logger): The logger used in this run of the script
-    settings (settings.SettingsNamespace): The dataset creation settings
+    - logger (logging.Logger): The logger used in this run of the script
+    - settings (settings.SettingsNamespace): The dataset creation settings
 
     Return:
-    tokenized_sentences (list): Tokenized sentence strings
+    - tokenized_sentences (list): Tokenized sentence strings
     '''
     comments = read_csv(logger, settings)
-
     logger.info('Breaking comments down into sentences.')
     sentences = itertools.chain(*[nltk.sent_tokenize(comment.lower()) for comment in comments])
     sentences = list(sentences)
     logger.info("%d sentences found in dataset." % len(sentences))
-
     return sentences
 # End of tokenize_sentences()
 
@@ -199,11 +210,11 @@ def tokenize_paragraphs(logger, settings):
     end tokens to each paragraph.
 
     Params:
-    logger (logging.Logger): The logger used in this run of the script
-    settings (settings.SettingsNamespace): The dataset creation settings
+    - logger (logging.Logger): The logger used in this run of the script
+    - settings (settings.SettingsNamespace): The dataset creation settings
 
     Return:
-    tokenized_paragraphs (list): Tokenized paragraph strings
+    - tokenized_paragraphs (list): Tokenized paragraph strings
     '''
     comments = read_csv(logger, settings)
 
@@ -223,11 +234,11 @@ def tokenize_stories(logger, settings):
     to each story.
 
     Params:
-    logger (logging.Logger): The logger used in this run of the script
-    settings (settings.SettingsNamespace): The dataset creation settings
+    - logger (logging.Logger): The logger used in this run of the script
+    - settings (settings.SettingsNamespace): The dataset creation settings
 
     Return:
-    tokenized_stories (list): Tokenized story strings
+    - tokenized_stories (list): Tokenized story strings
     '''
     comments = read_csv(logger, settings)
     logger.info('Retrieving stories from data.')
@@ -242,16 +253,16 @@ def read_csv(logger, settings):
     Empty data cells are not included in the output.
 
     Params:
-    logger (logging.Logger): The logger used in this run of the script
-    settings (settings.SettingsNamespace): The dataset creation settings
+    - logger (logging.Logger): The logger used in this run of the script
+    - settings (settings.SettingsNamespace): The dataset creation settings
 
     Return:
-    list: The rows in the data that can be tokenized
+    - csv_rows (list): The rows in the data that can be tokenized
     '''
     path = constants.RAW_DATA_DIR + settings.raw_data
 
     # Encoding breaks when using python2.7 for some reason.
-    comments = list()
+    csv_rows = list()
     logger.info("Reading the csv data file at: %s" % path)
     with open(path, 'r', encoding='utf-8') as datafile:
         reader = csv.reader(datafile, skipinitialspace=True)
@@ -261,13 +272,13 @@ def read_csv(logger, settings):
             reader.next() # For older versions of Python
         for item in reader:
             if len(item) > 0 and len(item[0]) > 0:
-                comments.append(item[0])
-                num_seen = len(comments)
+                csv_rows.append(item[0])
+                num_seen = len(csv_rows)
                 if settings.num_rows <= num_seen:
                     break
     logger.info("%d examples kept for creating training dataset." % num_seen)
     # End with
-    return comments
+    return csv_rows
 # End of read_csv()
 
 def normalize_examples(logger, settings, examples):
@@ -279,12 +290,12 @@ def normalize_examples(logger, settings, examples):
     - Adds start and end tokens to the examples
 
     Params:
-    logger (logging.Logger): The logger used in this run of the script
-    settings (settings.SettingsNamespace): The dataset creation settings
-    examples (list): Tokenized examples
+    - logger (logging.Logger): The logger used in this run of the script
+    - settings (settings.SettingsNamespace): The dataset creation settings
+    - examples (list): Tokenized examples
 
     Return:
-    normalized_examples (list): The normalized examples
+    - normalized_examples (list): The normalized examples
     '''
     examples = preprocess_data(logger, examples)
     examples = examples[:settings.num_examples]
@@ -297,11 +308,11 @@ def preprocess_data(logger, data_array):
     Pre-processes data in data_array so that it is more or less modular.
 
     Params:
-    logger (logging.Logger): The logger to which to write log output.
-    data_array (list): The list of Strings to be preprocessed
+    - logger (logging.Logger): The logger to which to write log output.
+    - data_array (list): The list of Strings to be preprocessed
 
     Return:
-    preprocessed_data (list): The list of preprocessed strings.
+    - preprocessed_data (list): The list of preprocessed strings.
     '''
     logger.info('Preprocessing data')
     num_skipped = 0
@@ -323,12 +334,12 @@ def low_level_tokenize(logger, settings, examples):
     Tokenizes examples into either words or letters.
 
     Params:
-    logger (logging.Logger): The logger used in this run of the script
-    settings (settings.SettingsNamespace): The dataset creation settings
-    examples (list): Examples to be tokenized
+    - logger (logging.Logger): The logger used in this run of the script
+    - settings (settings.SettingsNamespace): The dataset creation settings
+    - examples (list): Examples to be tokenized
 
     Return:
-    tokenized_examples (list): The tokenized examples
+    - tokenized_examples (list): The tokenized examples
     '''
     logger.info("Adding start and end tokens to examples.")
     if settings.token_level == constants.TOKEN_LEVEL_CHOICES[0]: # Words
@@ -347,12 +358,12 @@ def create_vocabulary(logger, settings, data):
     Creates the vocabulary list out of the given tokenized data.
 
     Params:
-    logger (logging.Logger): The logger used in this run of the script
-    settings (settings.SettingsNamespace): The dataset creation settings
-    data (list): Tokenized data
+    - logger (logging.Logger): The logger used in this run of the script
+    - settings (settings.SettingsNamespace): The dataset creation settings
+    - data (list): Tokenized data
 
     Return:
-    vocabulary (list): The most common vocabulary words in the tokenized data
+    - vocabulary (list): The most common vocabulary words in the tokenized data
     '''
     logger.info('Obtaining word frequency disribution.')
     word_freq = nltk.FreqDist(itertools.chain(*data))
@@ -376,15 +387,15 @@ def create_training_data(logger, settings, data, token_to_index):
     Creates the inputs and labels for training.
 
     Params:
-    logger (logging.Logger): The logger used in this run of the script
-    settings (settings.SettingsNamespace): The dataset creation settings
-    data (list): The data to break into inputs and labels
-    token_to_index (dict): The dictionary used to convert words to indexes
+    - logger (logging.Logger): The logger used in this run of the script
+    - settings (settings.SettingsNamespace): The dataset creation settings
+    - data (list): The data to break into inputs and labels
+    - token_to_index (dict): The dictionary used to convert words to indexes
 
     Return:
-    training_data (tuple): 
-    - inputs (list): The training inputs
-    - labels (list): The training labels (outputs)
+    - training_data (tuple): 
+      - inputs (list): The training inputs
+      - labels (list): The training labels (outputs)
     '''
     if type(data[0][0]) is str: # Currently not needed for other types of data
         logger.info('Replace all words not in vocabulary with unkown token.')
@@ -405,8 +416,11 @@ def tokens_to_indexes(data, token_to_index):
     Replaces the tokens in the data with the token's indexes in the vocabulary.
 
     Params:
-    data (list): The data to break into inputs and labels
-    token_to_index (dict): The dictionary used to convert words to indexes
+    - data (list): The data to break into inputs and labels
+    - token_to_index (dict): The dictionary used to convert words to indexes
+
+    Return:
+    - modified_data (list): The data with the tokens replaced with their indexes in the vocabulary
     '''
     new_data = list()
     for row in data:
@@ -423,11 +437,18 @@ def load_dataset(logger, dataset):
     Loads a saved dataset.
 
     Params:
-    logger (logging.Logger): The logger to be used for logging function results
-    dataset (string): The filename of the pickled dataset to load
+    - logger (logging.Logger): The logger to be used for logging function results
+    - dataset (string): The filename of the pickled dataset to load
 
     Return:
-    tuple: (data_type, token_level, vocabulary, index_to_word, token_to_index, x_train, y_train)
+    - dataset (tuple): 
+      - type (string): The type of dataset ('text' or 'number')
+      - token_level (string): The level of tokenization ('sentences', 'paragraphs', or 'stories')
+      - vocabulary (list): The vocabulary used in the dataset
+      - index_to_token (list): Converts indexes to tokens
+      - token_to_index (dict): Converts tokens to indexes
+      - x_train (list): Training inputs
+      - y_train (list): Training outputs
     '''
     path = constants.DATASETS_DIR + dataset
 
