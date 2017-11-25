@@ -1,8 +1,8 @@
-"""
+'''
 Utility class for creating, saving and loading datasets.
 
-Date: 25 October, 2017
-"""
+Date: 24 November, 2017
+'''
 
 # Specify documentation format
 __docformat__ = 'restructedtext en'
@@ -26,16 +26,16 @@ from . import setup
 from . import settings
 
 def run():
-    """
+    '''
     A simplified method for creating a dataset. The file will contain the following items, in the same order:
-    the vocabulary of the training set
-    the vector used to convert token indexes to words
-    the dictionary used to convert words to token indexes
-    the input for training, in tokenized format (as indexes)
-    the output for training, in tokenized format (as indexes)
-    the start token
-    the end token
-    """
+    - the vocabulary of the training set
+    - the vector used to convert token indexes to words
+    - the dictionary used to convert words to token indexes
+    - the input for training, in tokenized format (as indexes)
+    - the output for training, in tokenized format (as indexes)
+    - the start token
+    - the end token
+    '''
     settings_obj = get_settings()
     logger = setup.setup_logger(settings_obj.logging, settings_obj.logging.log_dir)
     save_dataset(logger, settings_obj.data)
@@ -43,40 +43,43 @@ def run():
 # End of run()
 
 def get_settings():
-    """
+    '''
     Parses command-line arguments into a settings Object.
     If non-dataset arguments are provided, prints error and exits script.
 
     Return:
     settings.Settings: The settings needed for creating a dataset
-    """
+    '''
     settings_obj = settings.Settings()
-    if constants.DATA_ARGS.keys() != vars(settings_obj.data).keys():
-        print("ERROR: Need to pass in dataset arguments to run this script.")
-        print("Correct usage: python dataset_maker.py dataset [args...]")
-        exit(-1)
+    required_keys = constants.DATA_ARGS.keys()
+    received_keys = vars(settings_obj.data).keys()
+    for key in required_keys:
+        if key not in received_keys:
+            print('ERROR: Need to pass in dataset arguments to run this script.')
+            print('Correct usage: python dataset_maker.py dataset [args...]')
+            exit(-1)
     return settings_obj
 # End of parse_arguments()
 
 def save_dataset(logger, settings):
-    """
+    '''
     Saves the created dataset to a specified file.
 
     Params:
     logger (logging.Logger): The logger used in this run of the script
     settings (settings.SettingsNamespace): The dataset creation settings
-    """
+    '''
     path = constants.DATASETS_DIR
     filename = settings.dataset_name
 
     setup.create_dir(path)
     dataset = create_dataset(logger, settings)
-    with open(path + filename, "wb") as dataset_file:
+    with open(path + filename, 'wb') as dataset_file:
         cPickle.dump(dataset, dataset_file, protocol=2)
 # End of save_dataset()
 
 def create_dataset(logger, settings):
-    """
+    '''
     Creates a dataset using tokenized data.
 
     Params:
@@ -85,14 +88,14 @@ def create_dataset(logger, settings):
 
     Return:
     tuple: (vocabulary as List, index_to_word as List, token_to_index as Dict, x_train as List, y_train as List)
-    """
+    '''
     dataset = create_text_dataset(logger, settings, None)
     dataset = create_numeric_dataset(logger, settings, dataset)
     return dataset
 # End of create_dataset()
 
 def create_text_dataset(logger, settings, dataset):
-    """
+    '''
     Creates a dataset based on text data. If the settings chosen do not specify a text dataset, returns the value
     of the dataset parameter, unchanged.
 
@@ -104,7 +107,7 @@ def create_text_dataset(logger, settings, dataset):
     Return:
     tuple: (type, token_level, vocabulary: List, index_to_word: List, token_to_index: Dict, x_train: List,
             y_train: List)
-    """
+    '''
     if settings.type != constants.TYPE_CHOICES[0]: # type = 'text'
         return dataset
     data = tokenize_data(logger, settings)
@@ -124,7 +127,7 @@ def create_text_dataset(logger, settings, dataset):
 # End of create_text_dataset
 
 def create_numeric_dataset(logger, settings, dataset):
-    """
+    '''
     Creates a dataset based on numeric data. If the settings chosen do not specify a numeric dataset, returns the value
     of the dataset parameter, unchanged.
 
@@ -134,11 +137,11 @@ def create_numeric_dataset(logger, settings, dataset):
     dataset (tuple): The previously created dataset, if any
 
     Return:
-    tuple: either
-    ("word_dataset", vocabulary: List, index_to_word: List, token_to_index: Dict, x_train: List, y_train: List)
-           or
-    ("char_dataset", vocabulary: List, x_train: List, y_train: List)
-    """
+    dataset (tuple):
+    - type (string): 'number'
+    - x_train (list): The input data
+    - y_train (list): The output data
+    '''
     if settings.type != constants.TYPE_CHOICES[1]: # type = 'number'
         return dataset
     # TODO: Implement this function
@@ -146,7 +149,7 @@ def create_numeric_dataset(logger, settings, dataset):
 # End of create_numeric_dataset()
 
 def tokenize_data(logger, settings):
-    """
+    '''
     Creates a dataset using tokenized data.
 
     Params:
@@ -155,7 +158,7 @@ def tokenize_data(logger, settings):
 
     Return:
     list: The tokenized data
-    """
+    '''
     mode = settings.mode
     if mode == 'sentences':
         data = tokenize_sentences(logger, settings)
@@ -167,7 +170,7 @@ def tokenize_data(logger, settings):
 # End of tokenize_data()
 
 def tokenize_sentences(logger, settings):
-    """
+    '''
     Uses the nltk library to break comments down into sentences, and then
     tokenizes the words in the sentences. Also appends the sentence start and
     end tokens to each sentence.
@@ -177,11 +180,11 @@ def tokenize_sentences(logger, settings):
     settings (settings.SettingsNamespace): The dataset creation settings
 
     Return:
-    list: Tokenized sentence strings
-    """
+    tokenized_sentences (list): Tokenized sentence strings
+    '''
     comments = read_csv(logger, settings)
 
-    logger.info("Breaking comments down into sentences.")
+    logger.info('Breaking comments down into sentences.')
     sentences = itertools.chain(*[nltk.sent_tokenize(comment.lower()) for comment in comments])
     sentences = list(sentences)
     logger.info("%d sentences found in dataset." % len(sentences))
@@ -190,7 +193,7 @@ def tokenize_sentences(logger, settings):
 # End of tokenize_sentences()
 
 def tokenize_paragraphs(logger, settings):
-    """
+    '''
     Uses the nltk library to break comments down into paragraphs, and then
     tokenizes the words in the paragraphs. Also appends the paragraph start and
     end tokens to each paragraph.
@@ -200,12 +203,12 @@ def tokenize_paragraphs(logger, settings):
     settings (settings.SettingsNamespace): The dataset creation settings
 
     Return:
-    list: Tokenized paragraph strings
-    """
+    tokenized_paragraphs (list): Tokenized paragraph strings
+    '''
     comments = read_csv(logger, settings)
 
     paragraphs = list()
-    logger.info("Breaking comments down into paragraphs.")
+    logger.info('Breaking comments down into paragraphs.')
     for comment in comments:
         paragraphs.extend(re.split('\n+', comment.lower()))
     logger.info("%d comments were broken down into %d paragraphs." % (len(comments), len(paragraphs)))
@@ -214,7 +217,7 @@ def tokenize_paragraphs(logger, settings):
 # End of tokenize_paragraphs()
 
 def tokenize_stories(logger, settings):
-    """
+    '''
     Uses the nltk library to word tokenize entire comments, assuming that
     each comment is its own story. Also appends the story start and end tokens
     to each story.
@@ -224,19 +227,17 @@ def tokenize_stories(logger, settings):
     settings (settings.SettingsNamespace): The dataset creation settings
 
     Return:
-    list: Tokenized story strings
-    """
+    tokenized_stories (list): Tokenized story strings
+    '''
     comments = read_csv(logger, settings)
-
-    logger.info("Retrieving stories from data.")
+    logger.info('Retrieving stories from data.')
     stories = [comment.lower() for comment in comments]
     logger.info("Found %d stories in the dataset." % len(stories))
-
     return stories
 # End of tokenize_stories()
 
 def read_csv(logger, settings):
-    """
+    '''
     Reads the given csv file and extracts data from it into the comments array.
     Empty data cells are not included in the output.
 
@@ -246,13 +247,13 @@ def read_csv(logger, settings):
 
     Return:
     list: The rows in the data that can be tokenized
-    """
+    '''
     path = constants.RAW_DATA_DIR + settings.raw_data
 
     # Encoding breaks when using python2.7 for some reason.
     comments = list()
     logger.info("Reading the csv data file at: %s" % path)
-    with open(path, "r", encoding='utf-8') as datafile:
+    with open(path, 'r', encoding='utf-8') as datafile:
         reader = csv.reader(datafile, skipinitialspace=True)
         try:
             reader.__next__() # Skips over table heading in Python 3.2+
@@ -270,7 +271,7 @@ def read_csv(logger, settings):
 # End of read_csv()
 
 def normalize_examples(logger, settings, examples):
-    """
+    '''
     Normalizes tokenized examples.
     - Removes invalid examples
     - Replaces invalid tokens with valid ones
@@ -283,8 +284,8 @@ def normalize_examples(logger, settings, examples):
     examples (list): Tokenized examples
 
     Return:
-    list: The normalized examples
-    """
+    normalized_examples (list): The normalized examples
+    '''
     examples = preprocess_data(logger, examples)
     examples = examples[:settings.num_examples]
     examples = low_level_tokenize(logger, settings, examples)
@@ -292,35 +293,33 @@ def normalize_examples(logger, settings, examples):
 # End of normalize_examples()
 
 def preprocess_data(logger, data_array):
-    """
+    '''
     Pre-processes data in data_array so that it is more or less modular.
 
-    :type logger: logging.Logger()
-    :param logger: the logger to which to write log output.
+    Params:
+    logger (logging.Logger): The logger to which to write log output.
+    data_array (list): The list of Strings to be preprocessed
 
-    :type data_array: list()
-    :param data_array: the list of Strings to be preprocessed
-
-    :type return: list()
-    :param return: the list of preprocessed Strings.
-    """
-    logger.info("Preprocessing data")
+    Return:
+    preprocessed_data (list): The list of preprocessed strings.
+    '''
+    logger.info('Preprocessing data')
     num_skipped = 0
     preprocessed_data = []
     for item in data_array:
-        if "[" in item or "]" in item:
+        if '[' in item or ']' in item:
             num_skipped += 1
             continue
-        item = item.replace("\n", " %s " % constants.CARRIAGE_RETURN)
-        item = item.replace("`", "'")
-        item = item.replace("''", "\"")
+        item = item.replace('\n', " %s " % constants.CARRIAGE_RETURN)
+        item = item.replace('`', '\'')
+        item = item.replace('\'\'', '"')
         preprocessed_data.append(item)
     logger.info("Skipped %d items in data." % num_skipped)
     return preprocessed_data
 # End of preprocess_data()
 
 def low_level_tokenize(logger, settings, examples):
-    """
+    '''
     Tokenizes examples into either words or letters.
 
     Params:
@@ -329,8 +328,8 @@ def low_level_tokenize(logger, settings, examples):
     examples (list): Examples to be tokenized
 
     Return:
-    list: The tokenized examples
-    """
+    tokenized_examples (list): The tokenized examples
+    '''
     logger.info("Adding start and end tokens to examples.")
     if settings.token_level == constants.TOKEN_LEVEL_CHOICES[0]: # Words
         examples = ["%s %s %s" % (constants.START_TOKEN, example, constants.END_TOKEN) for example in examples]
@@ -344,7 +343,7 @@ def low_level_tokenize(logger, settings, examples):
 # End of low_level_tokenize()
 
 def create_vocabulary(logger, settings, data):
-    """
+    '''
     Creates the vocabulary list out of the given tokenized data.
 
     Params:
@@ -353,9 +352,9 @@ def create_vocabulary(logger, settings, data):
     data (list): Tokenized data
 
     Return:
-    list: The most common vocabulary words in the tokenized data
-    """
-    logger.info("Obtaining word frequency disribution.")
+    vocabulary (list): The most common vocabulary words in the tokenized data
+    '''
+    logger.info('Obtaining word frequency disribution.')
     word_freq = nltk.FreqDist(itertools.chain(*data))
     logger.info("Found %d unique words." % len(word_freq.items()))
 
@@ -364,7 +363,7 @@ def create_vocabulary(logger, settings, data):
     else:
         vocabulary = word_freq.most_common(settings.vocab_size - 1)
 
-    logger.info("Calculating percent of words captured...")
+    logger.info('Calculating percent of words captured...')
     total = 0
     for word in vocabulary:
         total += word_freq.freq(word[0])
@@ -373,7 +372,7 @@ def create_vocabulary(logger, settings, data):
 # End of create_vocabulary()
 
 def create_training_data(logger, settings, data, token_to_index):
-    """
+    '''
     Creates the inputs and labels for training.
 
     Params:
@@ -383,20 +382,44 @@ def create_training_data(logger, settings, data, token_to_index):
     token_to_index (dict): The dictionary used to convert words to indexes
 
     Return:
-    tuple: (inputs, labels)
-    """
-    logger.info("Replace all words not in vocabulary with unkown token.")
-    for index, sentence in enumerate(data):
-        data[index] = [word if word in token_to_index else constants.UNKNOWN for word in sentence]
+    training_data (tuple): 
+    - inputs (list): The training inputs
+    - labels (list): The training labels (outputs)
+    '''
+    if type(data[0][0]) is str: # Currently not needed for other types of data
+        logger.info('Replace all words not in vocabulary with unkown token.')
+        for index, sentence in enumerate(data):
+            data[index] = [word if word in token_to_index else constants.UNKNOWN for word in sentence]
 
-    logger.info("Creating training data.")
-    x_train = [[token_to_index[word] for word in item[:-1]] for item in data]
-    y_train = [[token_to_index[word] for word in item[1:]] for item in data]
+    logger.info('Creating training data.')
+    data = tokens_to_indexes(data, token_to_index)
+    x_train = [item[:-1] for item in data]
+    y_train = [item[1:] for item in data]
+    if (type(y_train[0][0]) is tuple) or (type(y_train[0][0]) is list):
+        y_train = [[word[0] for word in row] for row in y_train] # Training labels only have one outcome
     return x_train, y_train
 # End of create_training_data()
 
+def tokens_to_indexes(data, token_to_index):
+    '''
+    Replaces the tokens in the data with the token's indexes in the vocabulary.
+
+    Params:
+    data (list): The data to break into inputs and labels
+    token_to_index (dict): The dictionary used to convert words to indexes
+    '''
+    new_data = list()
+    for row in data:
+        if type(row[0]) is str:
+            new_row = [token_to_index[word] for word in row]
+        elif (type(row[0]) is tuple) or (type(row[0]) is list):
+            new_row = [[token_to_index[char] for char in word] for word in row]
+        new_data.append(new_row)
+    return new_data
+# End of tokens_to_indexes()
+
 def load_dataset(logger, dataset):
-    """
+    '''
     Loads a saved dataset.
 
     Params:
@@ -405,7 +428,7 @@ def load_dataset(logger, dataset):
 
     Return:
     tuple: (data_type, token_level, vocabulary, index_to_word, token_to_index, x_train, y_train)
-    """
+    '''
     path = constants.DATASETS_DIR + dataset
 
     logger.info("Loading saved dataset.")
