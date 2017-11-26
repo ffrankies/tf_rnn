@@ -1,7 +1,7 @@
 '''
 Utility class for setting up an RNN.
 Copyright (c) 2017 Frank Derry Wanye
-Date: 18 November, 2017
+Date: 25 November, 2017
 '''
 
 # Specify documentation format
@@ -19,12 +19,14 @@ def parse_arguments():
     '''
     Parses the command line arguments and returns the namespace with those
     arguments.
+    
     There are three modes for this:
     - config: Specify a config place in place of command-line options
     - options: Specify command-line options for all settings
     - dataset: Specify command-line options for creating a dataset, or a config file to do the same
+    
     Return:
-    argparse.Namespace: The Namespace containing the values of all passed-in command-line arguments
+    - args (argparse.Namespace): The Namespace containing the values of all passed-in command-line arguments
     '''
     arg_parse = argparse.ArgumentParser()
     subparsers = arg_parse.add_subparsers(help='Sub-command help.')
@@ -38,8 +40,9 @@ def parse_arguments():
 def add_options_parser(subparsers):
     '''
     Adds network settings as command_line arguments.
+    
     Params:
-    subparser (argparse.Namespace): Container for the subparser Namespace objects
+    - subparser (argparse.Namespace): Container for the subparser Namespace objects
     '''
     options_parser = subparsers.add_parser('options', help='Provide network arguments as command arguments.')
     add_general_arguments(options_parser)
@@ -51,6 +54,7 @@ def add_options_parser(subparsers):
 def add_dataset_parser(subparsers):
     '''
     Adds a subparser containing arguments for creating a dataset.
+    
     Arguments added:
     - raw_data
     - dataset_name
@@ -59,8 +63,9 @@ def add_dataset_parser(subparsers):
     - num_comments
     - num_examples
     - mode
+    
     Params:
-    subparser (argparse.Namespace): Container for the subparser Namespace objects
+    - subparser (argparse.Namespace): Container for the subparser Namespace objects
     '''
     parser = subparsers.add_parser('dataset', help='Provide arguments for creating a dataset.')
     parser.add_argument('-c', '--config_file', default=constants.CONFIG_FILE,
@@ -88,12 +93,14 @@ def add_dataset_parser(subparsers):
 def add_general_arguments(parser):
     '''
     Adds general model arguments to the given argument parser.
+    
     Arguments added:
-    --model_name
-    --new_model
-    --best_model
+    - model_name
+    - new_model
+    - best_model
+    
     Params:
-    parser (argparse.ArgumentParser): The argument parser to which to add the general arguments
+    - parser (argparse.ArgumentParser): The argument parser to which to add the general arguments
     '''
     group = parser.add_argument_group('General Args')
     group.add_argument('-m', '--model_name', default=constants.MODEL_NAME,
@@ -107,13 +114,15 @@ def add_general_arguments(parser):
 def add_log_arguments(parser):
     '''
     Adds arguments for setting up the logger to the given argument parser.
+    
     Arguments added:
-    --log_name
-    --log_filename
-    --log_dir
-    --log_level
+    - log_name
+    - log_filename
+    - log_dir
+    - log_level
+    
     Params:
-    parser (argparse.ArgumentParser): The argument parser to which to add the logger arguments
+    - parser (argparse.ArgumentParser): The argument parser to which to add the logger arguments
     '''
     group = parser.add_argument_group('Logging Args')
     group.add_argument('-ln', '--log_name', default=constants.LOG_NAME,
@@ -129,14 +138,16 @@ def add_log_arguments(parser):
 def add_rnn_arguments(parser):
     '''
     Adds arguments for setting up an RNN to the given argument parser.
+    
     Arguments added:
-    --dataset
-    --hidden_size
-    --embed_size
-    --layers
-    --dropout
+    - dataset
+    - hidden_size
+    - embed_size
+    - layers
+    - dropout
+    
     Params:
-    parser (argparse.ArgumentParser): The argument parser to which to add the RNN arguments
+    - parser (argparse.ArgumentParser): The argument parser to which to add the RNN arguments
     '''
     group = parser.add_argument_group('RNN Args')
     group.add_argument('-d', '--dataset', default=constants.DATASET,
@@ -154,16 +165,18 @@ def add_rnn_arguments(parser):
 def add_train_arguments(parser):
     '''
     Adds arguments for training an RNN to the given argument parser.
+    
     Arguments added:
-    --epochs
-    --patience
-    --test
-    --learning_rate
-    --anneal
-    --truncate
-    --batch_size
+    - epochs
+    - patience
+    - test
+    - learning_rate
+    - anneal
+    - truncate
+    - batch_size
+    
     Params:
-    parser (argparse.ArgumentParser): The argument parser to which to add the training arguments
+    - parser (argparse.ArgumentParser): The argument parser to which to add the training arguments
     '''
     group = parser.add_argument_group('Training Args')
     group.add_argument('-e', '--epochs', default=constants.EPOCHS, type=int,
@@ -230,11 +243,11 @@ def setup_logger(args, logger_dir):
     Sets up a logger
 
     Params:
-    args (settings.SettingsNamespace): The logging settings
-    logger_dir (string): The directory where the logs will be saved
+    - args (settings.SettingsNamespace): The logging settings
+    - logger_dir (string): The directory where the logs will be saved
 
     Return:
-    logger (logging.Logger): The logger created with the given settings
+    - logger (logging.Logger): The logger created with the given settings
     '''
     logger = logging.getLogger(args.log_name)
     logger.setLevel(constants.LOG_LEVELS[args.log_level])

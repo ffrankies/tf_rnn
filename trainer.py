@@ -1,7 +1,7 @@
 '''
 Tensorflow implementation of a training method to train a given model.
 Copyright (c) 2017 Frank Derry Wanye
-Date: 18 November, 2017
+Date: 25 November, 2017
 '''
 
 import math
@@ -282,11 +282,12 @@ def test_step(model, accumulator):
 def plot(model, train_accumulator, valid_accumulator, test_accumulator):
     '''
     Plots a graph of epochs against losses. Saves the plot to file in <model_path>/graph.png.
+    
     Params:
-    model (model.RNNModel): The model containing the path where the figure will be saved
-    train_accumulator (layers.performance_layer.Accumulator): The accumulator for training performance
-    valid_accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
-    test_accumulator (layers.performance_layer.Accumulator): The accumulator for test performance
+    - model (model.RNNModel): The model containing the path where the figure will be saved
+    - train_accumulator (layers.performance_layer.Accumulator): The accumulator for training performance
+    - valid_accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
+    - test_accumulator (layers.performance_layer.Accumulator): The accumulator for test performance
     '''
     model.logger.info('Plotting results for visualization')
     plt.figure(num=1, figsize=(10, 20))
@@ -296,7 +297,7 @@ def plot(model, train_accumulator, valid_accumulator, test_accumulator):
         plot_accuracy_pie_chart(test_accumulator.accuracies[-1], 413)
     plot_bar_chart(test_accumulator.latest_timestep_accuracies, 414)
     plt.tight_layout()
-    plt.savefig(model.run_dir + constants.PLOT)
+    plt.savefig(model.saver.meta.latest()[constants.DIR] + constants.PLOT)
     plt.show()
 # End of plot()
 
@@ -346,8 +347,8 @@ def plot_accuracy_pie_chart(accuracy, axis):
     Plots the average accuracy on the test partition as a pie chart on a separate subplot.
 
     Params:
-    accuracy (float): The average accuracy of predictions for the test dataset partition
-    axis (int): The axis on which to plot the validation loss
+    - accuracy (float): The average accuracy of predictions for the test dataset partition
+    - axis (int): The axis on which to plot the validation loss
     '''
     axis = plt.subplot(axis)
     accuracy = accuracy * 100
@@ -359,9 +360,10 @@ def plot_accuracy_pie_chart(accuracy, axis):
 def plot_bar_chart(timestep_accuracy, axis):
     '''
     Plots the average accuracy for each timestep as a bar chart on a separate subplot.
+    
     Params:
-    timestep_accuracy (list): The average accuracy of predictions for each timestep on the test dataset partition
-    axis (int): The axis on which to plot the validation loss
+    - timestep_accuracy (list): The average accuracy of predictions for each timestep on the test dataset partition
+    - axis (int): The axis on which to plot the validation loss
     '''
     axis = plt.subplot(axis)
     timestep_accuracy = [x * 100.0 for x in timestep_accuracy]
@@ -384,12 +386,12 @@ def early_stop(valid_accumulator, epoch_num, num_epochs):
     Checks whether or not the model should stop training because it has started to over-fit the data.
 
     Params:
-    valid_accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
-    epoch_num (int): The number of epochs the model has trained for
-    num_epochs (int): The maximum number of epochs the model is set to train for
+    - valid_accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
+    - epoch_num (int): The number of epochs the model has trained for
+    - num_epochs (int): The maximum number of epochs the model is set to train for
 
     Return:
-    should_stop (boolean): True if the model has started to overfit the data
+    - should_stop (boolean): True if the model has started to overfit the data
     '''
     should_stop = False
     one_tenth = math.ceil(num_epochs/10)

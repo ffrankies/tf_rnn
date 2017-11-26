@@ -4,7 +4,7 @@ tensorflow model to file.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 18 November, 2017
+Date: 25 November, 2017
 '''
 
 import tensorflow as tf
@@ -24,15 +24,15 @@ class MetaInfo(object):
     Instance Variables:
     - run (int): The current run (variant) of the model
     - model_path (string): The path to the model's directory
-    - run_info (dict): Dictionary mapping runs to their information. Dictionary contains the following information:
-        - 'dir' (string): The directory in which to save off the model
-        - 'epoch' (int): The number of epochs for which the model has been trained
-        - 'train_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
-                                                                     metrics
-        - 'valid_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
-                                                                     performance metrics
-        - 'test_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
-                                                                    metrics
+    - run_info (dict): Dictionary mapping runs to the following information:
+      - 'dir' (string): The directory in which to save off the model
+      - 'epoch' (int): The number of epochs for which the model has been trained
+      - 'train_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
+                metrics
+      - 'valid_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
+                performance metrics
+      - 'test_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
+                metrics
     '''
 
     def __init__(self, logger, settings, max_length):
@@ -40,9 +40,9 @@ class MetaInfo(object):
         Instantiates a MetaInfo object.
 
         Params:
-        logger (logging.Logger): The logger for the model
-        settings (settings.SettingsNamespace): The settings needed for saving and loading the model
-        max_length (int): The maximum sequence length for the model's dataset
+        - logger (logging.Logger): The logger for the model
+        - settings (settings.SettingsNamespace): The settings needed for saving and loading the model
+        - max_length (int): The maximum sequence length for the model's dataset
         '''
         self.run = 0
         self.model_path = create_model_dir(settings.model_name)
@@ -56,7 +56,7 @@ class MetaInfo(object):
         an empty dictionary for it in run_info.
 
         Return:
-        latest_info (dict): The information for the latest run
+        - latest_info (dict): The information for the latest run
         '''
         if self.run not in self.run_info.keys():
             self.run_info[self.run] = dict()
@@ -69,8 +69,8 @@ class MetaInfo(object):
         creates an initial dictionary for the run information.
 
         Params:
-        logger (logging.Logger): The logger for the model
-        max_length (int): The maximum sequence length for the model's dataset
+        - logger (logging.Logger): The logger for the model
+        - max_length (int): The maximum sequence length for the model's dataset
         '''
         self.run += 1
         latest = self.latest()
@@ -87,14 +87,14 @@ class MetaInfo(object):
         Updates meta info with latest info.
 
         Params:
-        new_info (list/tuple): The new info with which to update the meta info
-        - epoch (int): The number of epochs for which the model has been trained
-        - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
-                                                                     metrics
-        - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
-                                                                     performance metrics
-        - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
-                                                                    metrics
+        - new_info (list/tuple): The new info with which to update the meta info
+          - epoch (int): The number of epochs for which the model has been trained
+          - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
+                    metrics
+          - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
+                    performance metrics
+          - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
+                    metrics
         '''
         latest = self.latest()
         epoch, train_acc, valid_acc, test_acc = new_info
@@ -115,9 +115,9 @@ class Saver(object):
         Instantiates a Saver object. Has to be called after the model's graph has been created.
 
         Params:
-        logger (logging.Logger): The RNN's model
-        settings (settings.SettingsNamespace): The settings needed for saving and loading the model
-        max_length (int): The maximum sequence size in the model's dataset
+        - logger (logging.Logger): The RNN's model
+        - settings (settings.SettingsNamespace): The settings needed for saving and loading the model
+        - max_length (int): The maximum sequence size in the model's dataset
         '''
         self.logger = logger
         self.logger.debug('Creating a saver object')
@@ -131,8 +131,8 @@ class Saver(object):
         Loads meta information about the model.
 
         Return:
-        meta_info (saver.MetaInfo): The meta info for this model
-        max_length (int): The maximum sequence size in the model's dataset
+        - meta_info (saver.MetaInfo): The meta info for this model
+        - max_length (int): The maximum sequence size in the model's dataset
         '''
         if os.path.isfile(self.meta_path):
             with open(self.meta_path, 'rb') as meta_file: # Read current meta info from file
@@ -147,14 +147,14 @@ class Saver(object):
         Updates meta info with latest info, and saves it.
 
         Params:
-        new_info (list/tuple): The new info with which to update the meta info
-        - epoch (int): The number of epochs for which the model has been trained
-        - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
-                                                                     metrics
-        - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
-                                                                     performance metrics
-        - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
-                                                                    metrics
+        - new_info (list/tuple): The new info with which to update the meta info
+          - epoch (int): The number of epochs for which the model has been trained
+          - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
+                    metrics
+          - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
+                    performance metrics
+          - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
+                    metrics
         '''
         self.meta.update(new_info)
         with open(self.meta_path, 'wb') as meta_file:
@@ -166,16 +166,16 @@ class Saver(object):
         Save the current model's weights in the models/ directory.
 
         Params:
-        model (model.RNNModel): The model whose weights are to be saved
-        meta_info (list/tuple): The new info with which to update the meta info
-        - epoch (int): The number of epochs for which the model has been trained
-        - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
-                                                                     metrics
-        - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
-                                                                     performance metrics
-        - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
-                                                                    metrics
-        best_weights (boolean): True if the weights correspond to the best accuracy trained so far
+        - model (model.RNNModel): The model whose weights are to be saved
+        - meta_info (list/tuple): The new info with which to update the meta info
+          - epoch (int): The number of epochs for which the model has been trained
+          - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
+                    metrics
+          - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
+                    performance metrics
+          - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
+                    metrics
+        - best_weights (boolean): True if the weights correspond to the best accuracy trained so far
         '''
         self.save_meta(meta_info)
         weights = model.variables.get_weights()
@@ -192,8 +192,8 @@ class Saver(object):
         Load the given model, and updates the meta info accordingly.
 
         Params:
-        model (model.RNNModel): The model whose weights are to be loaded
-        best_weights (boolean): True if the model should load the best weights, as opposed to the latest weights
+        - model (model.RNNModel): The model whose weights are to be loaded
+        - best_weights (boolean): True if the model should load the best weights, as opposed to the latest weights
         '''
         if best_weights == True:
             self.logger.info('Loading the weights that produced the best accuracy')
@@ -215,10 +215,10 @@ def create_model_dir(model_name):
     Creates the directory in which to save the model.
 
     Params:
-    model_name (string): The name of the model (gets set to a timestamp if a name is not given)
+    - model_name (string): The name of the model (gets set to a timestamp if a name is not given)
 
     Return:
-    string: The path to the created directory
+    - model_path (string): The path to the created directory
     """
     model_path = constants.MODEL_DIR + model_name + "/"
     setup.create_dir(model_path)
