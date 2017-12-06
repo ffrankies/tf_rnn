@@ -42,15 +42,18 @@ def run():
     load_dataset(logger, settings_obj.data.dataset_name)
 # End of run()
 
-def get_settings():
+def get_settings(dataset_only=False):
     '''
     Parses command-line arguments into a settings Object.
     If non-dataset arguments are provided, prints error and exits script.
 
+    Params:
+    - dataset_only (bool): True if only settings for the dataset should be provided. Default: False
+
     Return:
     - settings (settings.Settings): The settings needed for creating a dataset
     '''
-    settings_obj = settings.Settings()
+    settings_obj = settings.Settings(dataset_only)
     required_keys = constants.DATA_ARGS.keys()
     received_keys = vars(settings_obj.data).keys()
     for key in required_keys:
