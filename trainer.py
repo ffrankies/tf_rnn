@@ -1,7 +1,7 @@
 '''
 Tensorflow implementation of a training method to train a given model.
 Copyright (c) 2017 Frank Derry Wanye
-Date: 25 November, 2017
+Date: 16 December, 2017
 '''
 
 import math
@@ -12,6 +12,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from . import constants
+from .layers.performance_layer import Metrics
 from .layers.performance_layer import Accumulator
 
 def train(model):
@@ -25,28 +26,23 @@ def train(model):
     model.logger.info('Started training the model.')
 
     # Create accumulators, pass them to the training, validation and testing steps
-    train_accumulator = model.saver.meta.latest()[constants.TRAIN]
-    valid_accumulator = model.saver.meta.latest()[constants.VALID]
-    test_accumulator = model.saver.meta.latest()[constants.TEST]
+    metrics = model.saver.meta.latest()[constants.METRICS]
 
     for epoch_num in range(model.saver.meta.latest()[constants.EPOCH]+1, model.settings.train.epochs+1):
-        train_epoch(model, epoch_num, train_accumulator, valid_accumulator)
-        model.saver.save_model(
-            model, 
-            [epoch_num, train_accumulator, valid_accumulator, test_accumulator], 
-            valid_accumulator.is_best_accuracy)
-        if early_stop(valid_accumulator, epoch_num, model.settings.train.epochs) == True:
+        train_epoch(model, epoch_num, metrics.train, metrics.valid)
+        model.saver.save_model(model, [epoch_num, metrics], metrics.valid.is_best_accuracy)
+        if early_stop(metrics.valid, epoch_num, model.settings.train.epochs) == True:
             model.logger.info('Stopping early because validation partition no longer showing improvement')
             break
-        plot(model, train_accumulator, valid_accumulator, test_accumulator)
+        plot(model, metrics.train, metrics.valid, metrics.test)
         # End of epoch training
 
-    performance_eval(model, epoch_num+1, test_accumulator)
+    performance_eval(model, epoch_num+1, metrics.test)
 
     model.logger.info("Finished training the model. Final validation loss: %f | Final test loss: %f | "
                       "Final test accuracy: %f" %
-                      (valid_accumulator.losses[-1], test_accumulator.losses[-1], test_accumulator.accuracies[-1]))
-    plot(model, train_accumulator, valid_accumulator, test_accumulator)
+                      (metrics.valid.losses[-1], metrics.test.losses[-1], metrics.test.accuracies[-1]))
+    plot(model, metrics.train, metrics.valid, metrics.test)
 # End of train()
 
 def train_epoch(model, epoch_num, train_accumulator, valid_accumulator):

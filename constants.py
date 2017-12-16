@@ -1,7 +1,7 @@
 '''
 Contains constants for use within the project.
 Copyright (c) 2017 Frank Derry Wanye
-Date: 18 November, 2017
+Date: 16 December, 2017
 '''
 
 import time
@@ -40,6 +40,7 @@ DIR = 'dir'
 TRAIN = 'training_accumulator'
 VALID = 'validation_accumulator'
 TEST = 'test_accumulator'
+METRICS = 'performance_metrics'
 
 #########################################
 # VARIABLE SCOPES FOR TENSORBOARD

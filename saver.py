@@ -4,7 +4,7 @@ tensorflow model to file.
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 25 November, 2017
+Date: 16 December, 2017
 '''
 
 import tensorflow as tf
@@ -15,6 +15,7 @@ import ray
 
 from . import constants
 from . import setup
+from .layers.performance_layer import Metrics
 from .layers.performance_layer import Accumulator
 
 class MetaInfo(object):
@@ -27,6 +28,7 @@ class MetaInfo(object):
     - run_info (dict): Dictionary mapping runs to the following information:
       - 'dir' (string): The directory in which to save off the model
       - 'epoch' (int): The number of epochs for which the model has been trained
+      - 'metrics' (layers.performance_layer.Metrics): Contains the training, validation and test metric accumulators
       - 'train_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
                 metrics
       - 'valid_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
@@ -76,10 +78,12 @@ class MetaInfo(object):
         latest = self.latest()
         latest[constants.DIR] = self.model_path + 'run_' + str(self.run) + '/'
         setup.create_dir(latest[constants.DIR])
-        train_accumulator = Accumulator(logger, max_length)
-        valid_accumulator = Accumulator(logger, max_length)
-        test_accumulator = Accumulator(logger, max_length)
-        self.update((-1, train_accumulator, valid_accumulator, test_accumulator))
+        metrics = Metrics(logger, max_length)
+        # train_accumulator = Accumulator(logger, max_length)
+        # valid_accumulator = Accumulator(logger, max_length)
+        # test_accumulator = Accumulator(logger, max_length)
+        # self.update((-1, train_accumulator, valid_accumulator, test_accumulator))
+        self.update((-1, metrics))
     # End of increment_run()
 
     def update(self, new_info):
@@ -89,6 +93,7 @@ class MetaInfo(object):
         Params:
         - new_info (list/tuple): The new info with which to update the meta info
           - epoch (int): The number of epochs for which the model has been trained
+          - metrics (layers.performance_layer.Metrics): Contains the training, validation and test metric accumulators
           - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
                     metrics
           - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
@@ -97,11 +102,13 @@ class MetaInfo(object):
                     metrics
         '''
         latest = self.latest()
-        epoch, train_acc, valid_acc, test_acc = new_info
+        #epoch, train_acc, valid_acc, test_acc = new_info
+        epoch, metrics = new_info
         latest[constants.EPOCH] = epoch
-        latest[constants.TRAIN] = train_acc
-        latest[constants.VALID] = valid_acc
-        latest[constants.TEST] = test_acc
+        latest[constants.METRICS] = metrics
+        # latest[constants.TRAIN] = train_acc
+        # latest[constants.VALID] = valid_acc
+        # latest[constants.TEST] = test_acc
     # End of update()
 # End of MetaInfo()
 
@@ -149,6 +156,7 @@ class Saver(object):
         Params:
         - new_info (list/tuple): The new info with which to update the meta info
           - epoch (int): The number of epochs for which the model has been trained
+          - metrics (layers.performance_layer.Metrics): Contains the training, validation and test metric accumulators
           - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
                     metrics
           - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
@@ -169,6 +177,7 @@ class Saver(object):
         - model (model.RNNModel): The model whose weights are to be saved
         - meta_info (list/tuple): The new info with which to update the meta info
           - epoch (int): The number of epochs for which the model has been trained
+          - metrics (layers.performance_layer.Metrics): Contains the training, validation and test metric accumulators
           - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
                     metrics
           - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
