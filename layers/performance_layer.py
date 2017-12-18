@@ -207,17 +207,19 @@ class PerformancePlaceholders(object):
 def performance_ops(logits_series, labels_series, sizes_series, truncate):
     '''
     Performs all the performance calculations for a given minibatch
+    
     Params:
-    logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
-    labels_series (tf.Tensor): True labels for each input
-    sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
-    truncate (int): The maximum sequence length for each minibatch
-    Return:
-    loss (float): The average loss for the given minibatch
-    accuracy (float): The average accuracy for the given minibatch
-    size (int): The number of valid elements in this minibatch
-    timestep_accuracies (list): The average accuracy for each timestep in this minibatch
-    timestep_elements (list): The number of valid elements for each timestep in this minibatch
+    - logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
+    - labels_series (tf.Tensor): True labels for each input
+    - sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
+    - truncate (int): The maximum sequence length for each minibatch
+    
+    Returns:
+    - loss (float): The average loss for the given minibatch
+    - accuracy (float): The average accuracy for the given minibatch
+    - size (int): The number of valid elements in this minibatch
+    - timestep_accuracies (list): The average accuracy for each timestep in this minibatch
+    - timestep_elements (list): The number of valid elements for each timestep in this minibatch
     '''
     # calculate loss and accuracies for a minibatch
     avg_loss, batch_size = average_loss(logits_series, labels_series, sizes_series, truncate)

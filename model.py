@@ -338,7 +338,6 @@ class MultiInputRNN(RNNBase):
         with tf.variable_scope('predictions'):
             self.predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
             logits_series = tf.stack(logits_series, axis=0, name='stack_logits_series')
-            print('Shape of logits: ', np.shape(logits_series))
         return logits_series
     # End of output_layer()
 
@@ -385,7 +384,6 @@ class MultiInputRNN(RNNBase):
                     inputs, self.settings.rnn.input_names[index])
                 input_vector_list.append(input_vectors)
             inputs_series = tf.concat(input_vector_list, axis=-1, name='concatenate_inputs')
-            print('Shape of inputs_series: ', np.shape(inputs_series))
         return inputs_series
     # End of input_layer()
 # End of MultiInputRNN
