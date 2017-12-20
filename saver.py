@@ -79,10 +79,6 @@ class MetaInfo(object):
         latest[constants.DIR] = self.model_path + 'run_' + str(self.run) + '/'
         setup.create_dir(latest[constants.DIR])
         metrics = Metrics(logger, max_length)
-        # train_accumulator = Accumulator(logger, max_length)
-        # valid_accumulator = Accumulator(logger, max_length)
-        # test_accumulator = Accumulator(logger, max_length)
-        # self.update((-1, train_accumulator, valid_accumulator, test_accumulator))
         self.update((-1, metrics))
     # End of increment_run()
 
@@ -102,13 +98,9 @@ class MetaInfo(object):
                     metrics
         '''
         latest = self.latest()
-        #epoch, train_acc, valid_acc, test_acc = new_info
         epoch, metrics = new_info
         latest[constants.EPOCH] = epoch
         latest[constants.METRICS] = metrics
-        # latest[constants.TRAIN] = train_acc
-        # latest[constants.VALID] = valid_acc
-        # latest[constants.TEST] = test_acc
     # End of update()
 # End of MetaInfo()
 

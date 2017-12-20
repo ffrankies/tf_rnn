@@ -1,7 +1,7 @@
 '''
 Tensorflow implementation of a training method to train a given model.
 Copyright (c) 2017 Frank Derry Wanye
-Date: 17 December, 2017
+Date: 19 December, 2017
 '''
 
 import math
@@ -104,6 +104,7 @@ def train_minibatch(model, batch_num, current_state, accumulator):
     performance_data, train_step, current_state = model.session.run(
         [model.performance_ops, model.train_step_fun, model.current_state],
         feed_dict=current_feed_dict)
+    performance_data.extend([model.dataset.train.y[batch_num], model.dataset.train.sizes[batch_num]])
     update_accumulator(accumulator, model.dataset.train, batch_num, performance_data)
     return current_state
 # End of train_minibatch()
@@ -176,9 +177,15 @@ def update_accumulator(accumulator, dataset_partition, batch_num, performance_da
     - accumulator (layers.performance_layer.Accumulator): The accumulator to update with new performance data
     - dataset_partition (dataset.DatasetPartition): The dataset partition containing the remainder of the batch data
     - batch_num (int): The index of the batch (within the dataset partition) that is being added to the container
-    - performance_data (list): The performance data for the given batch
+    - performance_data (list): The performance data for the given minibatch
+      - loss (float): The average loss for the given minibatch
+      - accuracy (float): The average accuracy for the given minibatch
+      - size (int): The number of valid elements in this minibatch
+      - timestep_accuracies (list): The average accuracy for each timestep in this minibatch
+      - timestep_elements (list): The number of valid elements for each timestep in this minibatch
+      - predictions (tf.Tensor): The predictions made at every timestep
     '''
-    accumulator.add_data(
+    accumulator.update(
         data=performance_data,
         beginning=dataset_partition.beginning[batch_num],
         ending=dataset_partition.ending[batch_num])
@@ -218,6 +225,7 @@ def validate_minibatch(model, dataset_partition, batch_num, current_state, accum
         [model.performance_ops, model.current_state],
         feed_dict=current_feed_dict
         )
+    performance_data.extend([dataset_partition.y[batch_num], dataset_partition.sizes[batch_num]])
     update_accumulator(accumulator, dataset_partition, batch_num, performance_data)
     return current_state
 # End of validate_minibatch()
@@ -278,10 +286,11 @@ def test_step(model, accumulator):
     '''
     Finds the performance of the trained model on the testing partition of the dataset. Used as the definitive
     performance test for the model.
+    
     Params:
-    model (model.RNNModel): The trained model
-    accumulator (layers.performance_layer.Accumulator): Accumulator for performance metrics of the test dataset
-                                                        partition
+    - model (model.RNNModel): The trained model
+    - accumulator (layers.performance_layer.Accumulator): Accumulator for performance metrics of the test dataset
+                partition
     '''
     model.logger.debug('Evaluating the model\'s performance on the test partition')
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
@@ -312,3 +321,62 @@ def early_stop(valid_accumulator, epoch_num, num_epochs):
             should_stop = True
     return should_stop
 # End of early_stop
+
+def extend_performance_data(performance_data, index_to_token, dataset_partition, batch_num):
+    '''
+    Extends the performance data with the minibatch labels and sequence lengths. Also converts the predictions and 
+    labels to tokens.
+
+    Params:
+    - performance_data (list): The list of performance data
+      - loss (float): The average loss for the given minibatch
+      - accuracy (float): The average accuracy for the given minibatch
+      - size (int): The number of valid elements in this minibatch
+      - timestep_accuracies (list): The average accuracy for each timestep in this minibatch
+      - timestep_elements (list): The number of valid elements for each timestep in this minibatch
+      - predictions (list): The predictions made at every timestep
+    - index_to_token (list): Converts indexes to tokens in the vocabulary
+    - dataset_partition (dataset.DatasetPartitioon): The dataset partition to which the minibatch belongs
+    - batch_num (int): The index of the minibatch
+
+    Returns:
+    - extended_performance_data (list): The extended performance data
+      - loss (float): The average loss for the given minibatch
+      - accuracy (float): The average accuracy for the given minibatch
+      - size (int): The number of valid elements in this minibatch
+      - timestep_accuracies (list): The average accuracy for each timestep in this minibatch
+      - timestep_elements (list): The number of valid elements for each timestep in this minibatch
+      - predictions (list): The predictions made at every timestep, in token format
+      - labels (list): The correct predictiosn for the minibatch
+      - sequence_lengths (list): The lengths of each sequence in the minibatch 
+    '''
+    extended_performance_data = performance_data[:5]
+    data_list = [performance_data[-1], dataset_partition.y[batch_num]]
+    extended_performance_data.extend(indexes_to_tokens(index_to_token, data_list=data_list))
+    extended_performance_data.append(dataset_partition.sizes[batch_num])
+    return extended_performance_data
+# End of extend_dataset_partition()
+
+def indexes_to_tokens(index_to_token, data=None, data_list=None):
+    '''
+    Converts the indexes in the predictions and labels to the tokens they represent.
+
+    Params:
+    - index_to_token (list): Converts indexes to tokens
+    - data (list): The data to be converted to token form
+    - data_list (list): The list of data to be converted to token form
+
+    Returns:
+    - Either of the following:
+      - tokenized_data (list): The data, in token form, when data is not None
+      - tokenized_data_list (list): The list of data, in token form, when data is None
+    '''
+    if data is not None:
+        token_data = [[index_to_token[item] for item in row] for row in data]
+        return token_data
+    elif data_list is not None:
+        token_data_list = [index_to_token(index_to_token, data=item) for item in data_list]
+        return token_data_list
+    else:
+        raise ValueError('No input provided to function.')
+# End of indexes_to_tokens()

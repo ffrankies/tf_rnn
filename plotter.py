@@ -31,6 +31,14 @@ def plot(model, train_accumulator, valid_accumulator, test_accumulator):
     plt.show()
 # End of plot()
 
+def plot_comparison():
+    # TODO()
+    return None
+
+def plot_final():
+    # TODO()
+    return None
+
 def plot_loss(loss_list, axis):
     '''
     Plots the training and validation losses on a sublot.

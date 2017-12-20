@@ -1,7 +1,7 @@
 '''
 Contains functions for setting up the performance evaluation layer for a tensorflow-based RNN.
 Copyright (c) 2017 Frank Derry Wanye
-Date: 16 December, 2017
+Date: 18 December, 2017
 '''
 import tensorflow as tf
 import numpy as np
@@ -31,11 +31,20 @@ class Metrics(object):
         self.valid = Accumulator(logger, max_sequence_length)
         self.test = Accumulator(logger, max_sequence_length)
     # End of __init__()
+
+    def advance(self):
+        '''
+        Advances the training and validation accumulators to the next epoch.
+        '''
+        self.train.next_epoch()
+        self.valid.next_epoch()
+    # End of advance()
 # End of Metrics
 
 class Accumulator(object):
     '''
     Stores the data needed to evaluate the performance of the model on a given partition of the dataset.
+    
     Instance Variables:
     - logger (logging.Logger): The logger used by the RNN model
     - max_sequence_length (int): The maximum sequence length for this dataset
@@ -50,8 +59,8 @@ class Accumulator(object):
     - accuracies (list): List of accuracies for every epoch
     - latest_timestep_accuracies (list): The latest timestep accuracies
     - Temporary instance variables:
-        - next_timestep_accuracies (list): Incoming average accuracies per timestep
-        - next_timestep_elements (list): Incoming number of valid elements per timestep
+      - next_timestep_accuracies (list): Incoming average accuracies per timestep
+      - next_timestep_elements (list): Incoming number of valid elements per timestep
     '''
 
     def __init__(self, logger, max_sequence_length):
@@ -59,8 +68,8 @@ class Accumulator(object):
         Creates a new PerformanceData object.
 
         Params:
-        logger (logging.Logger): The logger from the model
-        max_sequence_length (int): The maximum sequence length for this dataset
+        - logger (logging.Logger): The logger from the model
+        - max_sequence_length (int): The maximum sequence length for this dataset
         '''
         self.logger = logger
         self.logger.debug('Creating a PerformanceData object')
@@ -75,20 +84,24 @@ class Accumulator(object):
         self.reset_metrics()
     # End of __init__()
 
-    def add_data(self, data, beginning, ending):
+    def update(self, data, beginning, ending):
         '''
         Adds the performance data from a given minibatch to the PerformanceData object.
+        
         Params:
-        data (tuple/list): The performance data for the given minibatch
-        - loss (float): The average loss for the given minibatch
-        - accuracy (float): The average accuracy for the given minibatch
-        - size (int): The number of valid elements in this minibatch
-        - timestep_accuracies (list): The average accuracy for each timestep in this minibatch
-        - timestep_elements (list): The number of valid elements for each timestep in this minibatch
-        beginning (boolean): True if this minibatch marks the start of a sequence
-        ending (boolean): True if this minibatch maarks the end of a sequence
+        - data (tuple/list): The performance data for the given minibatch
+          - loss (float): The average loss for the given minibatch
+          - accuracy (float): The average accuracy for the given minibatch
+          - size (int): The number of valid elements in this minibatch
+          - timestep_accuracies (list): The average accuracy for each timestep in this minibatch
+          - timestep_elements (list): The number of valid elements for each timestep in this minibatch
+          - predictions (list): The predictions made at every timestep, in token format
+          - labels (list): The correct predictiosn for the minibatch
+          - sequence_lengths (list): The lengths of each sequence in the minibatch 
+        - beginning (boolean): True if this minibatch marks the start of a sequence
+        - ending (boolean): True if this minibatch maarks the end of a sequence
         '''
-        loss, accuracy, size, timestep_accuracies, timestep_elements = data
+        loss, accuracy, size, timestep_accuracies, timestep_elements, predictions, labels, sequence_lengths = data
         self.logger.debug("Minibatch loss: %.2f | Minibatch accuracy: %.2f" % (loss, accuracy))
         self.loss = self.update_average(self.loss, self.elements, loss, size)
         self.accuracy = self.update_average(self.accuracy, self.elements, accuracy, size)
@@ -97,16 +110,17 @@ class Accumulator(object):
         if ending is True:
             self.merge_timesteps()
         self.logger.debug("Updated loss: %.2f | Updated accuracy: %.2f" % (self.loss, self.accuracy))
-    # End of add_data()
+    # End of update()
 
     def update_average(self, old_avg, old_num, new_avg, new_num):
         '''
         Updates the old average with new data.
+        
         Params:
-        old_avg (float): The current average value
-        old_num (int): The number of elements contributing to the current average
-        new_avg (float): The new average value
-        new_num (int): The number of elements contributing to the new average
+        - old_avg (float): The current average value
+        - old_num (int): The number of elements contributing to the current average
+        - new_avg (float): The new average value
+        - new_num (int): The number of elements contributing to the new average
         '''
         old_sum = old_avg * old_num
         new_sum = new_avg * new_num
@@ -119,9 +133,10 @@ class Accumulator(object):
     def extend_timesteps(self, accuracies, sizes):
         '''
         Appends the timestep accuracies and timestep sizes to the next_timestep_elements list.
+        
         Params:
-        accuracies (list): The list of accuracies for each timestep in the minibatch
-        sizes (list): The list of the number of valid elements for each timestep in the minibatch
+        - accuracies (list): The list of accuracies for each timestep in the minibatch
+        - sizes (list): The list of the number of valid elements for each timestep in the minibatch
         '''
         self.logger.debug('Extending incoming timestep accuracies')
         if len(accuracies) != len(sizes):
@@ -168,6 +183,7 @@ class Accumulator(object):
     def reset_metrics(self):
         '''
         Resets the performance metrics for the next epoch.
+        
         Creates the following instance variables, if they haven't already been created:
         - loss (float): The cumulative average loss for every minibatch
         - accuracy (float): The cumulative average accuracy for every minibatch
@@ -182,6 +198,79 @@ class Accumulator(object):
         self.timestep_elements = [0] * self.max_sequence_length
     # End of reset_metrics()
 # End of PerformanceData()
+
+class ConfusionMatrix(object):
+    '''
+    An updatable confusion matrix.
+    
+    Instance Variables:
+    - logger (logging.Logger): For logging purposes
+    - matrix (dict): The confusion matrix, as a dictionary
+    - row_labels (set): The valid labels for the rows
+    - col_labels (set): The valid labels for the columns
+    '''
+
+    def __init__(self, logger):
+        '''
+        Creates a ConfusionMatrix object.
+        '''
+        self.logger = logger
+        logger.debug('Creating a confusion matrix')
+        self.matrix = dict()
+        self.row_labels = set()
+        self.col_labels = set()
+    # End of __init__()
+
+    def update(self, predictions, labels, sequence_lengths):
+        '''
+        Updates the confusion matrix using the given predictions and their correct labels for one batch.
+
+        Params:
+        - predictions (list): The predictions made by the neural network for the given batch
+        - labels (list): The correct predictions for the given batch 
+        - sequence_lengths (list): The valid sequence lengths for every row in the given batch
+        '''
+        self.logger.debug('Updating confusion matrix')
+        for row_index, row in enumerate(predictions):
+            row_slice = row[:sequence_lengths[row_index]]
+            for column_index, prediction in enumerate(row_slice):
+                label = labels[row_index][column_index]
+                self.insert_prediction(prediction, label)
+    # End of update()
+
+    def insert_prediction(self, prediction, label):
+        '''
+        Inserts a set of predictions into the confusion matrix.
+
+        Params:
+        - prediction (int): The predictions to insert into the matrix
+        - label (int): The label for the prediction to be inserted
+        '''
+        if label not in self.matrix.keys():
+            self.matrix[label] = dict()
+        if prediction not in self.matrix[label].keys():
+            self.matrix[label][prediction] = 1
+        else:
+            self.matrix[label][prediction] += 1
+        self.row_labels.add(label)
+        self.col_labels.add(prediction)
+    # End of insert_prediction()
+
+    def to_array(self):
+        '''
+        Converts the confusion matrix dictionary to a 2d array.
+
+        Returns:
+        - confusion_matrix (list): A 2d array representation of the confusion matrix
+        '''
+        confusion_matrix = list()
+        for row_label in self.row_labels:
+            row_dict = self.matrix[row_label]
+            row = [row_dict[col_label] if col_label in row_dict.keys() else 0 for col_label in self.col_labels]
+            confusion_matrix.append(row)
+        return confusion_matrix
+    # End of to_array()
+# End of ConfusionMatrix()
 
 class PerformancePlaceholders(object):
     '''
@@ -220,24 +309,28 @@ def performance_ops(logits_series, labels_series, sizes_series, truncate):
     - size (int): The number of valid elements in this minibatch
     - timestep_accuracies (list): The average accuracy for each timestep in this minibatch
     - timestep_elements (list): The number of valid elements for each timestep in this minibatch
+    - predictions (tf.Tensor): The predictions made at every timestep
     '''
     # calculate loss and accuracies for a minibatch
     avg_loss, batch_size = average_loss(logits_series, labels_series, sizes_series, truncate)
-    avg_acc, timestep_accs, timestep_sizes = average_accuracy(logits_series, labels_series, sizes_series, truncate)
-    return avg_loss, avg_acc, batch_size, timestep_accs, timestep_sizes
+    avg_acc, timestep_accs, timestep_sizes, predictions = average_accuracy(
+        logits_series, labels_series, sizes_series, truncate)
+    return avg_loss, avg_acc, batch_size, timestep_accs, timestep_sizes, predictions
 # End of performance_ops()
 
 def average_loss(logits_series, labels_series, sizes_series, truncate):
     '''
     Calculates the average loss for a given minibatch.
+    
     Params:
-    logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
-    labels_series (tf.Tensor): True labels for each input
-    sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
-    truncate (int): The maximum sequence length for the minibatch
+    - logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
+    - labels_series (tf.Tensor): True labels for each input
+    - sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
+    - truncate (int): The maximum sequence length for the minibatch
+    
     Return:
-    loss (tf.Tensor): The average loss for this minibatch
-    size (tf.Tensor): The total number of elements in this minibatch
+    - loss (tf.Tensor): The average loss for this minibatch
+    - size (tf.Tensor): The total number of elements in this minibatch
     '''
     with tf.variable_scope(constants.LOSS_CALC):
         mask, _ = row_length_mask(sizes_series, truncate) # Copied in here so that it can be used for training
@@ -254,35 +347,42 @@ def average_loss(logits_series, labels_series, sizes_series, truncate):
 def average_accuracy(logits_series, labels_series, sizes_series, truncate):
     '''
     Calculates the average accuracy for a given minibatch.
+    
     Params:
-    logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
-    labels_series (tf.Tensor): True labels for each input
-    sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
-    truncate (int): The maximum sequence length for the minibatch
+    - logits_series (tf.Tensor): Calculated probabilities for each class for each input after training
+    - labels_series (tf.Tensor): True labels for each input
+    - sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
+    - truncate (int): The maximum sequence length for the minibatch
+    
     Return:
-    accuracy (tf.Tensor): The average loss for this minibatch
-    timestep_accuracies (tf.Tensor): The average accuracy for each timestep in the given minibatch
-    timestep_sizes (tf.Tensor): The valid number of elements for each timestep in the given minibatch
+    - accuracy (tf.Tensor): The average loss for this minibatch
+    - timestep_accuracies (tf.Tensor): The average accuracy for each timestep in the given minibatch
+    - timestep_sizes (tf.Tensor): The valid number of elements for each timestep in the given minibatch
+    - predictions (tf.Tensor): The predictions made at every timestep
     '''
     with tf.variable_scope(constants.ACCURACY):
-        masked_predictions, timestep_lengths = predict_and_mask(logits_series, labels_series, sizes_series, truncate)
+        predictions, masked_predictions, timestep_lengths = predict_and_mask(
+            logits_series, labels_series, sizes_series, truncate)
         avg_accuracy = overall_accuracy(masked_predictions, sizes_series)
         timestep_accuracies = timestep_accuracy(masked_predictions, timestep_lengths)
-    return avg_accuracy, timestep_accuracies, timestep_lengths
+    return avg_accuracy, timestep_accuracies, timestep_lengths, predictions
 # End of average_loss()
 
 def predict_and_mask(logits_series, labels_series, sizes_series, max_row_length):
     '''
     Finds the correct predictions made across the given logits, and applies a mask so that it only contains
     valid predictions.
+    
     Params:
-    logits_series (tf.Tensor): Calculated probabilities for each class for each input
-    labels_series (tf.Tensor): True labels for each input
-    sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
-    max_row_length (int): The maximum row length
+    - logits_series (tf.Tensor): Calculated probabilities for each class for each input
+    - labels_series (tf.Tensor): True labels for each input
+    - sizes_series (tf.Tensor): The true, un-padded lengths of each row in the minibatch
+    - max_row_length (int): The maximum row length
+    
     Return:
-    masked_predictions (tf.Tensor): The correct predictions, after the mask has been applied to them
-    timestep_lengths (tf.Tensor): The number of valid predictions at each timestep
+    - predictions (tf.Tensor): The predictions made at every timestep
+    - masked_predictions (tf.Tensor): The correct predictions, after the mask has been applied to them
+    - timestep_lengths (tf.Tensor): The number of valid predictions at each timestep
     '''
     with tf.variable_scope(constants.PREDICTIONS_MASK):
         mask, timestep_lengths = row_length_mask(sizes_series, max_row_length)
@@ -291,18 +391,20 @@ def predict_and_mask(logits_series, labels_series, sizes_series, max_row_length)
         correct_predictions = tf.equal(predictions, labels_series)
         correct_predictions = tf.cast(correct_predictions, tf.float32)
         correct_predictions_masked = tf.multiply(correct_predictions, mask)
-    return correct_predictions_masked, timestep_lengths
+    return predictions, correct_predictions_masked, timestep_lengths
 # End of predict_and_mask()
 
 def row_length_mask(sizes_series, max_row_length):
     '''
     Constructs a mask out of the row lengths series.
+    
     Params:
-    sizes_series (tf.Tensor): The length of each sequence (row) in the data
-    max_row_length (int): The maximum length of sequences in the data
+    - sizes_series (tf.Tensor): The length of each sequence (row) in the data
+    - max_row_length (int): The maximum length of sequences in the data
+    
     Return:
-    mask (tf.Tensor): A mask containing 1s where the logits are valid, 0 where they are not
-    timestep_lengths (tf.Tensor): The number of valid logits at each timestep in the data
+    - mask (tf.Tensor): A mask containing 1s where the logits are valid, 0 where they are not
+    - timestep_lengths (tf.Tensor): The number of valid logits at each timestep in the data
     '''
     mask = tf.sequence_mask(sizes_series, maxlen=max_row_length, dtype=tf.float32, name='row_length_mask')
     timestep_lengths = tf.reduce_sum(mask, axis=0, name='timestep_lengths')
@@ -312,11 +414,13 @@ def row_length_mask(sizes_series, max_row_length):
 def overall_accuracy(masked_predictions, sizes_series):
     '''
     Tensorflow operation that calculates the model's accuracy on a given minibatch.
+    
     Params:
-    labels_series (tf.Tensor): True labels for each input
-    predictions_series (tf.Tensor): The predictions made by the RNN for each input
+    - labels_series (tf.Tensor): True labels for each input
+    - predictions_series (tf.Tensor): The predictions made by the RNN for each input
+    
     Return:
-    average_accuracy (tf.Tensor): The average accuracy for each row in the minibatch
+    - average_accuracy (tf.Tensor): The average accuracy for each row in the minibatch
     '''
     with tf.variable_scope(constants.ACCURACY):
         row_sums = tf.reduce_sum(masked_predictions, axis=1, name='correct_predictions_per_sequence')
@@ -332,11 +436,13 @@ def timestep_accuracy(masked_predictions, timestep_lengths):
     Calculates the prediction accuracy for every timestep.
     Where the accuracy is NaN, the accuracy is replaced with 0. This should only happen in epochs where the given
     calculation is not done (eg. test_accuracy_op during training)
+    
     Params:
-    masked_predictions (tf.Tensor): The correct predictions, masked such that only valid predictions are present
-    timestep_lengths (tf.Tensor): The number of possible valid predictions at each timestep
+    - masked_predictions (tf.Tensor): The correct predictions, masked such that only valid predictions are present
+    - timestep_lengths (tf.Tensor): The number of possible valid predictions at each timestep
+    
     Return:
-    timestep_accuracies (tf.Tensor): The average accuracy for each timestep
+    - timestep_accuracies (tf.Tensor): The average accuracy for each timestep
     '''
     with tf.variable_scope(constants.TIMESTEP_ACCURACY):
         timestep_predictions = tf.reduce_sum(masked_predictions, axis=0, name='sum_correct_predictions')
