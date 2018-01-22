@@ -26,7 +26,7 @@ def train(model):
 
     # Create accumulators, pass them to the training, validation and testing steps
     metrics = model.saver.meta.latest()[constants.METRICS]
-
+    print('At start: ', metrics.test.latest_confusion_matrix.to_array())
     for epoch_num in range(model.saver.meta.latest()[constants.EPOCH]+1, model.settings.train.epochs+1):
         train_epoch(model, epoch_num, metrics.train, metrics.valid)
         model.saver.save_model(model, [epoch_num, metrics], metrics.valid.is_best_accuracy)
@@ -35,8 +35,9 @@ def train(model):
             break
         plotter.plot(model, metrics.train, metrics.valid, metrics.test)
         # End of epoch training
-
+    print('Before performance eval: ', metrics.test.latest_confusion_matrix.to_array())
     performance_eval(model, epoch_num+1, metrics.test)
+    print('After eval: ', metrics.test.latest_confusion_matrix.to_array())
 
     model.logger.info("Finished training the model. Final validation loss: %f | Final test loss: %f | "
                       "Final test accuracy: %f" %
@@ -104,6 +105,7 @@ def train_minibatch(model, batch_num, current_state, accumulator):
     performance_data, train_step, current_state = model.session.run(
         [model.performance_ops, model.train_step_fun, model.current_state],
         feed_dict=current_feed_dict)
+    performance_data = list(performance_data)
     performance_data.extend([model.dataset.train.y[batch_num], model.dataset.train.sizes[batch_num]])
     update_accumulator(accumulator, model.dataset.train, batch_num, performance_data)
     return current_state
@@ -225,6 +227,7 @@ def validate_minibatch(model, dataset_partition, batch_num, current_state, accum
         [model.performance_ops, model.current_state],
         feed_dict=current_feed_dict
         )
+    performance_data = list(performance_data)
     performance_data.extend([dataset_partition.y[batch_num], dataset_partition.sizes[batch_num]])
     update_accumulator(accumulator, dataset_partition, batch_num, performance_data)
     return current_state

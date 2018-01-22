@@ -58,6 +58,8 @@ class Accumulator(object):
     - losses (list): List of losses for every epoch
     - accuracies (list): List of accuracies for every epoch
     - latest_timestep_accuracies (list): The latest timestep accuracies
+    - confusion_matrix (ConfusionMatrix): The confusion matrix for visualizing prediction accuracies
+    - latest_confusion_matrix (ConfusionMatrix): The confusion matrix for the latest completed epoch
     - Temporary instance variables:
       - next_timestep_accuracies (list): Incoming average accuracies per timestep
       - next_timestep_elements (list): Incoming number of valid elements per timestep
@@ -74,6 +76,8 @@ class Accumulator(object):
         self.logger = logger
         self.logger.debug('Creating a PerformanceData object')
         self.max_sequence_length = max_sequence_length
+        self.confusion_matrix = ConfusionMatrix(logger)
+        self.latest_confusion_matrix = None
         self.best_accuracy = 0.0
         self.is_best_accuracy = False
         self.losses = list()
@@ -109,6 +113,7 @@ class Accumulator(object):
         self.extend_timesteps(timestep_accuracies, timestep_elements)
         if ending is True:
             self.merge_timesteps()
+        self.confusion_matrix.update(predictions, labels, sequence_lengths)
         self.logger.debug("Updated loss: %.2f | Updated accuracy: %.2f" % (self.loss, self.accuracy))
     # End of update()
 
@@ -196,6 +201,12 @@ class Accumulator(object):
         self.elements = 0
         self.timestep_accuracies = [0.0] * self.max_sequence_length
         self.timestep_elements = [0] * self.max_sequence_length
+        # print('Old confusion matrix: ', self.confusion_matrix.to_array())
+        self.latest_confusion_matrix = self.confusion_matrix.copy()
+        # print('Latest confusion matrix: ', self.latest_confusion_matrix.to_array())
+        self.confusion_matrix = ConfusionMatrix(self.logger)
+        # print('After updating: empty confusion matrix: ', self.confusion_matrix.to_array())
+        # print('After updating: latest confusion matrix: ', self.latest_confusion_matrix.to_array())
     # End of reset_metrics()
 # End of PerformanceData()
 
@@ -270,6 +281,30 @@ class ConfusionMatrix(object):
             confusion_matrix.append(row)
         return confusion_matrix
     # End of to_array()
+
+    def copy(self):
+        '''
+        Creates a copy of this confusion matrix object.
+
+        Returns:
+        - confusion_matrix_copy (ConfusionMatrix): A copy of this confusion matrix
+        '''
+        copy = ConfusionMatrix(self.logger)
+        copy.row_labels = deepcopy(self.row_labels)
+        copy.col_labels = deepcopy(self.col_labels)
+        copy.matrix = deepcopy(self.matrix)
+        return copy
+    # End of copy()
+
+    def is_empty(self):
+        '''
+        Specifies whether or not the confusion matrix is empty.
+
+        Returns:
+        - is_empty (bool): True if the confusion matrix is empty, False otherwise
+        '''
+        return len(self.matrix) == 0
+    # End of is_empty()
 # End of ConfusionMatrix()
 
 class PerformancePlaceholders(object):
