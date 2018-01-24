@@ -1,7 +1,7 @@
 '''
 Contains constants for use within the project.
 Copyright (c) 2017 Frank Derry Wanye
-Date: 16 December, 2017
+Date: 22 January, 2018
 '''
 
 import time
@@ -69,8 +69,17 @@ TIMESTEP_ACCURACY = "timestep_accuracy_calculation"
 #########################################
 LATEST_WEIGHTS = "latest_weights.pkl"
 BEST_WEIGHTS = "best_weights.pkl"
-PLOT = "loss_plot.png"
+# PLOT = "loss_plot.png"
 META = "meta.pkl"
+
+#########################################
+# PLOT FILENAMES
+#########################################
+PLT_TRAIN_LOSS = "training_loss_plot.png"
+PLT_TRAIN_ACCURACY = "training_accuracy_plot.png"
+PLT_TEST_ACCURACY_PIE = "test_accuracy_pie_chart.png"
+PLT_TEST_ACCURACY_BAR = "test_accuracy_bar_chart.png"
+PLT_CONFUSION_MATRIX = "confusion_matrix.png"
 
 #########################################
 # ARG KEY NAMES
