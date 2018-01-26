@@ -1,17 +1,16 @@
 '''
 Contains code for generating plots describing the neural network's performance.
 Copyright (c) 2017 Frank Derry Wanye
-Date: 22 January, 2018
+Date: 24 January, 2018
 '''
 import numpy as np
-# import pandas as pd
-# import matplotlib
-# matplotlib.use('Agg')
-# import matplotlib.pyplot as plt
 import bokeh
 import bokeh.plotting as bplot
-# import plotly.plotly as py
-# import plotly.graph_objs as go
+import bokeh.models as bmodels
+
+# Selenium support for PhantomJS warning is annoying
+import warnings
+warnings.filterwarnings('ignore')
 
 import seaborn as sns
 
@@ -34,6 +33,7 @@ def plot(model, train_accumulator, valid_accumulator, test_accumulator):
     directory = model.saver.meta.latest()[constants.DIR]
     plot_loss(directory, train_accumulator.losses, valid_accumulator.losses)
     plot_accuracy_line(directory, train_accumulator.accuracies, valid_accumulator.accuracies)
+    plot_bar_chart(directory, test_accumulator.latest_timestep_accuracies)
     # plot_accuracy_line((train_accumulator.accuracies, valid_accumulator.accuracies), 512)
     # if len(test_accumulator.accuracies) > 0:
     #     plot_accuracy_pie_chart(test_accumulator.accuracies[-1], 513)
@@ -50,25 +50,42 @@ def plot_comparison():
     # TODO()
     return None
 
-def plot_final():
-    # TODO()
-    return None
+def setup_plot(title, x_label, y_label, width=600):
+    '''
+    Sets up the figure and axis for a plot.
+
+    Params:
+    - title (str): The title for the plot
+    - x_label (str): The label for the x axis
+    - y_label (str): The label for the y axis
+    - width (int): The width of the plot to generate
+
+    Return:
+    - plot (bokeh.plotting.Figure): The plot figure
+    '''
+    plot = bplot.figure(title=title, x_axis_label=x_label, y_axis_label=y_label, tools='', toolbar_location=None, 
+        plot_width=width)
+    plot.min_border_left = 10
+    plot.min_border_right = 10
+    plot.min_border_top = 10
+    plot.min_border_bottom = 10
+    return plot
+# End of setup_plot()
 
 def plot_loss(directory, training_losses, validation_losses):
     '''
     Plots the training and validation losses on a sublot.
     Params:
-    loss_list (tuple):
+    - directory (str): The directory in which to save the plot
     - training_losses (list): The training losses to plot
     - validation_losses (list): The validation losses to plot
     '''
     x = list(range(0, len(training_losses)))
-    plot = bplot.figure(title='Training Loss Over Time')
-    plot.line(x, training_losses, legend="Training Loss (final=%.2f)" % training_losses[-1], color='blue')
-    plot.line(x, validation_losses, legend="Validation Loss (final=%.2f)" % validation_losses[-1], color='red')
-    plot.xaxis.axis_label = 'Epoch'
-    plot.yaxis.axis_label = 'Loss'
-    plot.toolbar_location = None
+    plot = setup_plot('Training Loss Over Time', 'Epoch', 'Loss')
+    plot.line(x, training_losses, legend="Training Loss (final=%.2f)" % training_losses[-1], color='blue', 
+        line_width=2)
+    plot.line(x, validation_losses, legend="Validation Loss (final=%.2f)" % validation_losses[-1], color='red',
+        line_width=2)
     bokeh.io.export_png(plot, filename=directory + constants.PLT_TRAIN_LOSS)
 # End of plot_loss()
 
@@ -77,20 +94,16 @@ def plot_accuracy_line(directory, training_accuracies, validation_accuracies):
     Plots the average accuracy during training as a line graph a separate subplot.
 
     Params:
-    accuracy_list (tuple): 
+    - directory (str): The directory in which to save the plot
     - training_accuracies (list): The training accuracies to plot
     - validation_accuracies (list): The validation accuracies to plot
-    axis (int): The axis on which to plot the validation loss
     '''
     x = list(range(0, len(training_accuracies)))
-    plot = bplot.figure(title='Training Accuracy Over Time')
+    plot = setup_plot('Training Accuracy Over Time', 'Epoch', 'Accuracy')
     plot.line(x, training_accuracies, legend="Training Accuracy (final=%.2f)" % training_accuracies[-1], 
-        color='blue')
+        color='blue', line_width=2)
     plot.line(x, validation_accuracies, legend="Validation Accuracy (final=%.2f)" % validation_accuracies[-1], 
-        color='red')
-    plot.xaxis.axis_label = 'Epoch'
-    plot.yaxis.axis_label = 'Accuracy'
-    plot.toolbar_location = None
+        color='red', line_width=2)
     plot.legend.location = 'bottom_right'
     bokeh.io.export_png(plot, filename=directory + constants.PLT_TRAIN_ACCURACY)
 # End of plot_accuracy_line()
@@ -111,7 +124,7 @@ def plot_accuracy_pie_chart(accuracy, axis):
     axis.set_title('Average accuracy for the test partition')
 # End of plot_accuracy_pie_chart()
 
-def plot_bar_chart(timestep_accuracy, axis):
+def plot_bar_chart(directory, timestep_accuracy):
     '''
     Plots the average accuracy for each timestep as a bar chart on a separate subplot.
     
@@ -119,20 +132,22 @@ def plot_bar_chart(timestep_accuracy, axis):
     - timestep_accuracy (list): The average accuracy of predictions for each timestep on the test dataset partition
     - axis (int): The axis on which to plot the validation loss
     '''
-    axis = plt.subplot(axis)
     timestep_accuracy = [x * 100.0 for x in timestep_accuracy]
-    bar_chart = axis.bar(range(1, len(timestep_accuracy) + 1), timestep_accuracy)
-    axis.set_xlabel('Timestep')
-    axis.set_ylabel('Average Accuracy (%)')
-    axis.set_title('Average accuracy of each timestep for the test partition')
-    # from https://matplotlib.org/gallery/api/barchart.html#sphx-glr-gallery-api-barchart-py
-    # Couldn't find a better way to label the bar chart, unfortunately
-    for bar, accuracy in zip(bar_chart, timestep_accuracy):
-        x_pos = bar.get_x() + bar.get_width()/2.
-        height = bar.get_height()
-        y_pos = height - 20.0
-        if height <= 30.0 : y_pos = height + 10.0
-        axis.text(x_pos, y_pos, "%.1f" % accuracy, ha='center', va='bottom', rotation=90)
+    timesteps = list(range(len(timestep_accuracy)))
+    plot_width = len(timesteps) * 30
+    if plot_width == 0:
+        plot_width = 600
+    plot = setup_plot('Accuracy of Predictions at Each Timestep', 'Timestep', 'Average Accuracy (%)', plot_width)
+    source = bmodels.ColumnDataSource(data=dict( 
+        timesteps=timesteps,
+        timestep_accuracy=timestep_accuracy,
+        labels=[" %.1f" % accuracy for accuracy in timestep_accuracy]))
+    plot.vbar(x='timesteps', top='timestep_accuracy', width=0.9, source=source)
+    plot.y_range = bmodels.Range1d(0, 120)
+    labels = bmodels.LabelSet(x='timesteps', y='timestep_accuracy', text='labels', level='glyph', text_baseline='middle', 
+        source=source, render_mode='canvas', angle=90, angle_units='deg')
+    plot.add_layout(labels)
+    bokeh.io.export_png(plot, directory + constants.PLT_TEST_ACCURACY_BAR)
 # End of plot_bar_chart()
 
 def plot_confusion_matrix(confusion_matrix, axis):
