@@ -1,7 +1,6 @@
 '''
 Contains functions for setting up the performance evaluation layer for a tensorflow-based RNN.
-Copyright (c) 2017 Frank Derry Wanye
-Date: 18 December, 2017
+@since 0.4.1
 '''
 import tensorflow as tf
 import numpy as np
@@ -275,12 +274,45 @@ class ConfusionMatrix(object):
         - confusion_matrix (list): A 2d array representation of the confusion matrix
         '''
         confusion_matrix = list()
-        for row_label in self.row_labels:
-            row_dict = self.matrix[row_label]
-            row = [row_dict[col_label] if col_label in row_dict.keys() else 0 for col_label in self.col_labels]
+        labels = self.all_labels()
+        for row_label in labels:
+            if row_label in self.matrix:
+                row_dict = self.matrix[row_label]
+                row = [row_dict[col_label] if col_label in row_dict.keys() else 0 for col_label in labels]
+            else:
+                row = [0 for label in labels]
             confusion_matrix.append(row)
         return confusion_matrix
     # End of to_array()
+
+    def all_labels(self):
+        '''
+        Returns a set of all labels in the confusion matrix.
+
+        Returns:
+        - labels (set): The set of all labels in the confusion matrix
+        '''
+        labels = set(self.row_labels)
+        labels.update(self.col_labels)
+        return labels
+    # End of all_labels()
+
+    def to_normalized_array(self):
+        '''
+        Converts the confusion matrix dictionary to a normalized 2d array. 
+        Normalization happens across rows, and all resulting values are between 0 and 1.
+
+        Returns:
+        - normalized_confusion_matrix (list): A 2d array representation of the normalized confusion matrix
+        '''
+        print('Normalizing matrix')
+        confusion_matrix = self.to_array()
+        print('Generated matrix')
+        sums = np.sum(confusion_matrix, axis=1) # Sum matrix along row
+        normalized_confusion_matrix = np.divide(confusion_matrix, sums[:, np.newaxis]) # Divide each value by row total
+        print('Done normalizing matrix')
+        return normalized_confusion_matrix
+    # End of to_normalized_array()
 
     def copy(self):
         '''
