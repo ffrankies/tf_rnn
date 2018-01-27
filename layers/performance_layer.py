@@ -200,12 +200,8 @@ class Accumulator(object):
         self.elements = 0
         self.timestep_accuracies = [0.0] * self.max_sequence_length
         self.timestep_elements = [0] * self.max_sequence_length
-        # print('Old confusion matrix: ', self.confusion_matrix.to_array())
         self.latest_confusion_matrix = self.confusion_matrix.copy()
-        # print('Latest confusion matrix: ', self.latest_confusion_matrix.to_array())
         self.confusion_matrix = ConfusionMatrix(self.logger)
-        # print('After updating: empty confusion matrix: ', self.confusion_matrix.to_array())
-        # print('After updating: latest confusion matrix: ', self.latest_confusion_matrix.to_array())
     # End of reset_metrics()
 # End of PerformanceData()
 
@@ -305,12 +301,9 @@ class ConfusionMatrix(object):
         Returns:
         - normalized_confusion_matrix (list): A 2d array representation of the normalized confusion matrix
         '''
-        print('Normalizing matrix')
         confusion_matrix = self.to_array()
-        print('Generated matrix')
         sums = np.sum(confusion_matrix, axis=1) # Sum matrix along row
         normalized_confusion_matrix = np.divide(confusion_matrix, sums[:, np.newaxis]) # Divide each value by row total
-        print('Done normalizing matrix')
         return normalized_confusion_matrix
     # End of to_normalized_array()
 

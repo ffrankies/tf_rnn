@@ -127,16 +127,12 @@ def plot_confusion_matrix(directory, confusion_matrix, index_to_token=None):
     
     # Get labels
     labels = confusion_matrix.all_labels()
-    # row_labels = confusion_matrix.row_labels
-    # col_labels = confusion_matrix.col_labels
     if index_to_token is not None:
         labels = [index_to_token[index] for index in labels]
-        # col_labels = [index_to_token[index] for index in col_labels]
 
     # Adjust size of figure to fit in whole plot
     cell_size = 0.25 # inches
     num_used_labels = len(labels)
-    num_used_predictions = len(labels)
     figure.set_size_inches(num_used_labels*cell_size, num_used_labels*cell_size)
     grid = plot.pcolormesh(confusion_matrix.to_normalized_array(), cmap=plt.cm.YlGnBu)
     figure.colorbar(grid)

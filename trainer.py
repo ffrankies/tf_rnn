@@ -1,9 +1,7 @@
 '''
 Tensorflow implementation of a training method to train a given model.
-Copyright (c) 2017 Frank Derry Wanye
-Date: 19 December, 2017
+@since 0.4.1
 '''
-
 import math
 import numpy as np
 import tensorflow as tf
@@ -26,18 +24,19 @@ def train(model):
 
     # Create accumulators, pass them to the training, validation and testing steps
     metrics = model.saver.meta.latest()[constants.METRICS]
-    print('At start: ', metrics.test.latest_confusion_matrix.to_array())
-    for epoch_num in range(model.saver.meta.latest()[constants.EPOCH]+1, model.settings.train.epochs+1):
+    final_epoch = model.settings.train.epochs + 1
+    for epoch_num in range(model.saver.meta.latest()[constants.EPOCH]+1, final_epoch):
         train_epoch(model, epoch_num, metrics.train, metrics.valid)
         model.saver.save_model(model, [epoch_num, metrics], metrics.valid.is_best_accuracy)
         if early_stop(metrics.valid, epoch_num, model.settings.train.epochs) == True:
+            final_epoch = epoch_num
             model.logger.info('Stopping early because validation partition no longer showing improvement')
             break
         plotter.plot(model, metrics.train, metrics.valid, metrics.test)
         # End of epoch training
-    print('Before performance eval: ', metrics.test.latest_confusion_matrix.to_array())
-    performance_eval(model, epoch_num+1, metrics.test)
-    print('After eval: ', metrics.test.latest_confusion_matrix.to_array())
+        
+    
+    performance_eval(model, final_epoch, metrics.test)
 
     model.logger.info("Finished training the model. Final validation loss: %f | Final test loss: %f | "
                       "Final test accuracy: %f" %
