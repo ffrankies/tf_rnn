@@ -102,12 +102,18 @@ def plot_timestep_accuracy(directory, timestep_accuracy, timestep_labels=None):
     timestep_accuracy = [ratio * 100.0 for ratio in timestep_accuracy]
     plot.set_ylim(0, 120)
     bar_chart = plot.bar(range(1, len(timestep_accuracy) + 1), timestep_accuracy)
+    
     # Add labels to the bar chart
     for bar in bar_chart:
         x_pos = bar.get_x() + bar.get_width()/2.
         height = bar.get_height()
         y_pos = height + 5
         plot.text(x_pos, y_pos, "%.1f" % height, ha='center', va='bottom', rotation=90)
+    
+    # Replace default labels with timestep_labels
+    if timestep_labels is not None:
+        plot.xaxis.set(ticklabels=timestep_labels)
+
     figure.savefig(directory + constants.PLT_TIMESTEP_ACCURACY)
 # End of plot_timestep_accuracy()
 

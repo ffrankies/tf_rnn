@@ -35,7 +35,6 @@ def train(model):
         plotter.plot(model, metrics.train, metrics.valid, metrics.test)
         # End of epoch training
         
-    
     performance_eval(model, final_epoch, metrics.test)
 
     model.logger.info("Finished training the model. Final validation loss: %f | Final test loss: %f | "
