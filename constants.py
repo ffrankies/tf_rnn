@@ -1,7 +1,6 @@
 '''
 Contains constants for use within the project.
-Copyright (c) 2017 Frank Derry Wanye
-Date: 16 December, 2017
+@since 0.4.1
 '''
 
 import time
@@ -31,6 +30,14 @@ MODEL_DIR = "models/"
 DATASETS_DIR = "datasets/"
 TENSORBOARD = "tensorboard/"
 RAW_DATA_DIR = "raw_data/"
+
+#########################################
+# PLOT NAMES
+#########################################
+PLT_TRAIN_LOSS = "training_loss.png"
+PLT_TRAIN_ACCURACY = "training_accuracy.png"
+PLT_TIMESTEP_ACCURACY = "timestep_accuracy.png"
+PLT_CONFUSION_MATRIX = "confusion_matrix.png"
 
 #########################################
 # META INFO KEYS
