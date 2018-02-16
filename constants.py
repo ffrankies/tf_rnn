@@ -1,7 +1,6 @@
 '''
 Contains constants for use within the project.
-Copyright (c) 2017 Frank Derry Wanye
-Date: 18 November, 2017
+@since 0.4.1
 '''
 
 import time
@@ -33,6 +32,14 @@ TENSORBOARD = "tensorboard/"
 RAW_DATA_DIR = "raw_data/"
 
 #########################################
+# PLOT NAMES
+#########################################
+PLT_TRAIN_LOSS = "training_loss.png"
+PLT_TRAIN_ACCURACY = "training_accuracy.png"
+PLT_TIMESTEP_ACCURACY = "timestep_accuracy.png"
+PLT_CONFUSION_MATRIX = "confusion_matrix.png"
+
+#########################################
 # META INFO KEYS
 #########################################
 EPOCH = 'epoch'
@@ -40,6 +47,7 @@ DIR = 'dir'
 TRAIN = 'training_accumulator'
 VALID = 'validation_accumulator'
 TEST = 'test_accumulator'
+METRICS = 'performance_metrics'
 
 #########################################
 # VARIABLE SCOPES FOR TENSORBOARD
@@ -107,6 +115,8 @@ NUM_EXAMPLES_STR = 'num_examples'
 TYPE_STR = 'type'
 MODE_STR = 'mode'
 TOKEN_LEVEL_STR = 'token_level'
+ADD_START_TOKEN_STR = 'add_start_token'
+ADD_END_TOKEN_STR = 'add_end_token'
 
 #########################################
 # ARG CHOICES
@@ -156,6 +166,8 @@ NUM_EXAMPLES = None # list[:None] returns all elements in list
 TYPE = TYPE_CHOICES[0]
 MODE = MODE_CHOICES[0]
 TOKEN_LEVEL = TOKEN_LEVEL_CHOICES[0]
+ADD_START_TOKEN = False
+ADD_END_TOKEN = False
 
 #########################################
 # ARG DEFAULTS
@@ -192,4 +204,6 @@ DATA_ARGS = {
     NUM_EXAMPLES_STR : NUM_EXAMPLES,
     TYPE_STR : TYPE,
     MODE_STR : MODE,
-    TOKEN_LEVEL_STR : TOKEN_LEVEL }
+    TOKEN_LEVEL_STR : TOKEN_LEVEL,
+    ADD_START_TOKEN_STR : ADD_START_TOKEN,
+    ADD_END_TOKEN_STR : ADD_END_TOKEN }

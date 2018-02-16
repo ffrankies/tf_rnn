@@ -5,7 +5,7 @@ The batches are converted into numpy arrays towards the end for them to play nic
 
 Copyright (c) 2017 Frank Derry Wanye
 
-Date: 25 November, 2017
+Date: 19 December, 2017
 '''
 import math
 import numpy as np
@@ -180,6 +180,8 @@ def get_pad_token(data, pad_token):
     Return:
     - pad_token (numeric/list): The padding token, replicated if there are multiple inputs
     '''
+    if len(data) == 0 or len(data[0]) == 0 or len(data[0][1]) == 0:
+        return data
     data_item = data[0][1][0]
     if (type(data_item) is tuple) or (type(data_item) is list):
         pad_token = [pad_token for item in data_item]

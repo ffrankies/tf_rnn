@@ -75,9 +75,14 @@ class RNNBase(object):
     - variables (ray.experimental.TensorFlowVariables): All the tensorflow variables, for saving and loading
     '''
 
-    def __init__(self):
+    def __init__(self, model_settings=None, model_dataset=None, logger=None):
         '''
         Constructor for an RNN Model.
+
+        Params:
+        - model_settings (settings.Settings): The settings to be used for the model
+        - model_dataset (dataset.DatasetBase): The dataset to be used for training the model
+        - logger (logging.Logger): The logger for the model
 
         Creates the following instance variables:
         - settings (settings.Settings): The settings for the RNN
@@ -85,11 +90,13 @@ class RNNBase(object):
         - logger (logging.Logger): The logger for this RNN
         - dataset (dataset.SimpleDataset): The dataset on which to train the model
         '''
-        self.settings = settings.Settings()
+        self.settings = settings.Settings() if model_settings is None else model_settings
         self.model_path = saver.create_model_dir(self.settings.general.model_name)
-        self.logger = setup.setup_logger(self.settings.logging, self.model_path)
+        self.logger = setup.setup_logger(self.settings.logging, self.model_path) if logger is None else logger
         self.logger.info("RNN settings: %s" % self.settings)
-        self.dataset = dataset.SimpleDataset(self.logger, self.settings.rnn.dataset, self.settings.train)
+        self.dataset = model_dataset
+        if model_dataset is None:
+            self.dataset = dataset.SimpleDataset(self.logger, self.settings.rnn.dataset, self.settings.train)
         self.create_graph()
     # End of __init__()
 
@@ -331,7 +338,6 @@ class MultiInputRNN(RNNBase):
         with tf.variable_scope('predictions'):
             self.predictions_series = [tf.nn.softmax(logits) for logits in logits_series]
             logits_series = tf.stack(logits_series, axis=0, name='stack_logits_series')
-            print('Shape of logits: ', np.shape(logits_series))
         return logits_series
     # End of output_layer()
 
@@ -378,7 +384,6 @@ class MultiInputRNN(RNNBase):
                     inputs, self.settings.rnn.input_names[index])
                 input_vector_list.append(input_vectors)
             inputs_series = tf.concat(input_vector_list, axis=-1, name='concatenate_inputs')
-            print('Shape of inputs_series: ', np.shape(inputs_series))
         return inputs_series
     # End of input_layer()
 # End of MultiInputRNN

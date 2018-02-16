@@ -1,7 +1,7 @@
 '''
 An object for storing a dataset for training.
 
-Date: 18 November 2017
+Date: 19 December 2017
 '''
 import random
 import math
@@ -15,12 +15,12 @@ class DataPartition(object):
     Stores a portion of a dataset.
 
     Instance Variables:
-    x (list): The inputs of this partition, as padded batches
-    y (list): The outputs/labels of this partition, as padded batches
-    sizes (list): The sizes of the examples in this partition
-    beginning (boolean): True if this batch contains the beginning of a sequence
-    ending (boolean): True if this batch contains the ending of a sequence
-    num_batches (int): The number of batches in this partition
+    - x (list): The inputs of this partition, as padded batches
+    - y (list): The outputs/labels of this partition, as padded batches
+    - sizes (list): The sizes of the examples in this partition
+    - beginning (boolean): True if this batch contains the beginning of a sequence
+    - ending (boolean): True if this batch contains the ending of a sequence
+    - num_batches (int): The number of batches in this partition
     '''
 
     def __init__(self, inputs, labels, sizes, num_sequences=None):
@@ -28,9 +28,9 @@ class DataPartition(object):
         Creates a DataPartition object.
 
         Params:
-        inputs (list): The inputs in this partition
-        labels (list): The labels in this partition
-        sizes (list): the size of each input in this partition
+        - inputs (list): The inputs in this partition
+        - labels (list): The labels in this partition
+        - sizes (list): the size of each input in this partition
         '''
         self.x = inputs
         self.y = labels
@@ -71,8 +71,8 @@ class DatasetBase(object):
         Creates a Batches object.
 
         Params:
-        logger (logging.Logger): The logger to be used by this class
-        train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
+        - logger (logging.Logger): The logger to be used by this class
+        - train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
         '''
         self.logger = logger
         self.settings = train_settings

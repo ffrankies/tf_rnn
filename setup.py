@@ -1,7 +1,7 @@
 '''
 Utility class for setting up an RNN.
 Copyright (c) 2017 Frank Derry Wanye
-Date: 25 November, 2017
+Date: 2 December, 2017
 '''
 
 # Specify documentation format
@@ -15,7 +15,7 @@ import sys
 
 from . import constants
 
-def parse_arguments():
+def parse_arguments(dataset_only=False):
     '''
     Parses the command line arguments and returns the namespace with those
     arguments.
@@ -25,6 +25,9 @@ def parse_arguments():
     - options: Specify command-line options for all settings
     - dataset: Specify command-line options for creating a dataset, or a config file to do the same
     
+    Params:
+    - dataset_only (bool): True if only the dataset arguments should be added to the options parser
+
     Return:
     - args (argparse.Namespace): The Namespace containing the values of all passed-in command-line arguments
     '''
@@ -32,12 +35,11 @@ def parse_arguments():
     subparsers = arg_parse.add_subparsers(help='Sub-command help.')
     config_parser = subparsers.add_parser('config', help='Pick a config file for setting up the network.')
     config_parser.add_argument(constants.CONFIG_FILE_STR, help='The name of the config file holding network settings.')
-    add_options_parser(subparsers)
-    add_dataset_parser(subparsers)
+    add_options_parser(subparsers, dataset_only)
     return arg_parse.parse_args()
 # End of parse_arguments()
 
-def add_options_parser(subparsers):
+def add_options_parser(subparsers, dataset_only=False):
     '''
     Adds network settings as command_line arguments.
     
@@ -45,13 +47,15 @@ def add_options_parser(subparsers):
     - subparser (argparse.Namespace): Container for the subparser Namespace objects
     '''
     options_parser = subparsers.add_parser('options', help='Provide network arguments as command arguments.')
-    add_general_arguments(options_parser)
-    add_log_arguments(options_parser)
-    add_rnn_arguments(options_parser)
-    add_train_arguments(options_parser)
+    add_dataset_arguments(options_parser)
+    if not dataset_only == True:
+        add_general_arguments(options_parser)
+        add_log_arguments(options_parser)
+        add_rnn_arguments(options_parser)
+        add_train_arguments(options_parser)
 # End of add_options_parser()
 
-def add_dataset_parser(subparsers):
+def add_dataset_arguments(parser):
     '''
     Adds a subparser containing arguments for creating a dataset.
     
@@ -65,30 +69,30 @@ def add_dataset_parser(subparsers):
     - mode
     
     Params:
-    - subparser (argparse.Namespace): Container for the subparser Namespace objects
+    - parser (argparse.ArgumentParser): The argument parser to which to add the dataset arguments
     '''
-    parser = subparsers.add_parser('dataset', help='Provide arguments for creating a dataset.')
-    parser.add_argument('-c', '--config_file', default=constants.CONFIG_FILE,
+    group = parser.add_argument_group('Dataset Args')
+    group.add_argument('-dc', '--config_file', default=constants.CONFIG_FILE,
                         help='The config file to ')
-    parser.add_argument('-r', '--raw_data', default=constants.RAW_DATA,
+    group.add_argument('-dr', '--raw_data', default=constants.RAW_DATA,
                         help='The name of the file containing raw (unprocessed) data.')
-    parser.add_argument('-d', '--dataset_name', default=constants.DATASET_NAME,
+    group.add_argument('-dd', '--dataset_name', default=constants.DATASET_NAME,
                         help='The name of the saved dataset.')
-    parser.add_argument('-s', '--source_type', default=constants.SOURCE_TYPE,
+    group.add_argument('-ds', '--source_type', default=constants.SOURCE_TYPE,
                         help='The type of source data [currently only the csv data type is supported].')
-    parser.add_argument('-v', '--vocab_size', default=constants.VOCAB_SIZE, type=int,
+    group.add_argument('-dv', '--vocab_size', default=constants.VOCAB_SIZE, type=int,
                         help='The size of the dataset vocabulary.')
-    parser.add_argument('-w', '--num_rows', type=int, default=constants.NUM_ROWS,
+    group.add_argument('-dw', '--num_rows', type=int, default=constants.NUM_ROWS,
                         help='The number of rows of data to be read.')
-    parser.add_argument('-n', '--num_examples', type=int, default=constants.NUM_EXAMPLES,
+    group.add_argument('-dn', '--num_examples', type=int, default=constants.NUM_EXAMPLES,
                         help='The number of sentence examples to be saved.')
-    parser.add_argument('-t', '--type', default=constants.TYPE, choices=constants.TYPE_CHOICES,
+    group.add_argument('-dt', '--type', default=constants.TYPE, choices=constants.TYPE_CHOICES,
                         help='The type of the dataset.')
-    parser.add_argument('-m', '--mode', default=constants.MODE, choices=constants.MODE_CHOICES,
+    group.add_argument('-dm', '--mode', default=constants.MODE, choices=constants.MODE_CHOICES,
                         help='Selects what constitutes an example in the dataset.')
-    parser.add_argument('-l', '--token_level', default=constants.TOKEN_LEVEL, choices=constants.TOKEN_LEVEL_CHOICES,
+    group.add_argument('-dl', '--token_level', default=constants.TOKEN_LEVEL, choices=constants.TOKEN_LEVEL_CHOICES,
                         help='Selects on what level to break down the training data.')
-# End of add_dataset_parser()
+# End of add_dataset_arguments()
 
 def add_general_arguments(parser):
     '''
