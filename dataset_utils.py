@@ -1,7 +1,7 @@
 '''
 Utility class for creating, saving and loading datasets.
 
-Date: 24 November, 2017
+Date: 16 February, 2018
 '''
 
 # Specify documentation format
@@ -411,24 +411,28 @@ def create_training_data(logger, settings, data, token_to_index):
     return x_train, y_train
 # End of create_training_data()
 
-def tokens_to_indexes(data, token_to_index):
+def tokens_to_indexes(logger, data, token_to_index):
     '''
     Replaces the tokens in the data with the token's indexes in the vocabulary.
 
     Params:
+    - logger (logging.Logger): The logger used in this run of the script
     - data (list): The data to break into inputs and labels
     - token_to_index (dict): The dictionary used to convert words to indexes
 
     Return:
     - modified_data (list): The data with the tokens replaced with their indexes in the vocabulary
     '''
-    new_data = list()
+    logger.debug('Converting tokens in data to indexes')
+    indexed_data = list()
     for row in data:
-        if type(row[0]) is str:
+        if isinstance(row[0], str):
+            print('Is string')
             new_row = [token_to_index[word] for word in row]
-        elif (type(row[0]) is tuple) or (type(row[0]) is list):
-            new_row = [[token_to_index[char] for char in word] for word in row]
-        new_data.append(new_row)
+        elif isinstance(row[0], tuple) or isinstance(row[0], list):
+            print('Is tuple or list')
+            new_row = [[token_to_index[idx][feature] for idx, feature in enumerate(entry)] for entry in row]
+        indexed_data.append(new_row)
     return new_data
 # End of tokens_to_indexes()
 
