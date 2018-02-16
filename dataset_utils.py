@@ -7,10 +7,7 @@ Date: 24 November, 2017
 # Specify documentation format
 __docformat__ = 'restructedtext en'
 
-try:
-    import _pickle as cPickle
-except Exception:
-    import cPickle
+import dill
 import re #regex library for re.split()
 import os
 import io
@@ -75,7 +72,7 @@ def save_dataset(logger, settings):
     setup.create_dir(path)
     dataset = create_dataset(logger, settings)
     with open(path + filename, 'wb') as dataset_file:
-        cPickle.dump(dataset, dataset_file, protocol=2)
+        dill.dump(dataset, dataset_file, protocol=2)
 # End of save_dataset()
 
 def create_dataset(logger, settings):
@@ -87,7 +84,7 @@ def create_dataset(logger, settings):
     - settings (settings.SettingsNamespace): The dataset creation settings
 
     Return:
-    - dataset (tuple): 
+    - dataset (tuple):
       - type (string): The type of dataset ('text' or 'number')
       - token_level (string): The level of tokenization ('sentences', 'paragraphs', or 'stories')
       - vocabulary (list): The vocabulary used in the dataset
@@ -112,7 +109,7 @@ def create_text_dataset(logger, settings, dataset):
     - dataset (tuple): The previously created dataset, if any
 
     Return:
-    - dataset (tuple): 
+    - dataset (tuple):
       - type (string): The type of dataset. 'text', in this case
       - token_level (string): The level of tokenization ('sentences', 'paragraphs', or 'stories')
       - vocabulary (list): The vocabulary used in the dataset
@@ -393,7 +390,7 @@ def create_training_data(logger, settings, data, token_to_index):
     - token_to_index (dict): The dictionary used to convert words to indexes
 
     Return:
-    - training_data (tuple): 
+    - training_data (tuple):
       - inputs (list): The training inputs
       - labels (list): The training labels (outputs)
     '''
@@ -441,7 +438,7 @@ def load_dataset(logger, dataset):
     - dataset (string): The filename of the pickled dataset to load
 
     Return:
-    - dataset (tuple): 
+    - dataset (tuple):
       - type (string): The type of dataset ('text' or 'number')
       - token_level (string): The level of tokenization ('sentences', 'paragraphs', or 'stories')
       - vocabulary (list): The vocabulary used in the dataset
@@ -454,7 +451,7 @@ def load_dataset(logger, dataset):
 
     logger.info("Loading saved dataset.")
     with open(path, "rb") as dataset_file:
-        data = cPickle.load(dataset_file)
+        data = dill.load(dataset_file)
         dataset_type = data[0]
         token_level = data[1]
         vocabulary = data[2]
