@@ -403,7 +403,7 @@ def create_training_data(logger, settings, data, token_to_index):
             data[index] = [word if word in token_to_index else constants.UNKNOWN for word in sentence]
 
     logger.info('Creating training data.')
-    data = tokens_to_indexes(data, token_to_index)
+    data = tokens_to_indexes(logger, data, token_to_index)
     x_train = [item[:-1] for item in data]
     y_train = [item[1:] for item in data]
     if (type(y_train[0][0]) is tuple) or (type(y_train[0][0]) is list):
@@ -433,7 +433,7 @@ def tokens_to_indexes(logger, data, token_to_index):
             print('Is tuple or list')
             new_row = [[token_to_index[idx][feature] for idx, feature in enumerate(entry)] for entry in row]
         indexed_data.append(new_row)
-    return new_data
+    return indexed_data
 # End of tokens_to_indexes()
 
 def load_dataset(logger, dataset):
