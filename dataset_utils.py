@@ -427,10 +427,8 @@ def tokens_to_indexes(logger, data, token_to_index):
     indexed_data = list()
     for row in data:
         if isinstance(row[0], str):
-            print('Is string')
             new_row = [token_to_index[word] for word in row]
         elif isinstance(row[0], tuple) or isinstance(row[0], list):
-            print('Is tuple or list')
             new_row = [[token_to_index[idx][feature] for idx, feature in enumerate(entry)] for entry in row]
         indexed_data.append(new_row)
     return indexed_data
