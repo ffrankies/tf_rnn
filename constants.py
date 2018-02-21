@@ -97,6 +97,8 @@ EMBED_SIZE_STR = 'embed_size'
 HIDDEN_SIZE_STR = 'hidden_size'
 LAYERS_STR = 'layers'
 DROPOUT_STR = 'dropout'
+NUM_INPUTS_STR = 'num_inputs'
+INPUT_NAMES_STR = 'input_names'
 # TRAIN
 BATCH_SIZE_STR = 'batch_size'
 PATIENCE_STR = 'patience'
@@ -143,14 +145,17 @@ LOG_NAME = 'TERRY'
 LOG_DIR = 'logging/'
 LOG_FILENAME = 'logging.log'
 LOG_LEVEL = 'info'
-# TRAIN
+# RNN
 DATASET = 'test.pkl'
 EMBED_SIZE = 100
 HIDDEN_SIZE = 100
 LAYERS = 2
 DROPOUT = 0.5
+NUM_INPUTS = 1
+INPUT_NAMES = 'token'
+# TRAIN
 BATCH_SIZE = 5
-PATIENCE = 100000 # Probably going to be deprecated
+PATIENCE = 5
 LEARN_RATE = 0.05
 EPOCHS = 10
 ANNEAL = 0.5
@@ -186,7 +191,9 @@ RNN_ARGS = {
     EMBED_SIZE_STR : EMBED_SIZE,
     HIDDEN_SIZE_STR : HIDDEN_SIZE,
     LAYERS_STR : LAYERS,
-    DROPOUT_STR : DROPOUT }
+    DROPOUT_STR : DROPOUT,
+    NUM_INPUTS_STR : NUM_INPUTS,
+    INPUT_NAMES_STR : INPUT_NAMES }
 TRAIN_ARGS = {
     BATCH_SIZE_STR : BATCH_SIZE,
     PATIENCE_STR : PATIENCE,

@@ -25,20 +25,22 @@ from .layers.hidden_layer import *
 # from .layers.output_layer import *
 from .layers.performance_layer import *
 
-def create_model(model_type):
+def create_model(settings):
     '''
     Creates a model of the given type.
 
     Params:
     - model_type (string): The type of the model to create
     '''
-    model_type = model_type.lower()
-    if model_type == 'basic':
-        rnn_model = BasicRNN()
-    elif model_type == 'multi_input':
-        rnn_model = MultiInputRNN()
-    else:
-        raise ValueError('This type of model is not available')
+    print(settings)
+    # model_type = model_type.lower()
+    rnn_model = BasicRNN(model_settings=settings)
+    # if model_type == 'basic':
+    #     rnn_model = BasicRNN()
+    # elif model_type == 'multi_input':
+    #     rnn_model = MultiInputRNN()
+    # else:
+    #     raise ValueError('This type of model is not available')
     return rnn_model
 # End of create_model()
 
@@ -55,11 +57,11 @@ class RNNBase(object):
     - session (tf.Session): The model's session for tensorflow variable execution
     - learning_rate (tf.float32): The learning rate for the model
     - performance_ops (tf.Tensor): The operations that evaluate the performance of the network on a given minibatch
-    - train_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating training 
+    - train_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating training
                 performance
-    - validation_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating 
+    - validation_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating
                 validation performance
-    - test_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating test 
+    - test_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating test
                 performance
     - batch_y_placeholder (tf.placeholder): The placeholder for the labels
     - out_weights (tf.Variable): The output layer weights
@@ -149,9 +151,9 @@ class RNNBase(object):
             # row_lengths_series = tf.unstack(self.batch_sizes, name="unstack_batch_sizes")
             # labels_series = tf.unstack(self.batch_y_placeholder, name="unstack_labels_series")
             # self.accuracy = calculate_accuracy(labels_series, self.predictions_series)
-            self.minibatch_loss_op, _ = average_loss(logits_series, self.batch_y_placeholder, self.batch_sizes, 
+            self.minibatch_loss_op, _ = average_loss(logits_series, self.batch_y_placeholder, self.batch_sizes,
                 self.settings.train.truncate)
-            self.performance_ops = performance_ops(logits_series, self.batch_y_placeholder, self.batch_sizes, 
+            self.performance_ops = performance_ops(logits_series, self.batch_y_placeholder, self.batch_sizes,
                 self.settings.train.truncate)
         return self.minibatch_loss_op
     # End of performance_evaluation()
@@ -161,11 +163,11 @@ class RNNBase(object):
         Creates variables for performance evaluation.
 
         Creates the following instance variables:
-        - train_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating training 
+        - train_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating training
                     performance
-        - validation_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating 
+        - validation_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating
                     validation performance
-        - test_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating test 
+        - test_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating test
                     performance
         '''
         max_length = self.dataset.max_length
@@ -180,7 +182,7 @@ class RNNBase(object):
     def output_layer(self):
         '''
         Creates the tensorflow variables and operations needed to compute the network outputs.
-        
+
         Creates the following instance variables:
         - batch_y_placeholder (tf.placeholder): The placeholder for the labels
         - out_weights (tf.Variable): The output layer weights
@@ -270,7 +272,7 @@ class RNNBase(object):
         '''
         self.saver = saver.Saver(self.logger, self.settings.general, self.dataset.max_length)
         self.variables = ray.experimental.TensorFlowVariables(self.minibatch_loss_op, self.session)
-        if self.settings.general.new_model == False: 
+        if self.settings.general.new_model == False:
             self.saver.load_model(self, self.settings.general.best_model)
         else:
             self.saver.meta.increment_run(self.logger, self.dataset.max_length)
@@ -346,7 +348,7 @@ class MultiInputRNN(RNNBase):
         @see RNNBase.hidden_layer
 
         Also returns:
-        - hidden_size (int): The size of the hidden layer for multiple inputs (hidden_size * number_of_inputs) 
+        - hidden_size (int): The size of the hidden layer for multiple inputs (hidden_size * number_of_inputs)
         '''
         inputs_series = self.input_layer()
         with tf.variable_scope(constants.HIDDEN):
@@ -380,7 +382,7 @@ class MultiInputRNN(RNNBase):
             unstacked_inputs = tf.unstack(self.batch_x_placeholder, axis=-1, name='unstack_inputs')
             input_vector_list = list()
             for index, inputs in enumerate(unstacked_inputs):
-                input_vectors = token_to_vector(self.dataset.vocabulary_size, self.settings.rnn.hidden_size, 
+                input_vectors = token_to_vector(self.dataset.vocabulary_size, self.settings.rnn.hidden_size,
                     inputs, self.settings.rnn.input_names[index])
                 input_vector_list.append(input_vectors)
             inputs_series = tf.concat(input_vector_list, axis=-1, name='concatenate_inputs')
