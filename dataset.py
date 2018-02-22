@@ -64,13 +64,11 @@ class DataPartition(object):
 class DatasetBase(object):
     '''
     Base Dataset class.
-25 November
     '''
 
     def __init__(self, logger, train_settings):
         '''
         Creates a Batches object.
-25 November
 
         Params:
         - logger (logging.Logger): The logger to be used by this class
@@ -164,7 +162,10 @@ class DatasetBase(object):
         Return:
         partition (DataPartition): The partition containing data in batch format
         '''
-        # TODO(): If end token in labels, use end token as padding, else use any token
+        if constants.END_TOKEN in self.token_to_index:
+            end_token = constants.END_TOKEN
+        else:
+            end_token = inputs[0][-1]
         x, y, sizes = batchmaker.make_batches(inputs, labels, self.settings.batch_size, self.settings.truncate, '1')
         return DataPartition(x, y, sizes, num_sequences)
     # End of make_partition()
