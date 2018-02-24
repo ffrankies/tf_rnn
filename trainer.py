@@ -16,7 +16,7 @@ def train(model):
     Trains the given model on the given dataset, and saves the losses incurred
     at the end of each epoch to a plot image. Also saves tensorflow event logs
     to the <model_path>/tensorboard directory for tensorboard functionality.
-    
+
     Params:
     - model (model.RNNModel): The model to train
     '''
@@ -34,7 +34,7 @@ def train(model):
             break
         plotter.plot(model, metrics.train, metrics.valid, metrics.test)
         # End of epoch training
-        
+
     performance_eval(model, final_epoch, metrics.test)
 
     model.logger.info("Finished training the model. Final validation loss: %f | Final test loss: %f | "
@@ -46,7 +46,7 @@ def train(model):
 def train_epoch(model, epoch_num, train_accumulator, valid_accumulator):
     '''
     Trains one full epoch.
-    
+
     Params:
     - model (model.RNNModel): The model to train
     - epoch_num (int): The number of the current epoch
@@ -70,7 +70,7 @@ def train_epoch(model, epoch_num, train_accumulator, valid_accumulator):
 def train_step(model, epoch_num, current_state, accumulator):
     '''
     Trains the model on the dataset's training partition.
-    
+
     Params:
     - model (model.RNNModel): The model to train
     - epoch_num (int): The number of the current epoch
@@ -89,13 +89,13 @@ def train_step(model, epoch_num, current_state, accumulator):
 def train_minibatch(model, batch_num, current_state, accumulator):
     '''
     Trains one minibatch.
-    
+
     Params:
     - model (model.RNNModel): The model to train
     - batch_num (int): The current batch number
     - current_state (np.ndarray): The current hidden state of the model
     - accumulator (layers.performance_layer.Accumulator): The accumulator for training performance
-    
+
     Return:
     - updated_hidden_state (np.ndarray): The updated state of the hidden layer after training
     '''
@@ -112,13 +112,13 @@ def train_minibatch(model, batch_num, current_state, accumulator):
 def get_feed_dict(model, dataset, batch_num, current_state):
     '''
     Obtains the information needed for running tensorflow operations as a feed dictionary.
-    
+
     Params:
     - model (model.RNNModel): The model containing the operations
     - dataset (dataset.DataPartition): The dataset from which to extract the batch information
     - batch_num (int): The index of the batch in the dataset
     - current_state (np.ndarray): The current hidden state of the RNN
-    
+
     Return:
     - feed_dict (dict): The dictionary holding the necessary information for running tensorflow operations
     '''
@@ -132,11 +132,11 @@ def get_feed_dict(model, dataset, batch_num, current_state):
 def reset_state(current_state, beginning):
     '''
     Resets the current state to zeros if the batch contains data from the beginning of a sequence.
-    
+
     Params:
     - current_state (np.ndarray): The current hidden state of the network after training the previous batch
     - beginning (boolean): True if the batch represents the start of a sequence
-    
+
     Return:
     - current_state (np.ndarray): The current hidden state of the network.
     '''
@@ -148,12 +148,12 @@ def reset_state(current_state, beginning):
 def build_feed_dict(model, batch, current_state):
     '''
     Builds a dictionary to feed into the model for performing tensorflow operations.
-    
+
     Params:
     - model (model.RNNModel): The model for which to build the feed dictionary
     - batch (tuple): Contains the inputs, outputs and sizes of the current batch
     - current_state (np.ndarray): The current hidden state of the RNN
-    
+
     Return:
     - feed_dict (dict): The dictionary built out of the provided batch and current state
     '''
@@ -169,10 +169,10 @@ def build_feed_dict(model, batch, current_state):
 def update_accumulator(accumulator, dataset_partition, batch_num, performance_data):
     '''
     Adds a batch's performance data to the specified Accumulator object.
-    
+
     Note: The Accumulator contains calculated inputs, but the rest of the data is obtained from
     the dataset.
-    
+
     Params:
     - accumulator (layers.performance_layer.Accumulator): The accumulator to update with new performance data
     - dataset_partition (dataset.DatasetPartition): The dataset partition containing the remainder of the batch data
@@ -184,6 +184,8 @@ def update_accumulator(accumulator, dataset_partition, batch_num, performance_da
       - timestep_accuracies (list): The average accuracy for each timestep in this minibatch
       - timestep_elements (list): The number of valid elements for each timestep in this minibatch
       - predictions (tf.Tensor): The predictions made at every timestep
+      - labels (list): The labels for the minibatch
+      - sequence_lengths (list): The list of lengths of each sequence in the minibatch
     '''
     accumulator.update(
         data=performance_data,
@@ -194,7 +196,7 @@ def update_accumulator(accumulator, dataset_partition, batch_num, performance_da
 def validation_step(model, epoch_num, current_state, accumulator):
     '''
     Performs performance calculations on the dataset's validation partition.
-    
+
     Params:
     - model (model.RNNModel): The model to train
     - epoch_num (int): The number of the current epoch
@@ -210,13 +212,13 @@ def validation_step(model, epoch_num, current_state, accumulator):
 def validate_minibatch(model, dataset_partition, batch_num, current_state, accumulator):
     '''
     Calculates the performance of the network on one minibatch, logs the performance to tensorflow.
-    
+
     Params:
     - model (model.RNNModel): The model to validate
     - batch_num (int): The current batch number
     - current_state (np.ndarray): The current hidden state of the model
     - accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
-    
+
     Return:
     - updated_hidden_state (np.ndarray): The updated state of the hidden layer after validating
     '''
@@ -235,7 +237,7 @@ def summarize(model, train_accumulator, valid_accumulator, epoch_num):
     '''
     Calculates the network's performance at the end of a particular epoch. Writes performance data to the
     summary.
-    
+
     Params:
     - model (model.RNNModel): The RNN model containing the operations and placeholders for the performance calculations
     - train_accumulator (layers.performance_layer.Accumulator): The accumulator for training performance
@@ -259,7 +261,7 @@ def summarize(model, train_accumulator, valid_accumulator, epoch_num):
 def performance_eval(model, epoch_num, accumulator):
     '''
     Performs a final performance evaluation on the test partition of the dataset.
-    
+
     Params:
     - model (model.RNNModel): The RNN model containing the session and tensorflow variable placeholders
     - epoch_num (int): Total number of epochs + 1 (only used so that the performance summary shows up in tensorboard)
@@ -287,7 +289,7 @@ def test_step(model, accumulator):
     '''
     Finds the performance of the trained model on the testing partition of the dataset. Used as the definitive
     performance test for the model.
-    
+
     Params:
     - model (model.RNNModel): The trained model
     - accumulator (layers.performance_layer.Accumulator): Accumulator for performance metrics of the test dataset
@@ -325,7 +327,7 @@ def early_stop(valid_accumulator, epoch_num, num_epochs):
 
 def extend_performance_data(performance_data, index_to_token, dataset_partition, batch_num):
     '''
-    Extends the performance data with the minibatch labels and sequence lengths. Also converts the predictions and 
+    Extends the performance data with the minibatch labels and sequence lengths. Also converts the predictions and
     labels to tokens.
 
     Params:
@@ -349,7 +351,7 @@ def extend_performance_data(performance_data, index_to_token, dataset_partition,
       - timestep_elements (list): The number of valid elements for each timestep in this minibatch
       - predictions (list): The predictions made at every timestep, in token format
       - labels (list): The correct predictiosn for the minibatch
-      - sequence_lengths (list): The lengths of each sequence in the minibatch 
+      - sequence_lengths (list): The lengths of each sequence in the minibatch
     '''
     extended_performance_data = performance_data[:5]
     data_list = [performance_data[-1], dataset_partition.y[batch_num]]

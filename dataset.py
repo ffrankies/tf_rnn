@@ -163,10 +163,11 @@ class DatasetBase(object):
         partition (DataPartition): The partition containing data in batch format
         '''
         if constants.END_TOKEN in self.token_to_index:
-            end_token = constants.END_TOKEN
+            pad_token = constants.END_TOKEN
         else:
-            end_token = inputs[0][-1]
-        x, y, sizes = batchmaker.make_batches(inputs, labels, self.settings.batch_size, self.settings.truncate, '1')
+            pad_token = inputs[0][-1]
+        x, y, sizes = batchmaker.make_batches(inputs, labels, self.settings.batch_size, self.settings.truncate,
+            pad_token)
         return DataPartition(x, y, sizes, num_sequences)
     # End of make_partition()
 # End of DatasetBase
