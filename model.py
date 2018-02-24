@@ -2,8 +2,7 @@
 An RNN model implementation in tensorflow.
 
 Copyright (c) 2017 Frank Derry Wanye
-
-Date: 25 November, 2017
+@since 0.4.2
 '''
 
 import numpy as np
@@ -33,14 +32,10 @@ def create_model(settings):
     - model_type (string): The type of the model to create
     '''
     print(settings)
-    # model_type = model_type.lower()
-    rnn_model = BasicRNN(model_settings=settings)
-    # if model_type == 'basic':
-    #     rnn_model = BasicRNN()
-    # elif model_type == 'multi_input':
-    #     rnn_model = MultiInputRNN()
-    # else:
-    #     raise ValueError('This type of model is not available')
+    if settings.rnn.num_inputs > 1 or len(settings.rnn.input_names) > 1:
+        rnn_model = MultiInputRNN(model_settings=settings)
+    else:
+        rnn_model = BasicRNN(model_settings=settings)
     return rnn_model
 # End of create_model()
 
