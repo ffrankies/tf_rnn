@@ -32,7 +32,7 @@ def create_model(settings):
     - model_type (string): The type of the model to create
     '''
     print(settings)
-    if settings.rnn.num_inputs > 1 or len(settings.rnn.input_names) > 1:
+    if settings.rnn.num_features > 1 or len(settings.rnn.input_names) > 1:
         rnn_model = MultiInputRNN(model_settings=settings)
     else:
         rnn_model = BasicRNN(model_settings=settings)
@@ -93,7 +93,7 @@ class RNNBase(object):
         self.logger.info("RNN settings: %s" % self.settings)
         self.dataset = model_dataset
         if model_dataset is None:
-            self.dataset = dataset.SimpleDataset(self.logger, self.settings.rnn.dataset, self.settings.train)
+            self.dataset = dataset.SimpleDataset(self.logger, self.settings.rnn, self.settings.train)
         self.create_graph()
     # End of __init__()
 
@@ -369,10 +369,10 @@ class MultiInputRNN(RNNBase):
         @see RNNBase.input_layer
         '''
         with tf.variable_scope(constants.INPUT):
-            num_inputs = len(self.settings.rnn.input_names)
+            num_features = len(self.settings.rnn.input_names)
             self.batch_x_placeholder = tf.placeholder(
                 dtype=tf.int32,
-                shape=[self.settings.train.batch_size, self.settings.train.truncate, num_inputs],
+                shape=[self.settings.train.batch_size, self.settings.train.truncate, num_features],
                 name='input_placeholder')
             unstacked_inputs = tf.unstack(self.batch_x_placeholder, axis=-1, name='unstack_inputs')
             input_vector_list = list()
