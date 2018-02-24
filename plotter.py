@@ -133,6 +133,8 @@ def plot_confusion_matrix(directory, confusion_matrix, index_to_token=None):
     
     # Get labels
     labels = confusion_matrix.all_labels()
+    print('Labels: ', labels)
+    print('Index to token: ', index_to_token)
     if index_to_token is not None:
         labels = [index_to_token[index] for index in labels]
 
