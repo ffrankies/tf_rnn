@@ -321,11 +321,11 @@ class MultiInputRNN(RNNBase):
                 shape=[self.settings.train.batch_size, self.settings.train.truncate],
                 name='output_placeholder')
             self.out_weights = tf.Variable(
-                initial_value=np.random.rand(hidden_size, self.dataset.vocabulary_size),
+                initial_value=np.random.rand(hidden_size, self.dataset.vocabulary_size[0]),
                 dtype=tf.float32,
                 name='out_weights')
             self.out_bias = tf.Variable(
-                np.zeros((self.dataset.vocabulary_size)),
+                np.zeros((self.dataset.vocabulary_size[0])),
                 dtype=tf.float32,
                 name='out_bias')
             logits_series = [
@@ -377,7 +377,7 @@ class MultiInputRNN(RNNBase):
             unstacked_inputs = tf.unstack(self.batch_x_placeholder, axis=-1, name='unstack_inputs')
             input_vector_list = list()
             for index, inputs in enumerate(unstacked_inputs):
-                input_vectors = token_to_vector(self.dataset.vocabulary_size, self.settings.rnn.hidden_size,
+                input_vectors = token_to_vector(self.dataset.vocabulary_size[index], self.settings.rnn.hidden_size,
                     inputs, self.settings.rnn.input_names[index])
                 input_vector_list.append(input_vectors)
             inputs_series = tf.concat(input_vector_list, axis=-1, name='concatenate_inputs')
