@@ -15,9 +15,9 @@ from . import constants
 
 def plot(model, train_accumulator, valid_accumulator, test_accumulator):
     '''
-    Plots a graphical representation of the model's training performance over time. Saves the plot to file in 
+    Plots a graphical representation of the model's training performance over time. Saves the plot to file in
     <model_path>/run_<run_number>/graph.png.
-    
+
     Params:
     - model (model.RNNModel): The model containing the path where the figure will be saved
     - train_accumulator (layers.performance_layer.Accumulator): The accumulator for training performance
@@ -29,7 +29,7 @@ def plot(model, train_accumulator, valid_accumulator, test_accumulator):
     plot_training_loss(directory, train_accumulator.losses, valid_accumulator.losses)
     plot_training_accuracy(directory, train_accumulator.accuracies, valid_accumulator.accuracies)
     plot_timestep_accuracy(directory, test_accumulator.latest_timestep_accuracies)
-    plot_confusion_matrix(directory, test_accumulator.latest_confusion_matrix, model.dataset.index_to_token)
+    plot_confusion_matrix(directory, test_accumulator.latest_confusion_matrix, model.dataset.indexer)
 # End of plot()
 
 def setup_plot(title, x_label, y_label):
@@ -56,7 +56,7 @@ def setup_plot(title, x_label, y_label):
 def plot_training_loss(directory, training_loss, validation_loss):
     '''
     Plots the training and validation losses on a sublot.
-    
+
     Params:
     - directory (str): The directory in which to save the plot
     - training_loss (list): The list of training losses
@@ -73,7 +73,7 @@ def plot_training_loss(directory, training_loss, validation_loss):
 def plot_training_accuracy(directory, training_accuracy, validation_accuracy):
     '''
     Plots the training and validation prediction accuracy on a sublot.
-    
+
     Params:
     - directory (str): The directory in which to save the plot
     - training_accuracy (list): The list of training accuracies
@@ -90,7 +90,7 @@ def plot_training_accuracy(directory, training_accuracy, validation_accuracy):
 def plot_timestep_accuracy(directory, timestep_accuracy, timestep_labels=None):
     '''
     Plots the average accuracy for each timestep as a bar chart.
-    
+
     Params:
     - directory (str): The directory in which to save the plot
     - timestep_accuracy (list): The average accuracy of predictions for each timestep
@@ -102,14 +102,14 @@ def plot_timestep_accuracy(directory, timestep_accuracy, timestep_labels=None):
     timestep_accuracy = [ratio * 100.0 for ratio in timestep_accuracy]
     plot.set_ylim(0, 120)
     bar_chart = plot.bar(range(1, len(timestep_accuracy) + 1), timestep_accuracy)
-    
+
     # Add labels to the bar chart
     for bar in bar_chart:
         x_pos = bar.get_x() + bar.get_width()/2.
         height = bar.get_height()
         y_pos = height + 5
         plot.text(x_pos, y_pos, "%.1f" % height, ha='center', va='bottom', rotation=90)
-    
+
     # Replace default labels with timestep_labels
     if timestep_labels is not None:
         plot.xaxis.set(ticklabels=timestep_labels)
@@ -117,24 +117,25 @@ def plot_timestep_accuracy(directory, timestep_accuracy, timestep_labels=None):
     figure.savefig(directory + constants.PLT_TIMESTEP_ACCURACY)
 # End of plot_timestep_accuracy()
 
-def plot_confusion_matrix(directory, confusion_matrix, index_to_token=None):
+def plot_confusion_matrix(directory, confusion_matrix, indexer=None):
     '''
     Plots a confusion matrix a more accurate breakdown of the predictions made.
 
     Params:
     - directory (str): The directory in which to save the plot
     - confusion_matrix (layers.performance_layer.ConfusionMatrix): The confusion matrix
-    - index_to_token (list): Converts the label indexes to tokens
+    - indexer (indexer.Indexer): Converts the label indexes to tokens
     '''
-    if confusion_matrix.is_empty(): 
+    if confusion_matrix.is_empty():
         return # Don't do anything if confusion matrix is empty
 
     figure, plot = setup_plot('Predictions Breakdown', 'Prediction', 'Correct Label')
-    
+
     # Get labels
     labels = confusion_matrix.all_labels()
-    if index_to_token is not None:
-        labels = [index_to_token[index] for index in labels]
+    # print('Labels: ', labels)
+    if indexer is not None:
+        labels = indexer.to_tokens(labels)
 
     # Adjust size of figure to fit in whole plot
     cell_size = 0.25 # inches

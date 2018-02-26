@@ -1,7 +1,6 @@
 '''
 An object for storing a dataset for training.
-
-Date: 19 December 2017
+@since 0.4.2
 '''
 import random
 import math
@@ -9,6 +8,7 @@ import math
 from . import dataset_utils
 from . import batchmaker
 from . import constants
+from . import indexer
 
 class DataPartition(object):
     '''
@@ -66,7 +66,7 @@ class DatasetBase(object):
     Base Dataset class.
     '''
 
-    def __init__(self, logger, train_settings):
+    def __init__(self, logger, train_settings, num_features):
         '''
         Creates a Batches object.
 
@@ -76,6 +76,7 @@ class DatasetBase(object):
         '''
         self.logger = logger
         self.settings = train_settings
+        self.num_features = num_features
     # End of __init__()
 
     def load_dataset(self, dataset_name):
@@ -84,8 +85,7 @@ class DatasetBase(object):
         Creates the following fields:
             - data_type (string): The type of data stored in this dataset
             - token_level (string): The level at which the data was tokenized
-            - index_to_token (list): Converts an index to a token
-            - token_to_index (dict): Converts a token to an index
+            - indexer (Indexer): Converts between tokens and indexes
             - vocabulary_size (int): The total number of tokens in the dataset
             - max_length (int): The length (number of time-steps in) the longest example in the dataset
 
@@ -100,12 +100,31 @@ class DatasetBase(object):
         self.data_type = dataset_params[0]
         self.token_level = dataset_params[1]
         # Skip vocabulary - we don't really need it
-        self.index_to_token = dataset_params[3]
-        self.token_to_index = dataset_params[4]
-        self.vocabulary_size = len(self.index_to_token)
+        index_to_token = dataset_params[3]
+        token_to_index = dataset_params[4]
+        self.indexer = indexer.Indexer(self.num_features, index_to_token, token_to_index)
+        self.vocabulary_size = self.extract_vocabulary_size(index_to_token)
         self.max_length = self.longest_example(dataset_params[6])
         return dataset_params[5], dataset_params[6]
     # End of load_dataset()
+
+    def extract_vocabulary_size(self, index_to_token):
+        '''
+        Finds the size of the vocabulary based on the number of input features in the dataset.
+
+        Params:
+        - index_to_token (list): The list of tokens used to convert indexes to tokens
+
+        Returns:
+        - vocabulary_size (list or int): The vocabulary size if there is only one feature, or the list of vocabulary
+            sizes if there are multiple features
+        '''
+        if self.num_features == 1:
+            vocabulary_size = len(index_to_token)
+        else:
+            vocabulary_size = [len(feature_index_to_token) for feature_index_to_token in index_to_token]
+        return vocabulary_size
+    # End of extract_vocabulary_size()
 
     def longest_example(self, labels):
         '''
@@ -156,17 +175,18 @@ class DatasetBase(object):
         batches.
 
         Params:
-        inputs (list): The inputs for the partition
-        labels (list): The labels for the partition
+        - inputs (list): The inputs for the partition
+        - labels (list): The labels for the partition
 
         Return:
-        partition (DataPartition): The partition containing data in batch format
+        - partition (DataPartition): The partition containing data in batch format
         '''
-        if constants.END_TOKEN in self.token_to_index:
-            end_token = constants.END_TOKEN
+        if constants.END_TOKEN in self.indexer.token_to_index:
+            pad_token = constants.END_TOKEN
         else:
-            end_token = inputs[0][-1]
-        x, y, sizes = batchmaker.make_batches(inputs, labels, self.settings.batch_size, self.settings.truncate, '1')
+            pad_token = inputs[0][-1]
+        x, y, sizes = batchmaker.make_batches(inputs, labels, self.settings.batch_size, self.settings.truncate,
+            pad_token)
         return DataPartition(x, y, sizes, num_sequences)
     # End of make_partition()
 # End of DatasetBase
@@ -178,6 +198,7 @@ class SimpleDataset(DatasetBase):
     Instance variables:
     - General:
         - logger (logging.Logger): The logger for this class
+        - num_features (int): The number of features in the dataset
         - settings (settings.SettingsNamespace): The training settings, containing batch_size and truncate values
     - Data:
         - inputs (list): The inputs to be used for training and validation
@@ -195,17 +216,17 @@ class SimpleDataset(DatasetBase):
         - max_length (int): The length (number of time-steps in) the longest example in the dataset
     '''
 
-    def __init__(self, logger, dataset_name, train_settings):
+    def __init__(self, logger, rnn_settings, train_settings):
         '''
         Creates a Batches object.
 
         Params:
         logger (logging.Logger): The logger to be used by this class
-        dataset_name (string): The name of the dataset to load
+        rnn_settings (settings.SettingsNamespace): The settings containing the dataset name and number of features
         train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
         '''
-        DatasetBase.__init__(self, logger, train_settings)
-        inputs, labels = self.load_dataset(dataset_name)
+        DatasetBase.__init__(self, logger, train_settings, rnn_settings.num_features)
+        inputs, labels = self.load_dataset(rnn_settings.dataset)
         self.train, self.valid, self.test = self.extract_partitions(inputs, labels)
     # End of __init__()
 
@@ -244,6 +265,7 @@ class CrossValidationDataset(DatasetBase):
     Instance variables:
     - General:
         - logger (logging.Logger): The logger for this class
+        - num_features (int): The number of features in the dataset
         - settings (settings.SettingsNamespace): The training settings, containing batch_size and truncate values
     - Data:
         - inputs (list): The inputs to be used for training and validation
@@ -264,17 +286,17 @@ class CrossValidationDataset(DatasetBase):
         - max_length (int): The length (number of time-steps in) the longest example in the dataset
     '''
 
-    def __init__(self, logger, dataset_name, train_settings):
+    def __init__(self, logger, rnn_settings, train_settings):
         '''
         Creates a Batches object.
 
         Params:
         logger (logging.Logger): The logger to be used by this class
-        dataset_name (string): The name of the dataset to load
+        rnn_settings (settings.SettingsNamespace): The settings containing the dataset name and number of features
         train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
         '''
-        DatasetBase.__init__(self, logger, train_settings)
-        inputs, labels = self.load_dataset(dataset_name)
+        DatasetBase.__init__(self, logger, train_settings, rnn_settings.num_features)
+        inputs, labels = self.load_dataset(rnn_settings.dataset)
         self.inputs, self.labels, self.test = self.extract_test_partition(inputs, labels)
         # Instantiate cross-validation parameters
         self.current = -1; # The section of the training data that is currently being used as the validation set

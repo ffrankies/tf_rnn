@@ -2,8 +2,7 @@
 An RNN model implementation in tensorflow.
 
 Copyright (c) 2017 Frank Derry Wanye
-
-Date: 25 November, 2017
+@since 0.4.2
 '''
 
 import numpy as np
@@ -33,14 +32,10 @@ def create_model(settings):
     - model_type (string): The type of the model to create
     '''
     print(settings)
-    # model_type = model_type.lower()
-    rnn_model = BasicRNN(model_settings=settings)
-    # if model_type == 'basic':
-    #     rnn_model = BasicRNN()
-    # elif model_type == 'multi_input':
-    #     rnn_model = MultiInputRNN()
-    # else:
-    #     raise ValueError('This type of model is not available')
+    if settings.rnn.num_features > 1 or len(settings.rnn.input_names) > 1:
+        rnn_model = MultiInputRNN(model_settings=settings)
+    else:
+        rnn_model = BasicRNN(model_settings=settings)
     return rnn_model
 # End of create_model()
 
@@ -98,7 +93,7 @@ class RNNBase(object):
         self.logger.info("RNN settings: %s" % self.settings)
         self.dataset = model_dataset
         if model_dataset is None:
-            self.dataset = dataset.SimpleDataset(self.logger, self.settings.rnn.dataset, self.settings.train)
+            self.dataset = dataset.SimpleDataset(self.logger, self.settings.rnn, self.settings.train)
         self.create_graph()
     # End of __init__()
 
@@ -326,11 +321,11 @@ class MultiInputRNN(RNNBase):
                 shape=[self.settings.train.batch_size, self.settings.train.truncate],
                 name='output_placeholder')
             self.out_weights = tf.Variable(
-                initial_value=np.random.rand(hidden_size, self.dataset.vocabulary_size),
+                initial_value=np.random.rand(hidden_size, self.dataset.vocabulary_size[0]),
                 dtype=tf.float32,
                 name='out_weights')
             self.out_bias = tf.Variable(
-                np.zeros((self.dataset.vocabulary_size)),
+                np.zeros((self.dataset.vocabulary_size[0])),
                 dtype=tf.float32,
                 name='out_bias')
             logits_series = [
@@ -374,15 +369,15 @@ class MultiInputRNN(RNNBase):
         @see RNNBase.input_layer
         '''
         with tf.variable_scope(constants.INPUT):
-            num_inputs = len(self.settings.rnn.input_names)
+            num_features = len(self.settings.rnn.input_names)
             self.batch_x_placeholder = tf.placeholder(
                 dtype=tf.int32,
-                shape=[self.settings.train.batch_size, self.settings.train.truncate, num_inputs],
+                shape=[self.settings.train.batch_size, self.settings.train.truncate, num_features],
                 name='input_placeholder')
             unstacked_inputs = tf.unstack(self.batch_x_placeholder, axis=-1, name='unstack_inputs')
             input_vector_list = list()
             for index, inputs in enumerate(unstacked_inputs):
-                input_vectors = token_to_vector(self.dataset.vocabulary_size, self.settings.rnn.hidden_size,
+                input_vectors = token_to_vector(self.dataset.vocabulary_size[index], self.settings.rnn.hidden_size,
                     inputs, self.settings.rnn.input_names[index])
                 input_vector_list.append(input_vectors)
             inputs_series = tf.concat(input_vector_list, axis=-1, name='concatenate_inputs')
