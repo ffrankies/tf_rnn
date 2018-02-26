@@ -2,7 +2,7 @@
 An RNN model implementation in tensorflow.
 
 Copyright (c) 2017 Frank Derry Wanye
-@since 0.4.2
+@since 0.4.3
 '''
 
 import numpy as np
@@ -293,6 +293,7 @@ class BasicRNN(RNNBase):
                 shape=[self.settings.train.batch_size, self.settings.train.truncate],
                 name='input_placeholder')
             if self.dataset.data_type == constants.TYPE_CHOICES[0]: # data type = 'text'
+                print(self.dataset.vocabulary_size)
                 inputs_series = token_to_vector(self.dataset.vocabulary_size, self.settings.rnn.hidden_size,
                     self.batch_x_placeholder)
             else:

@@ -1,6 +1,6 @@
 '''
 Contains constants for use within the project.
-@since 0.4.1
+@since 0.4.3
 '''
 
 import time
@@ -99,6 +99,7 @@ LAYERS_STR = 'layers'
 DROPOUT_STR = 'dropout'
 NUM_FEATURES_STR = 'num_features'
 INPUT_NAMES_STR = 'input_names'
+SHUFFLE_SEED_STR = 'shuffle_seed'
 # TRAIN
 BATCH_SIZE_STR = 'batch_size'
 PATIENCE_STR = 'patience'
@@ -153,6 +154,7 @@ LAYERS = 2
 DROPOUT = 0.5
 NUM_FEATURES = 1
 INPUT_NAMES = ['token']
+SHUFFLE_SEED = 0.2345
 # TRAIN
 BATCH_SIZE = 5
 PATIENCE = 5
@@ -193,7 +195,8 @@ RNN_ARGS = {
     LAYERS_STR : LAYERS,
     DROPOUT_STR : DROPOUT,
     NUM_FEATURES_STR : NUM_FEATURES,
-    INPUT_NAMES_STR : INPUT_NAMES }
+    INPUT_NAMES_STR : INPUT_NAMES,
+    SHUFFLE_SEED_STR : SHUFFLE_SEED }
 TRAIN_ARGS = {
     BATCH_SIZE_STR : BATCH_SIZE,
     PATIENCE_STR : PATIENCE,

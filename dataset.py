@@ -1,6 +1,6 @@
 '''
 An object for storing a dataset for training.
-@since 0.4.2
+@since 0.4.3
 '''
 import random
 import math
@@ -66,17 +66,19 @@ class DatasetBase(object):
     Base Dataset class.
     '''
 
-    def __init__(self, logger, train_settings, num_features):
+    def __init__(self, logger, rnn_settings, train_settings):
         '''
         Creates a Batches object.
 
         Params:
         - logger (logging.Logger): The logger to be used by this class
+        - rnn_settings (settings.SettingsNamespace): The settings containing number of features and shuffle seed
         - train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
         '''
         self.logger = logger
         self.settings = train_settings
-        self.num_features = num_features
+        self.num_features = rnn_settings.num_features
+        self.shuffle_seed = rnn_settings.shuffle_seed
     # End of __init__()
 
     def load_dataset(self, dataset_name):
@@ -119,6 +121,7 @@ class DatasetBase(object):
         - vocabulary_size (list or int): The vocabulary size if there is only one feature, or the list of vocabulary
             sizes if there are multiple features
         '''
+        print('Num features: ', self.num_features)
         if self.num_features == 1:
             vocabulary_size = len(index_to_token)
         else:
@@ -146,25 +149,25 @@ class DatasetBase(object):
         return longest_length
     # End of longest_example()
 
-    def shuffle(self, inputs, labels, seed=0.2345):
+    def shuffle(self, inputs, labels):
         '''
         Shuffles the inputs and labels to remove any ordering present in the dataset.
         The inputs and labels are joined together before they are shuffled, to ensure that they still correctly
         correspond to each other.
 
         Params:
-        inputs (list): The inputs from the dataset
-        labels (list): The labels from the dataset
+        - inputs (list): The inputs from the dataset
+        - labels (list): The labels from the dataset
 
         Return:
-        shuffled inputs (list): The shuffled inputs
-        shuffled lables (list): The shuffled labels
+        - shuffled inputs (list): The shuffled inputs
+        - shuffled lables (list): The shuffled labels
         '''
         self.logger.info('Shuffling dataset')
         # random.seed(seed) # Seed with system time / OS-specific randomness sources
         dataset = zip(inputs, labels) # Returns an iterable
         dataset = list(dataset)
-        random.shuffle(dataset, lambda : seed)
+        random.shuffle(dataset, lambda : self.shuffle_seed)
         shuffled_inputs, shuffled_labels = ([a for a,b in dataset], [b for a,b in dataset])
         return shuffled_inputs, shuffled_labels
     # End of shuffle()
@@ -199,6 +202,7 @@ class SimpleDataset(DatasetBase):
     - General:
         - logger (logging.Logger): The logger for this class
         - num_features (int): The number of features in the dataset
+        - shuffle_seed (float): The seed for shuffling the dataset
         - settings (settings.SettingsNamespace): The training settings, containing batch_size and truncate values
     - Data:
         - inputs (list): The inputs to be used for training and validation
@@ -210,8 +214,7 @@ class SimpleDataset(DatasetBase):
     - Info on dataset:
         - data_type (string): The type of data stored in this dataset
         - token_level (string): The level at which the data was tokenized
-        - index_to_token (list): Converts an index to a token
-        - token_to_index (dict): Converts a token to an index
+        - indexer (indexer.Indexer): Converts between indexes and tokens
         - vocabulary_size (int): The total number of tokens in the dataset
         - max_length (int): The length (number of time-steps in) the longest example in the dataset
     '''
@@ -221,11 +224,12 @@ class SimpleDataset(DatasetBase):
         Creates a Batches object.
 
         Params:
-        logger (logging.Logger): The logger to be used by this class
-        rnn_settings (settings.SettingsNamespace): The settings containing the dataset name and number of features
-        train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
+        - logger (logging.Logger): The logger to be used by this class
+        - rnn_settings (settings.SettingsNamespace): The settings containing the dataset name, number of features and 
+            the shuffle seed
+        - train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
         '''
-        DatasetBase.__init__(self, logger, train_settings, rnn_settings.num_features)
+        DatasetBase.__init__(self, logger, rnn_settings, train_settings)
         inputs, labels = self.load_dataset(rnn_settings.dataset)
         self.train, self.valid, self.test = self.extract_partitions(inputs, labels)
     # End of __init__()
@@ -266,6 +270,7 @@ class CrossValidationDataset(DatasetBase):
     - General:
         - logger (logging.Logger): The logger for this class
         - num_features (int): The number of features in the dataset
+        - shuffle_seed (float): The seed for shuffling the dataset
         - settings (settings.SettingsNamespace): The training settings, containing batch_size and truncate values
     - Data:
         - inputs (list): The inputs to be used for training and validation
@@ -280,8 +285,7 @@ class CrossValidationDataset(DatasetBase):
     - Info on dataset:
         - data_type (string): The type of data stored in this dataset
         - token_level (string): The level at which the data was tokenized
-        - index_to_token (list): Converts an index to a token
-        - token_to_index (dict): Converts a token to an index
+        - indexer (indexer.Indexer): Converts between indexes and tokens
         - vocabulary_size (int): The total number of tokens in the dataset
         - max_length (int): The length (number of time-steps in) the longest example in the dataset
     '''
@@ -291,11 +295,12 @@ class CrossValidationDataset(DatasetBase):
         Creates a Batches object.
 
         Params:
-        logger (logging.Logger): The logger to be used by this class
-        rnn_settings (settings.SettingsNamespace): The settings containing the dataset name and number of features
-        train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
+        - logger (logging.Logger): The logger to be used by this class
+        - rnn_settings (settings.SettingsNamespace): The settings containing dataset name, number of features, and 
+            shuffle seed
+        - train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
         '''
-        DatasetBase.__init__(self, logger, train_settings, rnn_settings.num_features)
+        DatasetBase.__init__(self, logger, rnn_settings, train_settings)
         inputs, labels = self.load_dataset(rnn_settings.dataset)
         self.inputs, self.labels, self.test = self.extract_test_partition(inputs, labels)
         # Instantiate cross-validation parameters
