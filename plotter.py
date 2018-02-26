@@ -29,7 +29,7 @@ def plot(model, train_accumulator, valid_accumulator, test_accumulator):
     plot_training_loss(directory, train_accumulator.losses, valid_accumulator.losses)
     plot_training_accuracy(directory, train_accumulator.accuracies, valid_accumulator.accuracies)
     plot_timestep_accuracy(directory, test_accumulator.latest_timestep_accuracies)
-    plot_confusion_matrix(directory, test_accumulator.latest_confusion_matrix, model.dataset.index_to_token)
+    plot_confusion_matrix(directory, test_accumulator.latest_confusion_matrix, model.dataset.indexer)
 # End of plot()
 
 def setup_plot(title, x_label, y_label):
@@ -117,14 +117,14 @@ def plot_timestep_accuracy(directory, timestep_accuracy, timestep_labels=None):
     figure.savefig(directory + constants.PLT_TIMESTEP_ACCURACY)
 # End of plot_timestep_accuracy()
 
-def plot_confusion_matrix(directory, confusion_matrix, index_to_token=None):
+def plot_confusion_matrix(directory, confusion_matrix, indexer=None):
     '''
     Plots a confusion matrix a more accurate breakdown of the predictions made.
 
     Params:
     - directory (str): The directory in which to save the plot
     - confusion_matrix (layers.performance_layer.ConfusionMatrix): The confusion matrix
-    - index_to_token (list): Converts the label indexes to tokens
+    - indexer (indexer.Indexer): Converts the label indexes to tokens
     '''
     if confusion_matrix.is_empty():
         return # Don't do anything if confusion matrix is empty
@@ -134,9 +134,8 @@ def plot_confusion_matrix(directory, confusion_matrix, index_to_token=None):
     # Get labels
     labels = confusion_matrix.all_labels()
     # print('Labels: ', labels)
-    # print('Index to token: ', index_to_token)
-    if index_to_token is not None:
-        labels = [index_to_token[index] for index in labels]
+    if indexer is not None:
+        labels = indexer.to_tokens(labels)
 
     # Adjust size of figure to fit in whole plot
     cell_size = 0.25 # inches

@@ -1,7 +1,6 @@
 '''
 An object for storing a dataset for training.
-
-Date: 19 December 2017
+@since 0.4.2
 '''
 import random
 import math
@@ -9,6 +8,7 @@ import math
 from . import dataset_utils
 from . import batchmaker
 from . import constants
+from . import indexer
 
 class DataPartition(object):
     '''
@@ -85,8 +85,7 @@ class DatasetBase(object):
         Creates the following fields:
             - data_type (string): The type of data stored in this dataset
             - token_level (string): The level at which the data was tokenized
-            - index_to_token (list): Converts an index to a token
-            - token_to_index (dict): Converts a token to an index
+            - indexer (Indexer): Converts between tokens and indexes
             - vocabulary_size (int): The total number of tokens in the dataset
             - max_length (int): The length (number of time-steps in) the longest example in the dataset
 
@@ -101,9 +100,10 @@ class DatasetBase(object):
         self.data_type = dataset_params[0]
         self.token_level = dataset_params[1]
         # Skip vocabulary - we don't really need it
-        self.index_to_token = dataset_params[3]
-        self.token_to_index = dataset_params[4]
-        self.vocabulary_size = self.extract_vocabulary_size(self.index_to_token)
+        index_to_token = dataset_params[3]
+        token_to_index = dataset_params[4]
+        self.indexer = indexer.Indexer(self.num_features, index_to_token, token_to_index)
+        self.vocabulary_size = self.extract_vocabulary_size(index_to_token)
         self.max_length = self.longest_example(dataset_params[6])
         return dataset_params[5], dataset_params[6]
     # End of load_dataset()
@@ -175,13 +175,13 @@ class DatasetBase(object):
         batches.
 
         Params:
-        inputs (list): The inputs for the partition
-        labels (list): The labels for the partition
+        - inputs (list): The inputs for the partition
+        - labels (list): The labels for the partition
 
         Return:
-        partition (DataPartition): The partition containing data in batch format
+        - partition (DataPartition): The partition containing data in batch format
         '''
-        if constants.END_TOKEN in self.token_to_index:
+        if constants.END_TOKEN in self.indexer.token_to_index:
             pad_token = constants.END_TOKEN
         else:
             pad_token = inputs[0][-1]
@@ -296,7 +296,7 @@ class CrossValidationDataset(DatasetBase):
         train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
         '''
         DatasetBase.__init__(self, logger, train_settings, rnn_settings.num_features)
-        inputs, labels = self.load_dataset(dataset_name)
+        inputs, labels = self.load_dataset(rnn_settings.dataset)
         self.inputs, self.labels, self.test = self.extract_test_partition(inputs, labels)
         # Instantiate cross-validation parameters
         self.current = -1; # The section of the training data that is currently being used as the validation set
