@@ -5,12 +5,13 @@ Copyright (c) 2017 Frank Derry Wanye
 @since 0.4.3
 '''
 
-import numpy as np
-import tensorflow as tf
-import logging
-import ray
 import time
 import abc
+import logging
+
+import numpy as np
+import tensorflow as tf
+import ray
 
 from . import constants
 from . import setup
@@ -24,6 +25,7 @@ from .layers.hidden_layer import *
 # from .layers.output_layer import *
 from .layers.performance_layer import *
 
+
 def create_model(settings):
     '''
     Creates a model of the given type.
@@ -33,11 +35,12 @@ def create_model(settings):
     '''
     print(settings)
     if settings.rnn.num_features > 1 or len(settings.rnn.input_names) > 1:
-        rnn_model = MultiInputRNN(model_settings=settings)
+        rnn_model = MultiFeatureRNN(model_settings=settings)
     else:
         rnn_model = BasicRNN(model_settings=settings)
     return rnn_model
 # End of create_model()
+
 
 class RNNBase(object):
     '''
@@ -276,6 +279,7 @@ class RNNBase(object):
     # End of init_saver()
 # End of RNNBase
 
+
 class BasicRNN(RNNBase):
     '''
     A basic RNN implementation in tensorflow.
@@ -303,9 +307,10 @@ class BasicRNN(RNNBase):
     # End of input_layer()
 # End of BasicRNN
 
-class MultiInputRNN(RNNBase):
+
+class MultiFeatureRNN(RNNBase):
     '''
-    An implementation of an RNN with multiple inputs.
+    An implementation of an RNN running with multiple inputs.
 
     @see RNNBase
     '''
@@ -379,7 +384,7 @@ class MultiInputRNN(RNNBase):
             input_vector_list = list()
             for index, inputs in enumerate(unstacked_inputs):
                 input_vectors = token_to_vector(self.dataset.vocabulary_size[index], self.settings.rnn.hidden_size,
-                    inputs, self.settings.rnn.input_names[index])
+                                                inputs, self.settings.rnn.input_names[index])
                 input_vector_list.append(input_vectors)
             inputs_series = tf.concat(input_vector_list, axis=-1, name='concatenate_inputs')
         return inputs_series

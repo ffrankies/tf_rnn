@@ -10,6 +10,7 @@ from . import batchmaker
 from . import constants
 from . import indexer
 
+
 class DataPartition(object):
     '''
     Stores a portion of a dataset.
@@ -60,6 +61,7 @@ class DataPartition(object):
         return x, y, sizes
     # End of get_batch()
 # End of DataPartition()
+
 
 class DatasetBase(object):
     '''
@@ -121,7 +123,6 @@ class DatasetBase(object):
         - vocabulary_size (list or int): The vocabulary size if there is only one feature, or the list of vocabulary
             sizes if there are multiple features
         '''
-        print('Num features: ', self.num_features)
         if self.num_features == 1:
             vocabulary_size = len(index_to_token)
         else:
@@ -185,14 +186,17 @@ class DatasetBase(object):
         - partition (DataPartition): The partition containing data in batch format
         '''
         if constants.END_TOKEN in self.indexer.token_to_index:
-            pad_token = constants.END_TOKEN
+            x_pad_token = constants.END_TOKEN
+            y_pad_token = constants.END_TOKEN
         else:
-            pad_token = inputs[0][-1]
-        x, y, sizes = batchmaker.make_batches(inputs, labels, self.settings.batch_size, self.settings.truncate,
-            pad_token)
-        return DataPartition(x, y, sizes, num_sequences)
+            x_pad_token = inputs[0][-1]
+            y_pad_token = labels[0][-1]
+        input_batches, label_batches, sizes = batchmaker.make_batches(
+            inputs, labels, self.settings.batch_size, self.settings.truncate, x_pad_token, y_pad_token)
+        return DataPartition(input_batches, label_batches, sizes, num_sequences)
     # End of make_partition()
 # End of DatasetBase
+
 
 class SimpleDataset(DatasetBase):
     '''
@@ -200,23 +204,23 @@ class SimpleDataset(DatasetBase):
 
     Instance variables:
     - General:
-        - logger (logging.Logger): The logger for this class
-        - num_features (int): The number of features in the dataset
-        - shuffle_seed (float): The seed for shuffling the dataset
-        - settings (settings.SettingsNamespace): The training settings, containing batch_size and truncate values
+      - logger (logging.Logger): The logger for this class
+      - num_features (int): The number of features in the dataset
+      - shuffle_seed (float): The seed for shuffling the dataset
+      - settings (settings.SettingsNamespace): The training settings, containing batch_size and truncate values
     - Data:
-        - inputs (list): The inputs to be used for training and validation
-        - labels (list): The labels to be used for training and validation
+      - inputs (list): The inputs to be used for training and validation
+      - labels (list): The labels to be used for training and validation
     - Partitions:
-        - test (DataPartition): The partition to be used for testing the performance of the trained model
-        - valid (DataPartition): The current partition of the dataset to be used for validation
-        - train (DataPartition): The current partition of the dataset to be used for training
+      - test (DataPartition): The partition to be used for testing the performance of the trained model
+      - valid (DataPartition): The current partition of the dataset to be used for validation
+      - train (DataPartition): The current partition of the dataset to be used for training
     - Info on dataset:
-        - data_type (string): The type of data stored in this dataset
-        - token_level (string): The level at which the data was tokenized
-        - indexer (indexer.Indexer): Converts between indexes and tokens
-        - vocabulary_size (int): The total number of tokens in the dataset
-        - max_length (int): The length (number of time-steps in) the longest example in the dataset
+      - data_type (string): The type of data stored in this dataset
+      - token_level (string): The level at which the data was tokenized
+      - indexer (indexer.Indexer): Converts between indexes and tokens
+      - vocabulary_size (int): The total number of tokens in the dataset
+      - max_length (int): The length (number of time-steps in) the longest example in the dataset
     '''
 
     def __init__(self, logger, rnn_settings, train_settings):
@@ -225,7 +229,7 @@ class SimpleDataset(DatasetBase):
 
         Params:
         - logger (logging.Logger): The logger to be used by this class
-        - rnn_settings (settings.SettingsNamespace): The settings containing the dataset name, number of features and 
+        - rnn_settings (settings.SettingsNamespace): The settings containing the dataset name, number of features and
             the shuffle seed
         - train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
         '''
@@ -262,32 +266,33 @@ class SimpleDataset(DatasetBase):
     # End of extract_partitions()
 # End of CrossValidationDataset()
 
+
 class CrossValidationDataset(DatasetBase):
     '''
     A dataset that uses cross-validation. Stores the dataset in batches for easy access.
 
     Instance variables:
     - General:
-        - logger (logging.Logger): The logger for this class
-        - num_features (int): The number of features in the dataset
-        - shuffle_seed (float): The seed for shuffling the dataset
-        - settings (settings.SettingsNamespace): The training settings, containing batch_size and truncate values
+      - logger (logging.Logger): The logger for this class
+      - num_features (int): The number of features in the dataset
+      - shuffle_seed (float): The seed for shuffling the dataset
+      - settings (settings.SettingsNamespace): The training settings, containing batch_size and truncate values
     - Data:
-        - inputs (list): The inputs to be used for training and validation
-        - labels (list): The labels to be used for training and validation
+      - inputs (list): The inputs to be used for training and validation
+      - labels (list): The labels to be used for training and validation
     - Partitions:
-        - test (DataPartition): The partition to be used for testing the performance of the trained model
-        - valid (DataPartition): The current partition of the dataset to be used for validation
-        - train (DataPartition): The current partition of the dataset to be used for training
+      - test (DataPartition): The partition to be used for testing the performance of the trained model
+      - valid (DataPartition): The current partition of the dataset to be used for validation
+      - train (DataPartition): The current partition of the dataset to be used for training
     - Cross-validation:
-        - current (int): The current section of inputs and labels being used for validation
-        - num_sections (int): The total number of sections being used for cross-validation
+      - current (int): The current section of inputs and labels being used for validation
+      - num_sections (int): The total number of sections being used for cross-validation
     - Info on dataset:
-        - data_type (string): The type of data stored in this dataset
-        - token_level (string): The level at which the data was tokenized
-        - indexer (indexer.Indexer): Converts between indexes and tokens
-        - vocabulary_size (int): The total number of tokens in the dataset
-        - max_length (int): The length (number of time-steps in) the longest example in the dataset
+      - data_type (string): The type of data stored in this dataset
+      - token_level (string): The level at which the data was tokenized
+      - indexer (indexer.Indexer): Converts between indexes and tokens
+      - vocabulary_size (int): The total number of tokens in the dataset
+      - max_length (int): The length (number of time-steps in) the longest example in the dataset
     '''
 
     def __init__(self, logger, rnn_settings, train_settings):
@@ -296,7 +301,7 @@ class CrossValidationDataset(DatasetBase):
 
         Params:
         - logger (logging.Logger): The logger to be used by this class
-        - rnn_settings (settings.SettingsNamespace): The settings containing dataset name, number of features, and 
+        - rnn_settings (settings.SettingsNamespace): The settings containing dataset name, number of features, and
             shuffle seed
         - train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
         '''
@@ -304,10 +309,10 @@ class CrossValidationDataset(DatasetBase):
         inputs, labels = self.load_dataset(rnn_settings.dataset)
         self.inputs, self.labels, self.test = self.extract_test_partition(inputs, labels)
         # Instantiate cross-validation parameters
-        self.current = -1; # The section of the training data that is currently being used as the validation set
-                           # Initialized to -1 so that the first call to next_iteration() starts the cross-validation
-                           # loop.
-        self.num_sections = 10; # The total number of sections the dataset will be broken into
+        # The section of the training data that is currently being used as the validation set
+        # Initialized to -1 so that the first call to next_iteration() starts the cross-validation loop
+        self.current = -1
+        self.num_sections = 10  # The total number of sections the dataset will be broken into
     # End of __init__()
 
     def extract_test_partition(self, inputs, labels):
@@ -316,13 +321,13 @@ class CrossValidationDataset(DatasetBase):
         that test data does not follow any original ordering.
 
         Params:
-        inputs (list): The inputs from the dataset
-        labels (list): The labels from the dataset
+        - inputs (list): The inputs from the dataset
+        - labels (list): The labels from the dataset
 
         Return:
-        inputs (list): The inputs to be used for training
-        labels (list): The labels to be used for training
-        test (DataPartition): The namespace containing the test inputs, labels and sizes
+        - inputs (list): The inputs to be used for training
+        - labels (list): The labels to be used for training
+        - test (DataPartition): The namespace containing the test inputs, labels and sizes
         '''
         self.logger.info('Creating test data partition')
         inputs, labels = self.shuffle(inputs, labels)
