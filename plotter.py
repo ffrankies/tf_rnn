@@ -13,6 +13,7 @@ import seaborn as sns # for heatmap
 
 from . import constants
 
+
 def plot(model, train_accumulator, valid_accumulator, test_accumulator):
     '''
     Plots a graphical representation of the model's training performance over time. Saves the plot to file in
@@ -31,6 +32,7 @@ def plot(model, train_accumulator, valid_accumulator, test_accumulator):
     plot_timestep_accuracy(directory, test_accumulator.latest_timestep_accuracies)
     plot_confusion_matrix(directory, test_accumulator.latest_confusion_matrix, model.dataset.indexer)
 # End of plot()
+
 
 def setup_plot(title, x_label, y_label):
     '''
@@ -53,6 +55,7 @@ def setup_plot(title, x_label, y_label):
     return figure, plot
 # End of setup_plot()
 
+
 def plot_training_loss(directory, training_loss, validation_loss):
     '''
     Plots the training and validation losses on a sublot.
@@ -70,6 +73,7 @@ def plot_training_loss(directory, training_loss, validation_loss):
     figure.savefig(directory + constants.PLT_TRAIN_LOSS)
 # End of plot_training_loss()
 
+
 def plot_training_accuracy(directory, training_accuracy, validation_accuracy):
     '''
     Plots the training and validation prediction accuracy on a sublot.
@@ -86,6 +90,7 @@ def plot_training_accuracy(directory, training_accuracy, validation_accuracy):
     plot.legend(loc='lower right')
     figure.savefig(directory + constants.PLT_TRAIN_ACCURACY)
 # End of plot_training_accuracy()
+
 
 def plot_timestep_accuracy(directory, timestep_accuracy, timestep_labels=None):
     '''
@@ -117,6 +122,7 @@ def plot_timestep_accuracy(directory, timestep_accuracy, timestep_labels=None):
     figure.savefig(directory + constants.PLT_TIMESTEP_ACCURACY)
 # End of plot_timestep_accuracy()
 
+
 def plot_confusion_matrix(directory, confusion_matrix, indexer=None):
     '''
     Plots a confusion matrix a more accurate breakdown of the predictions made.
@@ -126,8 +132,9 @@ def plot_confusion_matrix(directory, confusion_matrix, indexer=None):
     - confusion_matrix (layers.performance_layer.ConfusionMatrix): The confusion matrix
     - indexer (indexer.Indexer): Converts the label indexes to tokens
     '''
+    print('Plotting confusion matrix')
     if confusion_matrix.is_empty():
-        return # Don't do anything if confusion matrix is empty
+        return  # Don't do anything if confusion matrix is empty
 
     figure, plot = setup_plot('Predictions Breakdown', 'Prediction', 'Correct Label')
 
@@ -137,17 +144,28 @@ def plot_confusion_matrix(directory, confusion_matrix, indexer=None):
     if indexer is not None:
         labels = indexer.to_tokens(labels)
 
+    normalized_cm = confusion_matrix.to_normalized_array()
+    print('Got normalized matrix array')
+
     # Adjust size of figure to fit in whole plot
-    cell_size = 0.25 # inches
+    cell_size = 0.15  # size is in inches
     num_used_labels = len(labels)
+    print('Got length of used labels')
     figure.set_size_inches(num_used_labels*cell_size, num_used_labels*cell_size)
-    grid = plot.pcolormesh(confusion_matrix.to_normalized_array(), cmap=plt.cm.YlGnBu)
+    print('Set size of figure')
+    grid = plot.pcolormesh(normalized_cm, cmap=plt.cm.YlGnBu)
+    print('Plotted confusion matrix')
     figure.colorbar(grid)
+    print('Added color grid')
 
     # Center labels: credit to https://stackoverflow.com/a/24193138
     plot.yaxis.set(ticks=np.arange(0.5, num_used_labels), ticklabels=labels)
+    print('Set xticks')
     plot.xaxis.set(ticks=np.arange(0.5, num_used_labels), ticklabels=labels)
+    print('Set yticks')
     plt.xticks(rotation=90)
+    print('Added rotation')
 
     figure.savefig(directory + constants.PLT_CONFUSION_MATRIX)
+    print('Saved figure')
 # End of plot_confusion_matrix()
