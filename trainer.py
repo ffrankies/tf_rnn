@@ -4,12 +4,9 @@ Tensorflow implementation of a training method to train a given model.
 '''
 import math
 import numpy as np
-import tensorflow as tf
 
 from . import plotter
 from . import constants
-from .layers.performance_layer import Metrics
-from .layers.performance_layer import Accumulator
 
 def train(model):
     '''
@@ -36,6 +33,7 @@ def train(model):
         # End of epoch training
 
     performance_eval(model, final_epoch, metrics.test)
+    model.saver.save_model(model, [final_epoch, metrics], metrics.valid.is_best_accuracy)
 
     model.logger.info("Finished training the model. Final validation loss: %f | Final test loss: %f | "
                       "Final test accuracy: %f" %
