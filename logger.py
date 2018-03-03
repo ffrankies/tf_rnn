@@ -6,6 +6,8 @@ Wrapper for the python logging module - saves logs to multiple files based on se
 
 import logging
 import logging.handlers
+from typing import Callable, Any
+from functools import wraps
 
 from . import constants
 from . import utils
@@ -23,7 +25,7 @@ class Logger(object):
     - trace_logger (logging.Logger): Logs information at the trace severity level
     """
 
-    def __init__(self, log_directory):
+    def __init__(self, log_directory: str):
         """Creates an instance of the Logger class.
 
         Params:
@@ -36,7 +38,7 @@ class Logger(object):
         self.trace_logger = self.create_logger(constants.TRACE, log_directory)
     # End of __init__()
 
-    def create_logger(self, severity_level, log_directory):
+    def create_logger(self, severity_level: str, log_directory: str) -> logging.Logger:
         """Creates a logger at the given level, using the severity level as the name of the logger
 
         Params:
@@ -60,7 +62,7 @@ class Logger(object):
         return logger
     # End of create_logger()
 
-    def error(self, message):
+    def error(self, message: str):
         """Logs a message at the error severity level.
 
         Params:
@@ -73,7 +75,7 @@ class Logger(object):
         self.trace_logger.info(error_message)
     # End of error()
 
-    def info(self, message):
+    def info(self, message: str):
         """Logs a message at the info severity level.
 
         Params:
@@ -85,7 +87,7 @@ class Logger(object):
         self.trace_logger.info(info_message)
     # End of info()
 
-    def debug(self, message):
+    def debug(self, message: str):
         """Logs a message at the debug severity level.
 
         Params:
@@ -96,7 +98,7 @@ class Logger(object):
         self.trace_logger.info(debug_message)
     # End of debug()
 
-    def trace(self, message):
+    def trace(self, message: str):
         """Logs a message at the trace severity level.
 
         Params:
@@ -111,32 +113,68 @@ class Logger(object):
 #
 # Logging decorators that take a logger and a message as parameters
 #
-class error(object):
+class LogDecorator(object):
+    """Base class for a decorator for logging.
+    """
+
+    def __init__(self, message: str = None, logger: Logger = None):
+        """Creates an instance of the log decorator.
+
+        If no message is passed, logs the function name and the params given to the function.
+
+        If no logger is passed, it expects the function to be a part of a class that contains a Logger object named
+        logger.
+
+        Params:
+        - message (str): The message to be logged (default: None)
+        - logger (Logger): The logger to be used (default: None)
+        """
+        self.message = message
+        self.logger = logger
+    # End of __init__()
+
+    def getMessageAndLogger(self, function: Callable, *args: tuple, **kwargs: dict) -> tuple:
+        """Returns the message and logger to those of the function if they are not present
+
+        Params:
+        - function (Callable): The function that is being decorated
+        - args: The args passed to the function
+        - kwargs: The keyword args passed to the function
+
+        Returns:
+        - message (str): The message to log
+        - logger (Logger): The logger to use
+        """
+        if self.message is None:  # Use function definition as message
+            if not args or not args[0] or len(args[0]) < 2:  # If no args, or not enough args passed,
+                msg_args = ()                                # don't try to read them
+            else:
+                msg_args = args[0][1:]
+            self.message = "{} (args: {!s:.100}, kwargs: {!s:.200})".format(function.__name__, msg_args, kwargs)
+        if self.logger is None:  # Assume function is a class method, and class contains a Logger named logger
+            self.logger = args[0][0].logger
+        return self.message, self.logger
+    # End of getMessageAndLogger()
+# End of LogDecorator()
+
+
+class error(LogDecorator):
     """Decorator for the call to logger.error()
     """
 
-    def __init__(self, message):
-        """Creates an instance of the error decorator.
-
-        Params:
-        - message (str): The message to log
-        """
-        self.message = message
-    # End of __init__()
-
-    def __call__(self, function):
+    def __call__(self, function: Callable) -> Callable:
         """Logs the given message at the error severity, and returns the function that the decorator wraps.
 
         Params:
         - function: The function wrapped by this decorator
         """
-        message = self.message
-
-        def wrapped_function(self, *args, **kwargs):
+        @wraps(function)
+        def wrapped_function(*args: tuple, **kwargs: dict) -> Any:
             """Returns the decorated function, which spews out the error log message before it is called.
             """
-            self.logger.error(message)
-            return function(self, *args, **kwargs)
+            message, logger = self.getMessageAndLogger(function, args, kwargs)
+            logger.error(message)
+            return function(*args, **kwargs)
         # End of wrapped_function
 
         return wrapped_function
@@ -144,32 +182,23 @@ class error(object):
 # End of error() decorator
 
 
-class info(object):
+class info(LogDecorator):
     """Decorator for the call to logger.info()
     """
 
-    def __init__(self, message):
-        """Creates an instance of the info decorator.
-
-        Params:
-        - message (str): The message to log
-        """
-        self.message = message
-    # End of __init__()
-
-    def __call__(self, function):
+    def __call__(self, function: Callable) -> Callable:
         """Logs the given message at the info severity, and returns the function that the decorator wraps.
 
         Params:
         - function: The function wrapped by this decorator
         """
-        message = self.message
-
-        def wrapped_function(self, *args, **kwargs):
+        @wraps(function)
+        def wrapped_function(*args: tuple, **kwargs: dict) -> Any:
             """Returns the decorated function, which spews out the info log message before it is called.
             """
-            self.logger.info(message)
-            return function(self, *args, **kwargs)
+            message, logger = self.getMessageAndLogger(function, args, kwargs)
+            logger.info(message)
+            return function(*args, **kwargs)
         # End of wrapped_function
 
         return wrapped_function
@@ -177,32 +206,23 @@ class info(object):
 # End of info() decorator
 
 
-class debug(object):
+class debug(LogDecorator):
     """Decorator for the call to logger.debug()
     """
 
-    def __init__(self, message):
-        """Creates an instance of the debug decorator.
-
-        Params:
-        - message (str): The message to log
-        """
-        self.message = message
-    # End of __init__()
-
-    def __call__(self, function):
+    def __call__(self, function: Callable) -> Callable:
         """Logs the given message at the debug severity, and returns the function that the decorator wraps.
 
         Params:
         - function: The function wrapped by this decorator
         """
-        message = self.message
-
-        def wrapped_function(self, *args, **kwargs):
+        @wraps(function)
+        def wrapped_function(*args: tuple, **kwargs: dict) -> Any:
             """Returns the decorated function, which spews out the debug log message before it is called.
             """
-            self.logger.debug("{} (args: {!s:.100} kwargs: {!s:.100})".format(message, args, kwargs))
-            return function(self, *args, **kwargs)
+            message, logger = self.getMessageAndLogger(function, args, kwargs)
+            logger.debug(message)
+            return function(*args, **kwargs)
         # End of wrapped_function
 
         return wrapped_function
@@ -210,32 +230,23 @@ class debug(object):
 # End of debug() decorator
 
 
-class trace(object):
+class trace(LogDecorator):
     """Decorator for the call to logger.trace()
     """
 
-    def __init__(self, message):
-        """Creates an instance of the trace decorator.
-
-        Params:
-        - message (str): The message to log
-        """
-        self.message = message
-    # End of __init__()
-
-    def __call__(self, function):
+    def __call__(self, function: Callable) -> Callable:
         """Logs the given message at the trace severity, and returns the function that the decorator wraps.
 
         Params:
         - function: The function wrapped by this decorator
         """
-        message = self.message
-
-        def wrapped_function(self, *args, **kwargs):
+        @wraps(function)
+        def wrapped_function(*args: tuple, **kwargs: dict) -> Any:
             """Returns the decorated function, which spews out the trace log message before it is called.
             """
-            self.logger.trace("{} (args: {!s:.100} kwargs: {!s:.100})".format(message, args, kwargs))
-            return function(self, *args, **kwargs)
+            message, logger = self.getMessageAndLogger(function, args, kwargs)
+            logger.trace(message)
+            return function(*args, **kwargs)
         # End of wrapped_function
 
         return wrapped_function
