@@ -1,9 +1,7 @@
 """
 General purpose RNN written with tensorflow 1.3
 
-Copyright (c) 2017 Frank Derry Wanye
-
-Date: 27 October, 2017
+@since 0.5.0
 """
 
 from . import batchmaker
@@ -17,3 +15,4 @@ from . import settings
 from . import setup
 from . import tensorboard
 from . import trainer
+from . import logger
