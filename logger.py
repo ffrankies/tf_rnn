@@ -1,6 +1,7 @@
 """
 Wrapper for the python logging module - saves logs to multiple files based on severity level.
 
+Copyright (c) 2017-2018 Frank Derry Wanye
 @since 0.5.0
 """
 
@@ -10,7 +11,7 @@ from typing import Callable, Any
 from functools import wraps
 
 from . import constants
-from .utils import create_directory, Singleton
+from .utils import create_model_dir, create_directory, Singleton
 
 
 class Logger(object, metaclass=Singleton):
@@ -25,14 +26,20 @@ class Logger(object, metaclass=Singleton):
     - trace_logger (logging.Logger): Logs information at the trace severity level
     """
 
-    def __init__(self, log_directory: str = constants.LOG_DIR):
+    def __init__(self, log_directory: str = None):
         """Creates an instance of the Logger class.
 
+        Stores logs in models/model_name/<Severity>.log files. The model name is obtained through the settings object,
+        when the log directory is not given.
+
         Params:
-        - log_directory (str): The name of the directory in which to save the log files
+        - log_directory (str): The path to the directory where the logs should be stored
         """
-        print("Initializing logger with directory: ", log_directory)
-        create_directory(log_directory)
+        if log_directory:
+            create_directory(log_directory)
+        else:
+            log_directory = create_model_dir()
+
         self.error_logger = self.create_logger(constants.ERROR, log_directory)
         self.info_logger = self.create_logger(constants.INFO, log_directory)
         self.debug_logger = self.create_logger(constants.DEBUG, log_directory)
@@ -147,13 +154,13 @@ class LogDecorator(object):
         - logger (Logger): The logger to use
         """
         if self.message is None:  # Use function definition as message
-            if not args or not args[0] or len(args[0]) < 2:  # If no args, or not enough args passed,
+            if not args or not args[0]:  # If no args, or not enough args passed,
                 msg_args = ()                                # don't try to read them
             else:
-                msg_args = args[0][1:]
+                msg_args = args[0]
             self.message = "{} (args: {!s:.100}, kwargs: {!s:.200})".format(function.__name__, msg_args, kwargs)
         if self.logger is None:  # Assume function is a class method, and class contains a Logger named logger
-            self.logger = args[0][0].logger
+            self.logger = Logger()
         return self.message, self.logger
     # End of getMessageAndLogger()
 # End of LogDecorator()
