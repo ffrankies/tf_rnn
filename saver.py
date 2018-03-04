@@ -1,12 +1,9 @@
-"""
-Provides an interface for saving and loading various aspects of the 
-tensorflow model to file.
+"""Provides an interface for saving and loading various aspects of the tensorflow model to file.
 
 Copyright (c) 2017 Frank Derry Wanye
 @since 0.5.0
 """
 
-import pickle
 import os
 import dill
 
@@ -124,21 +121,24 @@ class Saver(object):
         self.logger.debug('Creating a saver object')
         self.settings = settings
         self.meta_path = constants.MODEL_DIR + self.settings.model_name + '/' + constants.META
-        self.meta = self.load_meta(settings, max_length)
+        self.meta = self.load_meta(max_length)
     # End of __init__()
 
     @debug()
-    def load_meta(self, settings: SettingsNamespace, max_length: int) -> MetaInfo:
+    def load_meta(self, max_length: int) -> MetaInfo:
         """Loads meta information about the model.
+
+        Params:
+        - max_length (int): The maximum sequence size in the model's dataset
 
         Return:
         - meta_info (saver.MetaInfo): The meta info for this model
         """
         if os.path.isfile(self.meta_path):
-            with open(self.meta_path, 'rb') as meta_file: # Read current meta info from file
+            with open(self.meta_path, 'rb') as meta_file:  # Read current meta info from file
                 meta_info = dill.load(meta_file)
         else:
-            meta_info = MetaInfo(self.logger, self.settings, max_length) # New model, so create new meta info
+            meta_info = MetaInfo(self.logger, self.settings, max_length)  # New model, so create new meta info
         return meta_info
     # End of load_meta()
 
@@ -183,11 +183,11 @@ class Saver(object):
         self.save_meta(meta_info)
         weights = model.variables.get_weights()
         run_dir = self.meta.latest()[constants.DIR]
-        if best_weights == True:
+        if best_weights:
             with open(run_dir + constants.BEST_WEIGHTS, 'wb') as weights_file:
-                pickle.dump(weights, weights_file)
+                dill.dump(weights, weights_file)
         with open(run_dir + constants.LATEST_WEIGHTS, 'wb') as weights_file:
-            pickle.dump(weights, weights_file)
+            dill.dump(weights, weights_file)
     # End of save_model()
 
     @debug()
@@ -206,7 +206,7 @@ class Saver(object):
             weights_path = self.meta.latest()[constants.DIR] + constants.LATEST_WEIGHTS
         if os.path.isfile(weights_path):
             with open(weights_path, 'rb') as weights_file:
-                weights = pickle.load(weights_file)
+                weights = dill.load(weights_file)
                 model.variables.set_weights(weights)
         else:
             self.logger.info('Could not load weights: Weights not found')
