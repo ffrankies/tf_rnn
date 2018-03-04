@@ -42,8 +42,7 @@ def create_model(settings):
 
 
 class RNNBase(object):
-    """
-    The base for an RNN model, implemented in tensorflow.
+    """The base for an RNN model, implemented in tensorflow.
 
     Instance variables:
     - settings (settings.Settings): The settings for the RNN
@@ -188,13 +187,7 @@ class RNNBase(object):
 
     @debug()
     def hidden_layer(self) -> tf.Tensor:
-        """
-        Creates the tensorflow variables and operations needed to compute the hidden layer state.
-
-        Creates the following instance variables:
-        - batch_sizes (tf.placeholder): The placeholder for the actual size of each sequence in the input minibatch
-        - hidden_state_placeholder (tf.placeholder): The placeholder for the hidden state of the model
-        - hidden_state_shape (tf.placeholder): The shape of the hidden state placeholder
+        """Creates the tensorflow variables and operations needed to compute the hidden layer state.
 
         Return:
         - states_series (tf.tensor): The RNN state for each input for each timestep in the input
@@ -205,7 +198,6 @@ class RNNBase(object):
                 dtype=tf.int32,
                 shape=[self.settings.train.batch_size],
                 name='batch_sizes')
-            # TODO: Might be able to get rid of the hidden_state_shape variable
             hidden_state, self.hidden_state_placeholder, self.hidden_state_shape = layered_state_tuple(
                 self.settings.rnn.layers, self.settings.train.batch_size, self.settings.rnn.hidden_size)
             cell = rnn_cell(self.settings.rnn.layers, self.settings.rnn.hidden_size, self.settings.rnn.dropout)
@@ -229,7 +221,6 @@ class RNNBase(object):
         - inputs_series (tf.tensor): The inputs series for each timestep for each sequence in the inputs
         """
         self.batch_x_placeholder = None
-        pass
     # End of input_layer()
 
     @debug()
@@ -250,8 +241,7 @@ class RNNBase(object):
 
 
 class BasicRNN(RNNBase):
-    """
-    A basic RNN implementation in tensorflow.
+    """A basic RNN implementation in tensorflow.
 
     @see RNNBase
     """
@@ -327,7 +317,6 @@ class MultiFeatureRNN(RNNBase):
                 dtype=tf.int32,
                 shape=[self.settings.train.batch_size],
                 name='batch_sizes')
-            # TODO: Might be able to get rid of the hidden_state_shape variable
             hidden_size = self.settings.rnn.hidden_size * len(self.settings.rnn.input_names)
             hidden_state, self.hidden_state_placeholder, self.hidden_state_shape = layered_state_tuple(
                 self.settings.rnn.layers, self.settings.train.batch_size, hidden_size)
