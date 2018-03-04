@@ -10,10 +10,10 @@ from typing import Callable, Any
 from functools import wraps
 
 from . import constants
-from . import utils
+from .utils import create_directory, Singleton
 
 
-class Logger(object):
+class Logger(object, metaclass=Singleton):
     """Wrapper for the python logging module. Contains multiple loggers with different severity levels. Each
     logger's output is logged to a separate file. Exposes the commonly used logging api: i.e.: one would interact
     with this logger by using the `error()`, `info()`, `debug()` and `trace()` methods.
@@ -25,13 +25,14 @@ class Logger(object):
     - trace_logger (logging.Logger): Logs information at the trace severity level
     """
 
-    def __init__(self, log_directory: str):
+    def __init__(self, log_directory: str = constants.LOG_DIR):
         """Creates an instance of the Logger class.
 
         Params:
         - log_directory (str): The name of the directory in which to save the log files
         """
-        utils.create_directory(log_directory)
+        print("Initializing logger with directory: ", log_directory)
+        create_directory(log_directory)
         self.error_logger = self.create_logger(constants.ERROR, log_directory)
         self.info_logger = self.create_logger(constants.INFO, log_directory)
         self.debug_logger = self.create_logger(constants.DEBUG, log_directory)
