@@ -116,7 +116,7 @@ class Settings(object, metaclass=Singleton):
         - yml_contents (dict<string, any>): A dictionary containing the contents of the YAML file
         """
         with open(yml_file, 'r') as stream:
-            yml_contents = yaml.load(stream)
+            yml_contents = yaml.safe_load(stream)
         return yml_contents
     # End of read_yml()
 
