@@ -6,9 +6,12 @@
 import os
 from typing import Any
 
+from . import settings
+from . import constants
 
-def create_directory(directory):
-    """Creates a directory if it does not exist. 
+
+def create_directory(directory: str):
+    """Creates a directory if it does not exist.
 
     Params:
     - directory (str): The path to the directory to be created
@@ -44,3 +47,20 @@ class Singleton(type):
         return cls._instances[cls]
     # End of __call__()
 # End of Singleton()
+
+
+def create_model_dir(model_name: str = None):
+    """Creates the directory in which to save the model.
+
+    Params:
+    - model_name (str): The name of the model (gets set to a timestamp if a name is not given)
+
+    Return:
+    - model_path (str): The path to the created directory
+    """
+    if not model_name:
+        model_name = settings.Settings().general.model_name  # pylint: disable=E1101
+    model_path = constants.MODEL_DIR + model_name + '/'
+    create_directory(model_path)
+    return model_path
+# End of create_model_dir()
