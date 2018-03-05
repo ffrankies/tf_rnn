@@ -105,7 +105,7 @@ class Accumulator(object):
         - ending (boolean): True if this minibatch maarks the end of a sequence
         '''
         loss, accuracy, size, timestep_accuracies, timestep_elements, predictions, labels, sequence_lengths = data
-        self.logger.debug("Minibatch loss: %.2f | Minibatch accuracy: %.2f" % (loss, accuracy))
+        # self.logger.debug("Minibatch loss: %.2f | Minibatch accuracy: %.2f" % (loss, accuracy))
         self.loss = self.update_average(self.loss, self.elements, loss, size)
         self.accuracy = self.update_average(self.accuracy, self.elements, accuracy, size)
         self.elements += size
@@ -113,7 +113,7 @@ class Accumulator(object):
         if ending is True:
             self.merge_timesteps()
         self.confusion_matrix.update(predictions, labels, sequence_lengths)
-        self.logger.debug("Updated loss: %.2f | Updated accuracy: %.2f" % (self.loss, self.accuracy))
+        # self.logger.debug("Updated loss: %.2f | Updated accuracy: %.2f" % (self.loss, self.accuracy))
     # End of update()
 
     def update_average(self, old_avg, old_num, new_avg, new_num):
@@ -142,7 +142,7 @@ class Accumulator(object):
         - accuracies (list): The list of accuracies for each timestep in the minibatch
         - sizes (list): The list of the number of valid elements for each timestep in the minibatch
         '''
-        self.logger.debug('Extending incoming timestep accuracies')
+        # self.logger.debug('Extending incoming timestep accuracies')
         if len(accuracies) != len(sizes):
             error_msg = ("Timestep accuracies and elements for each minibatch must be of same size."
                          "Accuracies: %d, Elements: %d" % (len(accuracies), len(sizes)))
@@ -156,7 +156,7 @@ class Accumulator(object):
         '''
         Updates the cumulative timestep accuracies.
         '''
-        self.logger.debug('Merging cumulative timestep accuracies with incoming timestep accuracies')
+        # self.logger.debug('Merging cumulative timestep accuracies with incoming timestep accuracies')
         self.next_timestep_accuracies = self.next_timestep_accuracies[:self.max_sequence_length]
         for index in range(len(self.next_timestep_accuracies)):
             old_avg = self.timestep_accuracies[index]
@@ -221,7 +221,7 @@ class ConfusionMatrix(object):
         Creates a ConfusionMatrix object.
         '''
         self.logger = logger
-        logger.debug('Creating a confusion matrix')
+        # logger.debug('Creating a confusion matrix')
         self.matrix = dict()
         self.row_labels = set()
         self.col_labels = set()
@@ -236,7 +236,7 @@ class ConfusionMatrix(object):
         - labels (list): The correct predictions for the given batch
         - sequence_lengths (list): The valid sequence lengths for every row in the given batch
         '''
-        self.logger.debug('Updating confusion matrix')
+        # self.logger.debug('Updating confusion matrix')
         for row_index, row in enumerate(predictions):
             row_slice = row[:sequence_lengths[row_index]]
             for column_index, prediction in enumerate(row_slice):
