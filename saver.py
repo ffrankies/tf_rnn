@@ -1,6 +1,6 @@
 """Provides an interface for saving and loading various aspects of the tensorflow model to file.
 
-Copyright (c) 2017 Frank Derry Wanye
+Copyright (c) 2017-2018 Frank Derry Wanye
 @since 0.5.0
 """
 
