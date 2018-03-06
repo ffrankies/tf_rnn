@@ -139,10 +139,13 @@ class LogDecorator(object):
         """
         self.message = message
         self.logger = logger
+        if self.logger is None:
+            self.logger = Logger()
     # End of __init__()
 
-    def getMessageAndLogger(self, function: Callable, *args: tuple, **kwargs: dict) -> tuple:
-        """Returns the message and logger to those of the function if they are not present
+    def getMessage(self, function: Callable, *args: tuple, **kwargs: dict) -> tuple:
+        """Returns the message to log. If no message is passed to the decorator, logs the function called and its 
+        arguments.
 
         Params:
         - function (Callable): The function that is being decorated
@@ -151,18 +154,17 @@ class LogDecorator(object):
 
         Returns:
         - message (str): The message to log
-        - logger (Logger): The logger to use
         """
-        if self.message is None:  # Use function definition as message
+        if self.message:
+            message = self.message
+        else:  # Use function definition as message
             if not args or not args[0]:  # If no args, or not enough args passed,
                 msg_args = ()                                # don't try to read them
             else:
                 msg_args = args[0]
-            self.message = "{} (args: {!s:.100}, kwargs: {!s:.200})".format(function.__name__, msg_args, kwargs)
-        if self.logger is None:  # Assume function is a class method, and class contains a Logger named logger
-            self.logger = Logger()
-        return self.message, self.logger
-    # End of getMessageAndLogger()
+            message = "{} (args: {!s:.100}, kwargs: {!s:.200})".format(function.__name__, msg_args, kwargs)
+        return message
+    # End of getMessage()
 # End of LogDecorator()
 
 
@@ -180,8 +182,8 @@ class error(LogDecorator):
         def wrapped_function(*args: tuple, **kwargs: dict) -> Any:
             """Returns the decorated function, which spews out the error log message before it is called.
             """
-            message, logger = self.getMessageAndLogger(function, args, kwargs)
-            logger.error(message)
+            message = self.getMessage(function, args, kwargs)
+            self.logger.error(message)
             return function(*args, **kwargs)
         # End of wrapped_function
 
@@ -204,8 +206,8 @@ class info(LogDecorator):
         def wrapped_function(*args: tuple, **kwargs: dict) -> Any:
             """Returns the decorated function, which spews out the info log message before it is called.
             """
-            message, logger = self.getMessageAndLogger(function, args, kwargs)
-            logger.info(message)
+            message = self.getMessage(function, args, kwargs)
+            self.logger.info(message)
             return function(*args, **kwargs)
         # End of wrapped_function
 
@@ -228,8 +230,8 @@ class debug(LogDecorator):
         def wrapped_function(*args: tuple, **kwargs: dict) -> Any:
             """Returns the decorated function, which spews out the debug log message before it is called.
             """
-            message, logger = self.getMessageAndLogger(function, args, kwargs)
-            logger.debug(message)
+            message = self.getMessage(function, args, kwargs)
+            self.logger.debug(message)
             return function(*args, **kwargs)
         # End of wrapped_function
 
@@ -252,8 +254,8 @@ class trace(LogDecorator):
         def wrapped_function(*args: tuple, **kwargs: dict) -> Any:
             """Returns the decorated function, which spews out the trace log message before it is called.
             """
-            message, logger = self.getMessageAndLogger(function, args, kwargs)
-            logger.trace(message)
+            message = self.getMessage(function, args, kwargs)
+            self.logger.trace(message)
             return function(*args, **kwargs)
         # End of wrapped_function
 
