@@ -63,7 +63,7 @@ def train_epoch(model: RNNBase, epoch_num: int, train_accumulator: Accumulator, 
 
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
     train_step(model, epoch_num, current_state, train_accumulator)
-    validation_step(model, epoch_num, current_state, valid_accumulator)
+    validation_step(model, current_state, valid_accumulator)
 
     summarize(model, train_accumulator, valid_accumulator, epoch_num)
     model.logger.info("Finished epoch: %d | training_loss: %.2f | validation_loss: %.2f | validation_accuracy: %.2f" %
@@ -208,12 +208,11 @@ def update_accumulator(accumulator: Accumulator, dataset_partition: DataPartitio
 
 
 @debug()
-def validation_step(model: RNNBase, epoch_num: int, current_state: np.array, accumulator: Accumulator):
+def validation_step(model: RNNBase, current_state: np.array, accumulator: Accumulator):
     """Performs performance calculations on the dataset's validation partition.
 
     Params:
     - model (model.RNNBase): The model to train
-    - epoch_num (int): The number of the current epoch
     - current_state (np.array): The current state of the hidden layer
     - accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
     """

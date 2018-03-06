@@ -210,7 +210,6 @@ class RNNBase(object):
     # End of hidden_layer()
 
     @abc.abstractmethod
-    @debug()
     def input_layer(self) -> tf.Tensor:
         """
         Creates the tensorflow variables and operations needed to perform the embedding lookup.
@@ -246,6 +245,7 @@ class BasicRNN(RNNBase):
     @see RNNBase
     """
 
+    @debug()
     def input_layer(self) -> tf.Tensor:
         """
         @see RNNBase.input_layer
@@ -275,6 +275,7 @@ class MultiFeatureRNN(RNNBase):
     @see RNNBase
     """
 
+    @debug()
     def output_layer(self):
         """
         @see RNNBase.output_layer
@@ -304,6 +305,7 @@ class MultiFeatureRNN(RNNBase):
         return logits_series
     # End of output_layer()
 
+    @debug()
     def hidden_layer(self):
         """
         @see RNNBase.hidden_layer
@@ -329,6 +331,7 @@ class MultiFeatureRNN(RNNBase):
         return states_series, hidden_size
     # End of hidden_layer()
 
+    @debug()
     def input_layer(self):
         """
         @see RNNBase.input_layer
