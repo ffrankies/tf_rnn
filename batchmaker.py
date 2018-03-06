@@ -203,8 +203,8 @@ def get_pad_token(data: list, pad_token: Any) -> Any:
     if not data or not data[0] or not data[0][1]:
         return data
     data_item = data[0][1][0]
-    if isinstance(data_item, tuple) or isinstance(data_item, list):
-        if not (isinstance(pad_token, tuple) or isinstance(pad_token, list)):
+    if isinstance(data_item, (tuple, list)):
+        if not isinstance(pad_token, (tuple, list)):
             pad_token = [pad_token for item in data_item]
     return pad_token
 # End of get_pad_token()
