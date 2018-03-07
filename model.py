@@ -66,6 +66,7 @@ class RNNBase(object):
     - batch_sizes (tf.placeholder): The placeholder for the actual size of each sequence in the input minibatch
     - hidden_state_placeholder (tf.placeholder): The placeholder for the hidden state of the model
     - hidden_state_shape (tf.placeholder): The shape of the hidden state placeholder
+    - dropout (tf.placeholder): The probability of keeping a weight when doing dropout
     - saver (saver.Saver): The object used for loading and saving the model's weights
     - run_dir (string): The directory in which the weights will be saved
     - summary_writer (tf.summary.FileWriter): The writer for the tensorboard events
@@ -200,7 +201,11 @@ class RNNBase(object):
                 name='batch_sizes')
             hidden_state, self.hidden_state_placeholder, self.hidden_state_shape = layered_state_tuple(
                 self.settings.rnn.layers, self.settings.train.batch_size, self.settings.rnn.hidden_size)
-            cell = rnn_cell(self.settings.rnn.layers, self.settings.rnn.hidden_size, self.settings.rnn.dropout)
+            self.dropout = tf.placeholder(
+                dtype=tf.float32,
+                shape=(),
+                name='dropout')
+            cell = rnn_cell(self.settings.rnn.layers, self.settings.rnn.hidden_size, self.dropout)
             states_series, self.current_state = tf.nn.dynamic_rnn(
                 cell=cell,
                 inputs=inputs_series,
@@ -322,7 +327,11 @@ class MultiFeatureRNN(RNNBase):
             hidden_size = self.settings.rnn.hidden_size * len(self.settings.rnn.input_names)
             hidden_state, self.hidden_state_placeholder, self.hidden_state_shape = layered_state_tuple(
                 self.settings.rnn.layers, self.settings.train.batch_size, hidden_size)
-            cell = rnn_cell(self.settings.rnn.layers, hidden_size, self.settings.rnn.dropout)
+            self.dropout = tf.placeholder(
+                dtype=tf.float32,
+                shape=(),
+                name='dropout')
+            cell = rnn_cell(self.settings.rnn.layers, hidden_size, self.dropout)
             states_series, self.current_state = tf.nn.dynamic_rnn(
                 cell=cell,
                 inputs=inputs_series,

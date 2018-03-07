@@ -118,7 +118,8 @@ def train_minibatch(model: RNNBase, batch_num: int, current_state: np.array, acc
 
 
 @trace()
-def get_feed_dict(model: RNNBase, dataset: DatasetBase, batch_num: int, current_state: np.array) -> dict:
+def get_feed_dict(model: RNNBase, dataset: DatasetBase, batch_num: int, current_state: np.array,
+                  training: bool = False) -> dict:
     """Obtains the information needed for running tensorflow operations as a feed dictionary.
 
     Params:
@@ -126,6 +127,7 @@ def get_feed_dict(model: RNNBase, dataset: DatasetBase, batch_num: int, current_
     - dataset (dataset.DataPartition): The dataset from which to extract the batch information
     - batch_num (int): The index of the batch in the dataset
     - current_state (np.array): The current hidden state of the RNN
+    - training (bool): Whether or not this batch is being trained on (default: False)
 
     Return:
     - feed_dict (dict): The dictionary holding the necessary information for running tensorflow operations
@@ -133,7 +135,7 @@ def get_feed_dict(model: RNNBase, dataset: DatasetBase, batch_num: int, current_
     batch = dataset.get_batch(batch_num)
     beginning = dataset.beginning[batch_num]
     current_state = reset_state(current_state, beginning)
-    feed_dict = build_feed_dict(model, batch, current_state)
+    feed_dict = build_feed_dict(model, batch, current_state, training)
     return feed_dict
 # End of get_feed_dict()
 
@@ -156,23 +158,29 @@ def reset_state(current_state: np.array, beginning: bool) -> np.array:
 
 
 @trace()
-def build_feed_dict(model: RNNBase, batch: int, current_state: np.array) -> dict:
+def build_feed_dict(model: RNNBase, batch: int, current_state: np.array, training: bool = False) -> dict:
     """Builds a dictionary to feed into the model for performing tensorflow operations.
 
     Params:
     - model (model.RNNBase): The model for which to build the feed dictionary
     - batch (tuple): Contains the inputs, outputs and sizes of the current batch
     - current_state (np.array): The current hidden state of the RNN
+    - training (bool): Whether or not this batch is being trained on (default: False)
 
     Return:
     - feed_dict (dict): The dictionary built out of the provided batch and current state
     """
     x, y, sizes = batch
+    if training:
+        dropout = model.settings.rnn.dropout
+    else:
+        dropout = 1.0
     feed_dict = {
         model.batch_x_placeholder: x,
         model.batch_y_placeholder: y,
         model.batch_sizes: sizes,
-        model.hidden_state_placeholder: current_state
+        model.hidden_state_placeholder: current_state,
+        model.dropout: dropout
         }
     return feed_dict
 # End of build_feed_dict()
