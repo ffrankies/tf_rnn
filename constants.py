@@ -1,11 +1,11 @@
 '''
 Contains constants for use within the project.
-@since 0.4.3
+
+@since 0.5.0
 '''
 
 import time
 import math
-import logging
 
 ##########################################
 # TOKENS
@@ -122,14 +122,16 @@ ADD_START_TOKEN_STR = 'add_start_token'
 ADD_END_TOKEN_STR = 'add_end_token'
 
 #########################################
+# LOGGING LEVELS
+#########################################
+ERROR = 'Error'
+INFO = 'Info'
+DEBUG = 'Debug'
+TRACE = 'Trace'
+
+#########################################
 # ARG CHOICES
 #########################################
-LOG_LEVELS = {
-    'critical' : logging.CRITICAL,
-    'error' : logging.ERROR,
-    'info' : logging.INFO,
-    'debug' : logging.DEBUG
-    }
 TYPE_CHOICES = ['text', 'number']
 MODE_CHOICES = ['sentences', 'paragraphs', 'stories']
 TOKEN_LEVEL_CHOICES = ['words', 'characters']
@@ -169,7 +171,7 @@ DATASET_NAME = 'stories.pkl'
 SOURCE_TYPE = 'csv'
 VOCAB_SIZE = None
 NUM_ROWS = math.inf
-NUM_EXAMPLES = None # list[:None] returns all elements in list
+NUM_EXAMPLES = None  # list[:None] returns all elements in list
 TYPE = TYPE_CHOICES[0]
 MODE = MODE_CHOICES[0]
 TOKEN_LEVEL = TOKEN_LEVEL_CHOICES[0]
@@ -180,40 +182,45 @@ ADD_END_TOKEN = False
 # ARG DEFAULTS
 #########################################
 GENERAL_ARGS = {
-    MODEL_NAME_STR : MODEL_NAME,
-    NEW_MODEL_STR : NEW_MODEL,
-    BEST_MODEL_STR : BEST_MODEL }
+    MODEL_NAME_STR: MODEL_NAME,
+    NEW_MODEL_STR: NEW_MODEL,
+    BEST_MODEL_STR: BEST_MODEL
+    }
 LOGGING_ARGS = {
-    LOG_NAME_STR : LOG_NAME,
-    LOG_DIR_STR : LOG_DIR,
-    LOG_FILENAME_STR : LOG_FILENAME,
-    LOG_LEVEL_STR : LOG_LEVEL }
+    LOG_NAME_STR: LOG_NAME,
+    LOG_DIR_STR: LOG_DIR,
+    LOG_FILENAME_STR: LOG_FILENAME,
+    LOG_LEVEL_STR: LOG_LEVEL
+    }
 RNN_ARGS = {
-    DATASET_STR : DATASET,
-    EMBED_SIZE_STR : EMBED_SIZE,
-    HIDDEN_SIZE_STR : HIDDEN_SIZE,
-    LAYERS_STR : LAYERS,
-    DROPOUT_STR : DROPOUT,
-    NUM_FEATURES_STR : NUM_FEATURES,
-    INPUT_NAMES_STR : INPUT_NAMES,
-    SHUFFLE_SEED_STR : SHUFFLE_SEED }
+    DATASET_STR: DATASET,
+    EMBED_SIZE_STR: EMBED_SIZE,
+    HIDDEN_SIZE_STR: HIDDEN_SIZE,
+    LAYERS_STR: LAYERS,
+    DROPOUT_STR: DROPOUT,
+    NUM_FEATURES_STR: NUM_FEATURES,
+    INPUT_NAMES_STR: INPUT_NAMES,
+    SHUFFLE_SEED_STR: SHUFFLE_SEED
+    }
 TRAIN_ARGS = {
-    BATCH_SIZE_STR : BATCH_SIZE,
-    PATIENCE_STR : PATIENCE,
-    LEARN_RATE_STR : LEARN_RATE,
-    EPOCHS_STR : EPOCHS,
-    ANNEAL_STR : ANNEAL,
-    TRUNCATE_STR : TRUNCATE }
+    BATCH_SIZE_STR: BATCH_SIZE,
+    PATIENCE_STR: PATIENCE,
+    LEARN_RATE_STR: LEARN_RATE,
+    EPOCHS_STR: EPOCHS,
+    ANNEAL_STR: ANNEAL,
+    TRUNCATE_STR: TRUNCATE
+    }
 DATA_ARGS = {
     # Config file not added here because it's not needed to create the dataset
-    RAW_DATA_STR : RAW_DATA,
-    DATASET_NAME_STR : DATASET_NAME,
-    SOURCE_TYPE_STR : SOURCE_TYPE,
-    VOCAB_SIZE_STR : VOCAB_SIZE,
-    NUM_ROWS_STR : NUM_ROWS,
-    NUM_EXAMPLES_STR : NUM_EXAMPLES,
-    TYPE_STR : TYPE,
-    MODE_STR : MODE,
-    TOKEN_LEVEL_STR : TOKEN_LEVEL,
-    ADD_START_TOKEN_STR : ADD_START_TOKEN,
-    ADD_END_TOKEN_STR : ADD_END_TOKEN }
+    RAW_DATA_STR: RAW_DATA,
+    DATASET_NAME_STR: DATASET_NAME,
+    SOURCE_TYPE_STR: SOURCE_TYPE,
+    VOCAB_SIZE_STR: VOCAB_SIZE,
+    NUM_ROWS_STR: NUM_ROWS,
+    NUM_EXAMPLES_STR: NUM_EXAMPLES,
+    TYPE_STR: TYPE,
+    MODE_STR: MODE,
+    TOKEN_LEVEL_STR: TOKEN_LEVEL,
+    ADD_START_TOKEN_STR: ADD_START_TOKEN,
+    ADD_END_TOKEN_STR: ADD_END_TOKEN
+    }
