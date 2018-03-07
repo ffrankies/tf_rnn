@@ -164,5 +164,6 @@ def plot_confusion_matrix(directory: str, confusion_matrix: list, indexer: Index
     plot.xaxis.set(ticks=np.arange(0.5, num_used_labels), ticklabels=labels)
     plt.xticks(rotation=90)
 
+    figure.tight_layout()
     figure.savefig(directory + constants.PLT_CONFUSION_MATRIX)
 # End of plot_confusion_matrix()
