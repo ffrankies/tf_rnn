@@ -302,7 +302,6 @@ def performance_eval(model: RNNBase, epoch_num: int, accumulator: Accumulator):
 
 
 @debug('Evaluating model\'s performance on test partition')
-@debug()
 def test_step(model: RNNBase, accumulator: Accumulator):
     """
     Finds the performance of the trained model on the testing partition of the dataset. Used as the definitive
@@ -315,8 +314,6 @@ def test_step(model: RNNBase, accumulator: Accumulator):
     """
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
     for batch_num in range(model.dataset.test.num_batches):
-        # Debug log outside of function to reduce number of arguments.
-        model.logger.debug("Testing minibatch : %d" % batch_num)
         current_state = validate_minibatch(model, model.dataset.test, batch_num, current_state, accumulator)
 # End of test_step()
 
