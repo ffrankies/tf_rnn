@@ -4,6 +4,7 @@ Copyright (c) 2017-2018 Frank Derry Wanye
 
 @since 0.5.0
 """
+import numpy as np
 
 
 class Indexer(object):
@@ -53,6 +54,7 @@ class Indexer(object):
         - indexes (list): The lsit of indexes to convert into tokens
         - feature_index (int): The index of the feature to which the index belongs. Defaults to 0
         """
+        # print('Tokenizing {} with feature_index = {}'.format(indexes, feature_index))
         if feature_index >= self.num_features:
             raise ValueError('The feature_index was > number of features: %d > %d' %
                              (feature_index, self.num_features))
@@ -62,6 +64,33 @@ class Indexer(object):
             tokens = [self.to_token(index, feature_index) for index in indexes]
         return tokens
     # End of to_tokens()
+
+    def to_tokens_array(self, indexes_array, features_present=[0]):
+        """Converts an array of indexes into an array of tokens.
+
+        Params:
+        - indexes_array (ndarray<int>): The lsit of indexes to convert into tokens
+        - features_present (list<int>): The indexes of the features present in the array. Defaults to [0]
+        """
+        indexes = np.array(indexes_array)
+        if len(features_present) > 1:
+            print('Indexes before split: ', indexes[0])
+            indexes = np.split(indexes, len(features_present), -1)
+            indexes = [np.squeeze(index) for index in indexes]
+            print('Try: ', self.index_to_token[2][8])
+            print('Split indexes[0]: ', indexes[0][0])
+            print('Split indexes[1]: ', indexes[1][0])
+            print('Split indexes[2]: ', indexes[2][0])
+            print('Num split indexes: ', len(indexes))
+            for feature_index in features_present:
+                indexes[feature_index] = np.apply_along_axis(self.to_tokens, 0, indexes[feature_index], feature_index)
+            indexes = np.stack(indexes, -1)
+            indexes = np.squeeze(indexes)
+            print('Indexes after tokenization: ', indexes[3])
+        else:
+            indexes = np.apply_along_axis(self.to_tokens, 0, indexes)
+        return indexes
+    # End of to_tokens_array()
 
     def to_index(self, token, feature_index=0):
         """Converts a single token into an index.
