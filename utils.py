@@ -6,7 +6,6 @@
 import os
 from typing import Any
 
-from . import settings
 from . import constants
 
 
@@ -58,8 +57,6 @@ def create_model_dir(model_name: str = None):
     Return:
     - model_path (str): The path to the created directory
     """
-    if not model_name:
-        model_name = settings.Settings().general.model_name  # pylint: disable=E1101
     model_path = constants.MODEL_DIR + model_name + '/'
     create_directory(model_path)
     return model_path

@@ -11,7 +11,7 @@ from typing import Callable, Any
 from functools import wraps
 
 from . import constants
-from .utils import create_model_dir, create_directory, Singleton
+from .utils import create_directory, Singleton
 
 
 class Logger(object, metaclass=Singleton):
@@ -35,11 +35,8 @@ class Logger(object, metaclass=Singleton):
         Params:
         - log_directory (str): The path to the directory where the logs should be stored
         """
-        if log_directory:
-            create_directory(log_directory)
-        else:
-            log_directory = create_model_dir()
-
+        print("initting with log_dir = ", log_directory)
+        create_directory(log_directory)
         self.error_logger = self.create_logger(constants.ERROR, log_directory)
         self.info_logger = self.create_logger(constants.INFO, log_directory)
         self.debug_logger = self.create_logger(constants.DEBUG, log_directory)
@@ -139,8 +136,6 @@ class LogDecorator(object):
         """
         self.message = message
         self.logger = logger
-        if self.logger is None:
-            self.logger = Logger()
     # End of __init__()
 
     def getMessage(self, function: Callable, *args: tuple, **kwargs: dict) -> tuple:
@@ -155,6 +150,8 @@ class LogDecorator(object):
         Returns:
         - message (str): The message to log
         """
+        if self.logger is None:
+            self.logger = Logger()
         if self.message:
             message = self.message
         else:  # Use function definition as message

@@ -36,7 +36,7 @@ def plot(model: RNNBase, train_accumulator: Accumulator, valid_accumulator: Accu
     directory = model.saver.meta.latest()[constants.DIR]
     plot_training_loss(directory, train_accumulator.losses, valid_accumulator.losses)
     plot_training_accuracy(directory, train_accumulator.accuracies, valid_accumulator.accuracies)
-    plot_timestep_accuracy(directory, test_accumulator.latest_timestep_accuracies)
+    plot_timestep_accuracy(directory, test_accumulator)
     plot_confusion_matrix(directory, test_accumulator.latest_confusion_matrix, model.dataset.indexer)
 # End of plot()
 
@@ -100,7 +100,7 @@ def plot_training_accuracy(directory: str, training_accuracy: list, validation_a
 
 
 @trace()
-def plot_timestep_accuracy(directory: str, timestep_accuracy: list, timestep_labels: list = None):
+def plot_timestep_accuracy(directory: str, accumulator: Accumulator, timestep_labels: list = None):
     """Plots the average accuracy for each timestep as a bar chart.
 
     Params:
@@ -108,10 +108,12 @@ def plot_timestep_accuracy(directory: str, timestep_accuracy: list, timestep_lab
     - timestep_accuracy (list): The average accuracy of predictions for each timestep
     - timestep_labels (list): The labels for the timesteps
     """
-    if timestep_accuracy is None:
+    if accumulator.latest_timestep_accuracies is None:
         return
-    figure, plot = setup_plot('Avg. Accuracy at Each Timestep', 'Timestep', 'Avg. Accuracy')
-    timestep_accuracy = [ratio * 100.0 for ratio in timestep_accuracy]
+    figure, plot = setup_plot(
+        "Avg. Accuracy at Each Timestep\nAvg. Overall Accuracy = {:.2f}".format(accumulator.best_accuracy), 
+        'Timestep', 'Avg. Accuracy')
+    timestep_accuracy = [ratio * 100.0 for ratio in accumulator.latest_timestep_accuracies]
     plot.set_ylim(0, 120)
     bar_chart = plot.bar(range(1, len(timestep_accuracy) + 1), timestep_accuracy)
 
