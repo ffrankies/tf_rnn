@@ -34,9 +34,9 @@ def run():
     - the end token
     '''
     settings_obj = get_settings()
-    logger = setup.setup_logger(settings_obj.logging, settings_obj.logging.log_dir)
+    logger = setup.setup_logger(settings_obj.logging, settings_obj.logging.log_dir)  # pylint: disable=E1101
     save_dataset(logger, settings_obj.data)
-    load_dataset(logger, settings_obj.data.dataset_name)
+    load_dataset(logger, settings_obj.data.dataset_name)  # pylint: disable=E1101
 # End of run()
 
 def get_settings(dataset_only=False):
@@ -365,7 +365,7 @@ def create_vocabulary(logger, settings, data):
     Return:
     - vocabulary (list): The most common vocabulary words in the tokenized data
     '''
-    logger.info('Obtaining word frequency disribution.')
+    logger.info('Obtaining word frequency distribution.')
     word_freq = nltk.FreqDist(itertools.chain(*data))
     logger.info("Found %d unique words." % len(word_freq.items()))
 
@@ -398,7 +398,7 @@ def create_training_data(logger, settings, data, token_to_index):
       - labels (list): The training labels (outputs)
     '''
     if type(data[0][0]) is str: # Currently not needed for other types of data
-        logger.info('Replace all words not in vocabulary with unkown token.')
+        logger.info('Replace all words not in vocabulary with unknown token.')
         for index, sentence in enumerate(data):
             data[index] = [word if word in token_to_index else constants.UNKNOWN for word in sentence]
 
@@ -461,7 +461,7 @@ def load_dataset(logger, dataset):
         token_level = data[1]
         vocabulary = data[2]
         index_to_token = data[3]
-        token_to_index = data[4]
+        # token_to_index = data[4]
         x_train = data[5]
         y_train = data[6]
 
