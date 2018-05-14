@@ -36,6 +36,10 @@ class Logger(object, metaclass=Singleton):
         - log_directory (str): The path to the directory where the logs should be stored
         """
         print("initting with log_dir = ", log_directory)
+        
+        if log_directory[-1] != '/':
+            log_directory += '/'
+            
         create_directory(log_directory)
         self.error_logger = self.create_logger(constants.ERROR, log_directory)
         self.info_logger = self.create_logger(constants.INFO, log_directory)
@@ -52,7 +56,7 @@ class Logger(object, metaclass=Singleton):
         """
         logger = logging.getLogger(severity_level)
         logger.setLevel(logging.INFO)  # Doesn't matter, so long as it logs to the same file
-
+        
         # Logger will use up to 5 files for logging, 'rotating' the data between them as they get filled up.
         handler = logging.handlers.RotatingFileHandler(
             filename=log_directory+severity_level+'.log',
