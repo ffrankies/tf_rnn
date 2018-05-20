@@ -41,17 +41,54 @@ SIZES = SIZES_COMBINED_SCRAMBLED_BATCHES_4
 # Accumulator tests
 #
 
+def make_data_list(batch, size, loss, accuracy, t_accuracy):
+    """Creates the data for updating an accumulator.
+    """
+    max_size = max(size)
+    t_size = [0] * max_size
+    for i in size:
+        for index, j in enumerate(range(i)):
+            t_size[index] += 1
+    print('t_size = ', t_size)
+    data = [
+        loss,  # loss
+        accuracy,  # accuracy
+        sum(size),  # number of elements in batch
+        t_accuracy,  # timestep accuracies
+        t_size,  # timestep lengths
+        batch,  # predictions
+        batch,  # labels
+        size  # length of each sequence
+    ]
+    return data
+# End of make_data_list()
+
+
 class TestAppendBatchToAccumulator():
     def test_should_correctly_append_batch_to_empty_performance_data(self):
-        shape = np.shape(PADDED_SCRAMBLED_BATCHES_4[0])
-        var = Accumulator(LOGGER, MAX_LENGTH)
-        batch = PADDED_SCRAMBLED_BATCHES_4[0]
-        sizes = SIZES_TRUNCATED_SCRAMBLED_BATCHES_4[0][1:-1]
-        var.append_batch(batch, batch, sizes)
-        var.next_epoch()
-        assert var.inputs == PADDED_SCRAMBLED_BATCHES_4[0]
-        assert var.labels == PADDED_SCRAMBLED_BATCHES_4[0]
-        assert var.sizes == SIZES_TRUNCATED_SCRAMBLED_BATCHES_4[0][1:-1]
+        batches = PADDED_SCRAMBLED_BATCHES_4[:2]
+        print(batches[1])
+        sizes = SIZES_TRUNCATED_SCRAMBLED_BATCHES_4[:2]
+        accumulator = Accumulator(LOGGER, MAX_LENGTH)
+        # beginning = SIZES_TRUNCATED_SCRAMBLED_BATCHES_4[0][0]
+        # ending = SIZES_TRUNCATED_SCRAMBLED_BATCHES_4[0][-1]
+        data = make_data_list(batches[0], sizes[0], 0.2, 0.5, [0.5 for t in range(max(sizes[0]))])
+        accumulator.update(data, True, False)
+        data = make_data_list(batches[1], sizes[1], 0.2, 0.5, [0.5 for t in range(max(sizes[1]))])
+        accumulator.update(data, False, True)
+        accumulator.next_epoch()
+        assert accumulator.loss == 0.0
+        assert accumulator.accuracy == 0.0
+        assert accumulator.elements == 0
+        assert not accumulator.timestep_accuracies
+        assert not accumulator.timestep_elements
+        assert accumulator.confusion_matrix.is_empty()
+        assert accumulator.losses == [0.2]
+        assert accumulator.accuracies == [0.5]
+        assert accumulator.best_accuracy == 0.5
+        assert accumulator.is_best_accuracy
+        assert accumulator.latest_timestep_accuracies == [0.5] * MAX_LENGTH
+        assert not accumulator.latest_confusion_matrix.is_empty()
     
 class TestExtendAccumulatorWithBatch():
     def test_should_raise_value_error_if_sizes_dont_match(self):
