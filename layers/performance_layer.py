@@ -1,6 +1,6 @@
 '''
 Contains functions for setting up the performance evaluation layer for a tensorflow-based RNN.
-@since 0.4.4
+@since 0.5.1
 '''
 import tensorflow as tf
 import numpy as np
