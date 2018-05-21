@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Fixed out-of-date accumulator tests.
+- Fixed out-of-date batchmaker tests.
 - Fixed running average calculation error in accumulator - initial average is now the average of the first batch, not 0.
 
 ## Format
