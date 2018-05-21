@@ -105,29 +105,29 @@ class TestPadBatches():
 
 class TestMakeBatches():
     def test_should_do_nothing_when_data_is_empty(self):
-        x_batches, y_batches, lengths = make_batches([], [], 2, 4, PAD)
+        x_batches, y_batches, lengths = make_batches([], [], 2, 4, PAD, PAD)
         assert x_batches.tolist() == []
         assert y_batches.tolist() == []
         assert lengths == []
 
     def test_should_raise_value_error_when_batch_size_is_less_than_one(self):
         with pytest.raises(ValueError):
-            make_batches([], [], -1, 4, PAD)
+            make_batches([], [], -1, 4, PAD, PAD)
 
     def test_should_not_raise_value_error_when_batch_size_is_one(self):
-        make_batches([], [], 1, 4, PAD)
+        make_batches([], [], 1, 4, PAD, PAD)
         pass
 
     def test_should_raise_value_error_when_truncate_is_less_than_one(self):
         with pytest.raises(ValueError):
-            make_batches([], [], 2, -1, PAD)
+            make_batches([], [], 2, -1, PAD, PAD)
 
     def test_should_not_raise_value_error_when_truncate_is_one(self):
-        make_batches([], [], 2, 1, PAD)
+        make_batches([], [], 2, 1, PAD, PAD)
         pass
 
     def test_should_correctly_create_batches(self):
-        x_batches, y_batches, lengths = make_batches(SCRAMBLED_DATA, SORTED_DATA, 2, 4, PAD)
+        x_batches, y_batches, lengths = make_batches(SCRAMBLED_DATA, SORTED_DATA, 2, 4, PAD, PAD)
         for batch in x_batches:
             for example in batch:
                 assert len(example) == 4
