@@ -286,3 +286,5 @@ PADDED_SORTED_BATCHES_3_4 = [
         [PAD, PAD, PAD, PAD]
     ]
 ]
+
+MAX_LENGTH = 8
