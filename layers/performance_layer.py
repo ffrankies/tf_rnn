@@ -179,7 +179,7 @@ class Accumulator(object):
         - timestep_accuracies (list<float>): The incoming timestep accuracies
         - timestep_elements (list<int>): The incoming timestep lengths
         """
-        for index in range(len(timestep_accuracies)):
+        for index, _ in enumerate(timestep_accuracies):
             old_avg = self.timestep_accuracies[index]
             old_num = self.timestep_elements[index]
             new_avg = timestep_accuracies[index]
