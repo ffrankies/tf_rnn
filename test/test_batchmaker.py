@@ -2,8 +2,21 @@ import pytest
 from ..batchmaker import *
 from ..logger import Logger
 from .test_data import *
+import shutil
 
 Logger('test-Logger')
+
+def setup_module(module):
+    """Initializes logger with a log directory, so the batchmaker class does not break on logger initialization.
+    """
+    Logger('test-Logger')
+
+
+def teardown_module(module):
+    """Deletes the test-Logger directory after tests have completed.
+    """
+    shutil.rmtree('./test-Logger')
+
 
 class TestSortByLength():
     def test_should_not_change_data_when_it_is_empty(self):
@@ -66,7 +79,7 @@ class TestTruncateBatches():
         assert truncate_batches(BATCHED_SORTED_DATA_3, 4) == TRUNCATED_SORTED_BATCHES_3_4
         assert truncate_batches(BATCHED_SORTED_DATA_2, 4) == TRUNCATED_SORTED_BATCHES_4
 
-class TestGetRowLenghts():
+class TestGetRowLengths():
     def test_should_return_empty_list_when_data_is_empty(self):
         assert get_row_lengths([]) == []
 
