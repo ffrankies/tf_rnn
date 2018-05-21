@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Separate performance_layer.py into multiple python modules.
 - Use underscores to declare private variables and methods.
 
-## 0.4.4 - 2018-05-21
+## 0.5.1 - 2018-05-21
 
 ### Added
 
