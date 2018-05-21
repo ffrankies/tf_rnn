@@ -1,6 +1,9 @@
 import pytest
 from ..batchmaker import *
+from ..logger import Logger
 from .test_data import *
+
+Logger('test-Logger')
 
 class TestSortByLength():
     def test_should_not_change_data_when_it_is_empty(self):
