@@ -4,8 +4,6 @@ from ..logger import Logger
 from .test_data import *
 import shutil
 
-Logger('test-Logger')
-
 def setup_module(module):
     """Initializes logger with a log directory, so the batchmaker class does not break on logger initialization.
     """
