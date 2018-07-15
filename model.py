@@ -25,18 +25,19 @@ from .layers.hidden_layer import layered_state_tuple, rnn_cell
 from .layers.performance_layer import average_loss, performance_ops, PerformancePlaceholders
 
 
-def create_model(settings):
+def create_model(settings, dataset):
     """
-    Creates a model of the given type.
+    Creates a model of the given type.ls
 
     Params:
-    - model_type (string): The type of the model to create
+    - settings (SettingsNamespace): The RNN settings
+    - dataset (DatasetBase): The dataset to be used. Defaults to None, in which case a SimpleDataset is created
     """
     print(settings)
     if settings.rnn.num_features > 1 or len(settings.rnn.input_names) > 1:
-        rnn_model = MultiFeatureRNN(model_settings=settings)
+        rnn_model = MultiFeatureRNN(model_settings=settings, model_dataset=dataset)
     else:
-        rnn_model = BasicRNN(model_settings=settings)
+        rnn_model = BasicRNN(model_settings=settings, model_dataset=dataset)
     return rnn_model
 # End of create_model()
 
