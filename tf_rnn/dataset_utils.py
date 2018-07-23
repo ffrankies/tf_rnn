@@ -1,26 +1,24 @@
-'''
-Utility class for creating, saving and loading datasets.
+"""Utility class for creating, saving and loading datasets.
+@since: 0.5.0
+"""
 
-Date: 16 February, 2018
-'''
+import re  # regex library for re.split()
+import csv
+import itertools
+import logging
+import logging.handlers
+import argparse
+
+import dill
+import nltk
+
+import constants
+import settings
+
 
 # Specify documentation format
 __docformat__ = 'restructedtext en'
 
-import dill
-import re #regex library for re.split()
-import os
-import io
-# import operator
-import csv
-import itertools
-import nltk
-import logging
-import logging.handlers
-import argparse
-from . import constants
-from . import setup
-from . import settings
 
 def run():
     '''

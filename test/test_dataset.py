@@ -1,5 +1,7 @@
 import pytest
-from ..dataset import *
+
+from tf_rnn.dataset import *
+
 
 INPUT_PLACEHOLDER = 1
 OUTPUT_PLACEHOLDER = 2

@@ -1,8 +1,13 @@
+"""Tests for tf_rnn.batchmaker.
+"""
 import pytest
-from ..batchmaker import *
-from ..logger import Logger
-from .test_data import *
 import shutil
+
+from tf_rnn.batchmaker import *
+from tf_rnn.logger import Logger
+
+from .test_data import *
+
 
 def setup_module(module):
     """Initializes logger with a log directory, so the batchmaker class does not break on logger initialization.

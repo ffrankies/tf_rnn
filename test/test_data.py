@@ -1,5 +1,4 @@
-"""
-Data for testing.
+"""Data for testing.
 """
 
 PAD = 99
