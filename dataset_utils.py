@@ -401,13 +401,17 @@ def create_training_data(logger, settings, data, token_to_index):
         logger.info('Replace all words not in vocabulary with unknown token.')
         for index, sentence in enumerate(data):
             data[index] = [word if word in token_to_index else constants.UNKNOWN for word in sentence]
-
+    print('Passed if statement')
     logger.info('Creating training data.')
     data = tokens_to_indexes(logger, data, token_to_index)
+    print('Converted tokens to indexes')
     x_train = [item[:-1] for item in data]
+    print('Got training data')
     y_train = [item[1:] for item in data]
+    print('Got training labels')
     if (type(y_train[0][0]) is tuple) or (type(y_train[0][0]) is list):
         y_train = [[word[0] for word in row] for row in y_train] # Training labels only have one outcome
+    print('Only locations in labels')
     return x_train, y_train
 # End of create_training_data()
 
