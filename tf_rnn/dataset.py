@@ -1,19 +1,20 @@
 """An object for storing a dataset for training.
-@since 0.4.3
+
+@since 0.6.0
 """
 import random
 import math
 from typing import Any
 
-import dataset_utils
-import batchmaker
-import constants
-import indexer
-from logger import info, debug, trace
+from . import dataset_utils
+from . import batchmaker
+from . import constants
+from . import indexer
+from .logger import info, debug, trace
 
 # These variables are only imported for type hinting
-from logger import Logger
-from settings import SettingsNamespace
+from .logger import Logger
+from .settings import SettingsNamespace
 
 
 class DataPartition(object):

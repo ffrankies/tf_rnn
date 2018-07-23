@@ -1,15 +1,15 @@
 """
 A Python3 collection of Namespaces for the different model settings.
 
-@since 0.5.0
+@since 0.6.0
 """
-
-import yaml
 import argparse  # I want to see if I can get rid of this - it's only use is type hinting
 
-from .utils import Singleton
-from . import setup
+import yaml
+
 from . import constants
+from . import cmd_arg_parser
+from .utils import Singleton
 
 
 class SettingsNamespace(object):
@@ -39,7 +39,7 @@ class Settings(object, metaclass=Singleton):
     def __init__(self, dataset_only: bool = False):
         """Creates the Settings class.
         The class is created from the provided config file if it is supplied.
-        If 'options' is passed in as a command-line argument, then the class is created from the command-line 
+        If 'options' is passed in as a command-line argument, then the class is created from the command-line
         arguments passed into it.
 
         Params:
@@ -78,7 +78,7 @@ class Settings(object, metaclass=Singleton):
         Return:
         - config_dicts (tuple): Separate dictionaries for each configuration category.
         """
-        args = setup.parse_arguments(dataset_only)
+        args = cmd_arg_parser.parse_arguments(dataset_only)
         if 'config_file' in args and args.config_file is not None:
             config_dicts = self.parse_config_yml(args.config_file)
             config_dicts = self.set_defaults(config_dicts)

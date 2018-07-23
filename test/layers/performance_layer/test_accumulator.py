@@ -1,8 +1,10 @@
+"""Test for the accumulator module.
+"""
 import pytest
 import logging
 import numpy as np
 
-from ....layers.performance_layer import *
+from tf_rnn.layers.performance_layer import *
 from ...test_data import *
 
 LOGGER = logging.getLogger('TEST')

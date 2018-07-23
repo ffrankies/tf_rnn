@@ -8,7 +8,7 @@ import os
 import dill
 
 from . import constants
-from . import setup
+from . import utils
 
 from .utils import create_model_dir
 from .layers.performance_layer import Metrics
@@ -76,7 +76,7 @@ class MetaInfo(object):
         self.run += 1
         latest = self.latest()
         latest[constants.DIR] = self.model_path + 'run_' + str(self.run) + '/'
-        setup.create_dir(latest[constants.DIR])
+        utils.create_directory(latest[constants.DIR])
         metrics = Metrics(logger, max_length)
         self.update((-1, metrics))
     # End of increment_run()

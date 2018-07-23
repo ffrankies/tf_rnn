@@ -3,7 +3,7 @@ The batches are converted into numpy arrays towards the end for them to play nic
 (i.e. avoid the "ValueError: setting an array element with a sequence" error)
 
 Copyright (c) 2017-2018 Frank Derry Wanye
-@since 0.5.0
+@since 0.6.0
 """
 import math
 
@@ -81,7 +81,7 @@ def group_into_batches(data: list, batch_size: int) -> list:
     for item in data:
         batched_data_item = [item[i:i+batch_size] for i in range(0, len(item), batch_size)]
         if len(batched_data_item) is not 0:
-            while(len(batched_data_item[-1]) < batch_size):
+            while len(batched_data_item[-1]) < batch_size:
                 batched_data_item[-1].append([])
         batched_data.append(batched_data_item)
     return batched_data
@@ -145,7 +145,8 @@ def truncate_batch(index: int, last_index: int, truncate: int, batch: list) -> l
 
 @trace()
 def get_row_lengths(data: list) -> list:
-    """Returns the lengths of every row in the given data. The data must be arranged in batches or the function will fail.
+    """Returns the lengths of every row in the given data. The data must be arranged in batches or the function will
+    fail.
 
     Params:
     - data (list): The list of data (arranged in batches) whose length is to be found
