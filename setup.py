@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tf_rnn",
-    version="0.5.0",
+    version="0.6.0",
     author="ffrankies",
     author_email="hahanotsharing",
     description="wanyef@mail.gvsu.edu",
