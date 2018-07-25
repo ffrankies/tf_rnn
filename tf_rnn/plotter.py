@@ -54,14 +54,14 @@ def setup_plot(title: str, x_label: str, y_label: str) -> tuple:
 
     Returns:
     - figure (matplotlib.figure.Figure): The figure containing the plot
-    - plot (matplotlib.axes.Axes): The plot axes
+    - axes (matplotlib.axes.Axes): The plot axes
     """
     plt.close('all')
-    figure, plot = plt.subplots()
-    plot.set_title(title)
-    plot.set_xlabel(x_label)
-    plot.set_ylabel(y_label)
-    return figure, plot
+    figure, axes = plt.subplots()
+    axes.set_title(title)
+    axes.set_xlabel(x_label)
+    axes.set_ylabel(y_label)
+    return figure, axes
 # End of setup_plot()
 
 
@@ -74,11 +74,11 @@ def plot_training_loss(directory: str, training_loss: list, validation_loss: lis
     - training_loss (list): The list of training losses
     - validation_loss (list): The list of validation losses
     """
-    figure, plot = setup_plot('Training Loss Over Time', 'Epoch', 'Loss')
+    figure, axes = setup_plot('Training Loss Over Time', 'Epoch', 'Loss')
     x = range(0, len(training_loss))
-    plot.plot(x, training_loss, label="Training Loss (final=%.2f)" % training_loss[-1])
-    plot.plot(x, validation_loss, label="Validation Loss (final=%.2f)" % validation_loss[-1])
-    plot.legend(loc='upper right')
+    axes.plot(x, training_loss, label="Training Loss (final=%.2f)" % training_loss[-1])
+    axes.plot(x, validation_loss, label="Validation Loss (final=%.2f)" % validation_loss[-1])
+    axes.legend(loc='upper right')
     figure.savefig(directory + constants.PLT_TRAIN_LOSS)
 # End of plot_training_loss()
 
@@ -92,11 +92,11 @@ def plot_training_accuracy(directory: str, training_accuracy: list, validation_a
     - training_accuracy (list): The list of training accuracies
     - validation_accuracy (list): The list of validation accuracies
     """
-    figure, plot = setup_plot('Training Accuracy Over Time', 'Epoch', 'Accuracy')
+    figure, axes = setup_plot('Training Accuracy Over Time', 'Epoch', 'Accuracy')
     x = range(0, len(training_accuracy))
-    plot.plot(x, training_accuracy, label="Training Accuracy (final=%.2f)" % training_accuracy[-1])
-    plot.plot(x, validation_accuracy, label="Validation Accuracy (final=%.2f)" % validation_accuracy[-1])
-    plot.legend(loc='lower right')
+    axes.plot(x, training_accuracy, label="Training Accuracy (final=%.2f)" % training_accuracy[-1])
+    axes.plot(x, validation_accuracy, label="Validation Accuracy (final=%.2f)" % validation_accuracy[-1])
+    axes.legend(loc='lower right')
     figure.savefig(directory + constants.PLT_TRAIN_ACCURACY)
 # End of plot_training_accuracy()
 
@@ -112,23 +112,23 @@ def plot_timestep_accuracy(directory: str, accumulator: Accumulator, timestep_la
     """
     if accumulator.latest_timestep_accuracies is None:
         return
-    figure, plot = setup_plot(
+    figure, axes = setup_plot(
         "Avg. Accuracy at Each Timestep\nAvg. Overall Accuracy = {:.2f}".format(accumulator.best_accuracy),
         'Timestep', 'Avg. Accuracy')
     timestep_accuracy = [ratio * 100.0 for ratio in accumulator.latest_timestep_accuracies]
-    plot.set_ylim(0, 120)
-    bar_chart = plot.bar(range(1, len(timestep_accuracy) + 1), timestep_accuracy)
+    axes.set_ylim(0, 120)
+    bar_chart = axes.bar(range(1, len(timestep_accuracy) + 1), timestep_accuracy)
 
     # Add labels to the bar chart
     for bar in bar_chart:
         x_pos = bar.get_x() + bar.get_width()/2.
         height = bar.get_height()
         y_pos = height + 5
-        plot.text(x_pos, y_pos, "%.1f" % height, ha='center', va='bottom', rotation=90)
+        axes.text(x_pos, y_pos, "%.1f" % height, ha='center', va='bottom', rotation=90)
 
     # Replace default labels with timestep_labels
     if timestep_labels is not None:
-        plot.xaxis.set(ticklabels=timestep_labels)
+        axes.xaxis.set(ticklabels=timestep_labels)
 
     figure.savefig(directory + constants.PLT_TIMESTEP_ACCURACY)
 # End of plot_timestep_accuracy()
@@ -146,7 +146,7 @@ def plot_confusion_matrix(directory: str, confusion_matrix: ConfusionMatrix, ind
     if confusion_matrix.is_empty():
         return  # Don't do anything if confusion matrix is empty
 
-    figure, plot = setup_plot('Predictions Breakdown', 'Prediction', 'Correct Label')
+    figure, axes = setup_plot('Predictions Breakdown', 'Prediction', 'Correct Label')
 
     # Get labels
     labels = confusion_matrix.all_labels()
@@ -160,12 +160,12 @@ def plot_confusion_matrix(directory: str, confusion_matrix: ConfusionMatrix, ind
     cell_size = 0.15  # size is in inches
     num_used_labels = len(labels)
     figure.set_size_inches(1.15*num_used_labels*cell_size, num_used_labels*cell_size)
-    grid = plot.pcolormesh(normalized_cm, cmap=plt.cm.YlGnBu)  # pylint: disable=E1101
+    grid = axes.pcolormesh(normalized_cm, cmap=plt.cm.YlGnBu)  # pylint: disable=E1101
     figure.colorbar(grid)
 
     # Center labels: credit to https://stackoverflow.com/a/24193138
-    plot.yaxis.set(ticks=np.arange(0.5, num_used_labels), ticklabels=labels)
-    plot.xaxis.set(ticks=np.arange(0.5, num_used_labels), ticklabels=labels)
+    axes.yaxis.set(ticks=np.arange(0.5, num_used_labels), ticklabels=labels)
+    axes.xaxis.set(ticks=np.arange(0.5, num_used_labels), ticklabels=labels)
     plt.xticks(rotation=90)
 
     figure.tight_layout()

@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Moved `Accumulator`, `ConfusionMatrix` and `Metrics` into separate submodules in `layers/utils/`.
 - `Accumulator.update()` now takes an `AccumulatorData` object as the `data` parameter, not a `list`.
+- Renamed `plot` to `axes` in `plotter` to avoid name collisions.
+
+### Removed
+
+- Tensorboard no longer logs average accuracy and test partition results, since those are available elsewhere.
 
 ### Fixed
 
