@@ -17,10 +17,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 
 - A `utils` sub-package under `layers/`.
+- The `AccumulatorData` object, a `namedtuple` for storing the data used to update the `Accumulator`.
+- The `ConfusionMatrix.performance_metrics()` method, for calculating accuracy, precision, recall and f1_score.
 
 ### Changed
 
 - Moved `Accumulator`, `ConfusionMatrix` and `Metrics` into separate submodules in `layers/utils/`.
+- `Accumulator.update()` now takes an `AccumulatorData` object as the `data` parameter, not a `list`.
+
+### Fixed
+
+- Some pylint warnings.
 
 ## 0.6.0
 

@@ -2,12 +2,18 @@
 
 @since 0.6.1
 """
+
+from collections import namedtuple
 from copy import deepcopy
 
 import numpy as np
 
 # The following imports are only used for type hinting
 from ...logger import Logger
+
+
+PerformanceMetrics = namedtuple('PerformanceMetrics', ['accuracy', 'precision', 'recall', 'f1_score'])
+
 
 class ConfusionMatrix(object):
     """An updatable confusion matrix.
@@ -99,8 +105,8 @@ class ConfusionMatrix(object):
         - normalized_confusion_matrix (list): A 2d array representation of the normalized confusion matrix
         """
         confusion_matrix = self.to_array()
-        sums = np.sum(confusion_matrix, axis=1) # Sum matrix along row
-        normalized_confusion_matrix = np.divide(confusion_matrix, sums[:, np.newaxis]) # Divide each value by row total
+        sums = np.sum(confusion_matrix, axis=1)  # Sum matrix along row
+        normalized_confusion_matrix = np.divide(confusion_matrix, sums[:, np.newaxis])  # Divide each value by row total
         return normalized_confusion_matrix
     # End of to_normalized_array()
 
@@ -125,4 +131,26 @@ class ConfusionMatrix(object):
         """
         return len(self.matrix) == 0
     # End of is_empty()
+
+    def performance_metrics(self) -> PerformanceMetrics:
+        """Calculates the performance metrics for this confusion matrix.
+
+        Returns:
+        - performance_metrics (PerformanceMetrics): The performance matrix for this confusion matrix
+        """
+        matrix = self.to_array()
+        matrix = np.array(matrix)
+        identity = np.identity(len(self.all_labels))
+        masked_matrix = matrix * identity
+        accuracy = np.sum(masked_matrix) / np.sum(matrix)
+        with np.errstate(divide='ignore'):
+            # recall = true positives / true positives + false negatives
+            recall = masked_matrix.sum(axis=0) / matrix.sum(axis=0)
+            # precision = true positives / true positives + false positives
+            precision = masked_matrix.sum(axis=1) / matrix.sum(axis=1)
+        recall = np.nan_to_num(recall).mean()
+        precision = np.nan_to_num(recall).mean()
+        f1_score = (2 * recall * precision) / (recall + precision)
+        return PerformanceMetrics(accuracy, precision, recall, f1_score)
+    # End of performance_matrix()
 # End of ConfusionMatrix()

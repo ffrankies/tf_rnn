@@ -13,7 +13,7 @@ from .logger import info, debug, trace
 # Only imported for type hints
 from .model import RNNBase
 from .dataset import DatasetBase, DataPartition
-from .layers.utils import Accumulator
+from .layers.utils import Accumulator, AccumulatorData
 
 
 @info('Training the model')
@@ -110,7 +110,6 @@ def train_minibatch(model: RNNBase, batch_num: int, current_state: np.array, acc
         [model.performance_ops, model.train_step_fun, model.current_state],
         feed_dict=current_feed_dict)
     performance_data = list(performance_data)
-    performance_data.extend([model.dataset.train.y[batch_num], model.dataset.train.sizes[batch_num]])
     update_accumulator(accumulator, model.dataset.train, batch_num, performance_data)
     return current_state
 # End of train_minibatch()
@@ -207,7 +206,9 @@ def update_accumulator(accumulator: Accumulator, dataset_partition: DataPartitio
       - labels (list): The labels for the minibatch
       - sequence_lengths (list): The list of lengths of each sequence in the minibatch
     """
-    accumulator.update(data=performance_data, ending=dataset_partition.ending[batch_num])
+    performance_data.extend([dataset_partition.y[batch_num], dataset_partition.sizes[batch_num]])
+    data = AccumulatorData._make(performance_data)
+    accumulator.update(data=data, ending=dataset_partition.ending[batch_num])
 # End of update_accumulator()
 
 

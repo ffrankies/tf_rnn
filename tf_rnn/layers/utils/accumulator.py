@@ -3,11 +3,17 @@
 @since 0.6.1
 """
 from copy import deepcopy
+from collections import namedtuple
 
 from .confusion_matrix import ConfusionMatrix
 
 # The following imports are only used for type hinting
 from ...logger import Logger
+
+
+AccumulatorData = namedtuple('AccumulatorData',
+                             ['loss', 'accuracy', 'size', 'timestep_accuracies', 'timestep_elements', 'predictions',
+                              'labels', 'sequence_lengths'])
 
 
 class Accumulator(object):
@@ -55,30 +61,21 @@ class Accumulator(object):
         self._reset_metrics()
     # End of __init__()
 
-    def update(self, data: list, ending: bool):
+    def update(self, data: AccumulatorData, ending: bool):
         """Adds the performance data from a given minibatch to the PerformanceData object.
 
         Params:
-        - data (tuple/list): The performance data for the given minibatch
-          - loss (float): The average loss for the given minibatch
-          - accuracy (float): The average accuracy for the given minibatch
-          - size (int): The number of valid elements in this minibatch
-          - timestep_accuracies (list): The average accuracy for each timestep in this minibatch
-          - timestep_elements (list): The number of valid elements for each timestep in this minibatch
-          - predictions (list): The predictions made at every timestep, in token format
-          - labels (list): The correct predictions for the minibatch
-          - sequence_lengths (list): The lengths of each sequence in the minibatch
+        - data (AccumulatorData): The performance data for the given minibatch
         - ending (boolean): True if this minibatch marks the end of a sequence
         """
-        loss, accuracy, size, timestep_accuracies, timestep_elements, predictions, labels, sequence_lengths = data
         # self.logger.debug("Minibatch loss: %.2f | Minibatch accuracy: %.2f" % (loss, accuracy))
-        self.loss = self._update_average(self.loss, self.elements, loss, size)
-        self.accuracy = self._update_average(self.accuracy, self.elements, accuracy, size)
-        self.elements += size
-        self.extend_timesteps(timestep_accuracies, timestep_elements)
+        self.loss = self._update_average(self.loss, self.elements, data.loss, data.size)
+        self.accuracy = self._update_average(self.accuracy, self.elements, data.accuracy, data.size)
+        self.elements += data.size
+        self.extend_timesteps(data.timestep_accuracies, data.timestep_elements)
         if ending is True:
             self._merge_timesteps()
-        self.confusion_matrix.update(predictions, labels, sequence_lengths)
+        self.confusion_matrix.update(data.predictions, data.labels, data.sequence_lengths)
         # self.logger.debug("Updated loss: %.2f | Updated accuracy: %.2f" % (self.loss, self.accuracy))
     # End of update()
 

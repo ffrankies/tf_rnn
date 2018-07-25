@@ -2,6 +2,8 @@
 
 @since 0.6.1
 """
+
+# pylint: disable=C0413
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa
@@ -13,15 +15,15 @@ from .logger import debug, trace  # noqa
 
 # These things are only imported for type checking
 from .model import RNNBase  # noqa
-from .layers.utils import Accumulator
-from .layers.utils import ConfusionMatrix
+from .layers.utils import Accumulator  # noqa
+from .layers.utils import ConfusionMatrix  # noqa
 from .indexer import Indexer  # noqa
 
 plt.style.use('ggplot')
 
-# import seaborn as sns  # for heatmap
+
 @debug('Plotting training results')
-def plot(model: RNNBase, train_accumulator: Accumulator, valid_accumulator: Accumulator, 
+def plot(model: RNNBase, train_accumulator: Accumulator, valid_accumulator: Accumulator,
          test_accumulator: Accumulator):
     """Plots a graphical representation of the model's training performance over time. Saves the plot to file in
     <model_path>/run_<run_number>/graph.png.
@@ -111,7 +113,7 @@ def plot_timestep_accuracy(directory: str, accumulator: Accumulator, timestep_la
     if accumulator.latest_timestep_accuracies is None:
         return
     figure, plot = setup_plot(
-        "Avg. Accuracy at Each Timestep\nAvg. Overall Accuracy = {:.2f}".format(accumulator.best_accuracy), 
+        "Avg. Accuracy at Each Timestep\nAvg. Overall Accuracy = {:.2f}".format(accumulator.best_accuracy),
         'Timestep', 'Avg. Accuracy')
     timestep_accuracy = [ratio * 100.0 for ratio in accumulator.latest_timestep_accuracies]
     plot.set_ylim(0, 120)
@@ -158,7 +160,7 @@ def plot_confusion_matrix(directory: str, confusion_matrix: ConfusionMatrix, ind
     cell_size = 0.15  # size is in inches
     num_used_labels = len(labels)
     figure.set_size_inches(1.15*num_used_labels*cell_size, num_used_labels*cell_size)
-    grid = plot.pcolormesh(normalized_cm, cmap=plt.cm.YlGnBu)
+    grid = plot.pcolormesh(normalized_cm, cmap=plt.cm.YlGnBu)  # pylint: disable=E1101
     figure.colorbar(grid)
 
     # Center labels: credit to https://stackoverflow.com/a/24193138
