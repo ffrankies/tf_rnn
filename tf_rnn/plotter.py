@@ -1,7 +1,6 @@
 """Contains code for generating plots describing the neural network's performance.
 
-Copyright (c) 2017-2018 Frank Derry Wanye
-@since 0.5.0
+@since 0.6.1
 """
 import matplotlib
 matplotlib.use('Agg')
@@ -14,7 +13,8 @@ from .logger import debug, trace  # noqa
 
 # These things are only imported for type checking
 from .model import RNNBase  # noqa
-from .layers.performance_layer import Accumulator  # noqa
+from .layers.utils import Accumulator
+from .layers.utils import ConfusionMatrix
 from .indexer import Indexer  # noqa
 
 plt.style.use('ggplot')
@@ -28,9 +28,9 @@ def plot(model: RNNBase, train_accumulator: Accumulator, valid_accumulator: Accu
 
     Params:
     - model (model.RNNModel): The model containing the path where the figure will be saved
-    - train_accumulator (layers.performance_layer.Accumulator): The accumulator for training performance
-    - valid_accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
-    - test_accumulator (layers.performance_layer.Accumulator): The accumulator for test performance
+    - train_accumulator (layers.utils.Accumulator): The accumulator for training performance
+    - valid_accumulator (layers.utils.Accumulator): The accumulator for validation performance
+    - test_accumulator (layers.utils.Accumulator): The accumulator for test performance
     """
     model.logger.info('Plotting results for visualization')
     directory = model.saver.meta.latest()[constants.DIR]
@@ -133,12 +133,12 @@ def plot_timestep_accuracy(directory: str, accumulator: Accumulator, timestep_la
 
 
 @trace()
-def plot_confusion_matrix(directory: str, confusion_matrix: list, indexer: Indexer = None):
+def plot_confusion_matrix(directory: str, confusion_matrix: ConfusionMatrix, indexer: Indexer = None):
     """Plots a confusion matrix a more accurate breakdown of the predictions made.
 
     Params:
     - directory (str): The directory in which to save the plot
-    - confusion_matrix (layers.performance_layer.ConfusionMatrix): The confusion matrix
+    - confusion_matrix (layers.utils.ConfusionMatrix): The confusion matrix
     - indexer (indexer.Indexer): Converts the label indexes to tokens
     """
     if confusion_matrix.is_empty():

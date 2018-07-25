@@ -1,7 +1,6 @@
 """Tensorflow implementation of a training method to train a given model.
 
-Copyright (c) 2017-2018 Frank Derry Wanye
-@since 0.5.0
+@since 0.6.1
 """
 import math
 import numpy as np
@@ -14,7 +13,7 @@ from .logger import info, debug, trace
 # Only imported for type hints
 from .model import RNNBase
 from .dataset import DatasetBase, DataPartition
-from .layers.performance_layer import Accumulator
+from .layers.utils import Accumulator
 
 
 @info('Training the model')
@@ -56,8 +55,8 @@ def train_epoch(model: RNNBase, epoch_num: int, train_accumulator: Accumulator, 
     Params:
     - model (model.RNNBase): The model to train
     - epoch_num (int): The number of the current epoch
-    - train_accumulator (layers.performance_layer.Accumulator): The accumulator for training performance
-    - valid_accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
+    - train_accumulator (layers.utils.Accumulator): The accumulator for training performance
+    - valid_accumulator (layers.utils.Accumulator): The accumulator for validation performance
     """
     model.logger.info("Starting epoch: %d" % (epoch_num))
 
@@ -83,7 +82,7 @@ def train_step(model: RNNBase, epoch_num: int, current_state: np.array, accumula
     - model (model.RNNBase): The model to train
     - epoch_num (int): The number of the current epoch
     - current_state (np.array): The current state of the hidden layer
-    - accumulator (layers.performance_layer.Accumulator): The accumulator for training performance
+    - accumulator (layers.utils.Accumulator): The accumulator for training performance
     """
     for batch_num in range(model.dataset.train.num_batches):
         if epoch_num == 0:
@@ -101,7 +100,7 @@ def train_minibatch(model: RNNBase, batch_num: int, current_state: np.array, acc
     - model (model.RNNBase): The model to train
     - batch_num (int): The current batch number
     - current_state (np.array): The current hidden state of the model
-    - accumulator (layers.performance_layer.Accumulator): The accumulator for training performance
+    - accumulator (layers.utils.Accumulator): The accumulator for training performance
 
     Return:
     - updated_hidden_state (np.array): The updated state of the hidden layer after training
@@ -195,7 +194,7 @@ def update_accumulator(accumulator: Accumulator, dataset_partition: DataPartitio
     the dataset.
 
     Params:
-    - accumulator (layers.performance_layer.Accumulator): The accumulator to update with new performance data
+    - accumulator (layers.utils.Accumulator): The accumulator to update with new performance data
     - dataset_partition (dataset.DatasetPartition): The dataset partition containing the remainder of the batch data
     - batch_num (int): The index of the batch (within the dataset partition) that is being added to the container
     - performance_data (list): The performance data for the given minibatch
@@ -222,7 +221,7 @@ def validation_step(model: RNNBase, current_state: np.array, accumulator: Accumu
     Params:
     - model (model.RNNBase): The model to train
     - current_state (np.array): The current state of the hidden layer
-    - accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
+    - accumulator (layers.utils.Accumulator): The accumulator for validation performance
     """
     for batch_num in range(model.dataset.valid.num_batches):
         current_state = validate_minibatch(model, model.dataset.valid, batch_num, current_state, accumulator)
@@ -238,7 +237,7 @@ def validate_minibatch(model: RNNBase, dataset_partition: DataPartition, batch_n
     - model (model.RNNBase): The model to validate
     - batch_num (int): The current batch number
     - current_state (np.array): The current hidden state of the model
-    - accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
+    - accumulator (layers.utils.Accumulator): The accumulator for validation performance
 
     Return:
     - updated_hidden_state (np.array): The updated state of the hidden layer after validating
@@ -262,8 +261,8 @@ def summarize(model: RNNBase, train_accumulator: Accumulator, valid_accumulator:
 
     Params:
     - model (model.RNNBase): The RNN model containing the operations and placeholders for the performance calculations
-    - train_accumulator (layers.performance_layer.Accumulator): The accumulator for training performance
-    - valid_accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
+    - train_accumulator (layers.utils.Accumulator): The accumulator for training performance
+    - valid_accumulator (layers.utils.Accumulator): The accumulator for validation performance
     - epoch_num (int): The epoch number for which the calculation is performed
     """
     model.logger.debug('Evaluating the model\'s performance after training for an epoch')
@@ -288,7 +287,7 @@ def performance_eval(model: RNNBase, epoch_num: int, accumulator: Accumulator):
     Params:
     - model (model.RNNBase): The RNN model containing the session and tensorflow variable placeholders
     - epoch_num (int): Total number of epochs + 1 (only used so that the performance summary shows up in tensorboard)
-    - accumulator (layers.performance_layer.Accumulator): Accumulator for performance metrics of the test dataset
+    - accumulator (layers.utils.Accumulator): Accumulator for performance metrics of the test dataset
             partition
 
     Return:
@@ -317,7 +316,7 @@ def test_step(model: RNNBase, accumulator: Accumulator):
 
     Params:
     - model (model.RNNBase): The trained model
-    - accumulator (layers.performance_layer.Accumulator): Accumulator for performance metrics of the test dataset
+    - accumulator (layers.utils.Accumulator): Accumulator for performance metrics of the test dataset
                 partition
     """
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
@@ -331,7 +330,7 @@ def early_stop(valid_accumulator: Accumulator, epoch_num: int, num_epochs: int) 
     """Checks whether or not the model should stop training because it has started to over-fit the data.
 
     Params:
-    - valid_accumulator (layers.performance_layer.Accumulator): The accumulator for validation performance
+    - valid_accumulator (layers.utils.Accumulator): The accumulator for validation performance
     - epoch_num (int): The number of epochs the model has trained for
     - num_epochs (int): The maximum number of epochs the model is set to train for
 

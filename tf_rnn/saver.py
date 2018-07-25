@@ -1,7 +1,7 @@
 """Provides an interface for saving and loading various aspects of the tensorflow model to file.
 
 Copyright (c) 2017-2018 Frank Derry Wanye
-@since 0.5.0
+@since 0.6.1
 """
 
 import os
@@ -11,7 +11,7 @@ from . import constants
 from . import utils
 
 from .utils import create_model_dir
-from .layers.performance_layer import Metrics
+from .layers.utils import Metrics
 from .logger import debug, trace
 
 # Classes imported for type hinting only
@@ -28,12 +28,12 @@ class MetaInfo(object):
     - run_info (dict): Dictionary mapping runs to the following information:
       - 'dir' (string): The directory in which to save off the model
       - 'epoch' (int): The number of epochs for which the model has been trained
-      - 'metrics' (layers.performance_layer.Metrics): Contains the training, validation and test metric accumulators
-      - 'train_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
+      - 'metrics' (layers.utils.Metrics): Contains the training, validation and test metric accumulators
+      - 'train_accumulator' (layers.utils.Accumulator): Accumulator for the training partition performance
                 metrics
-      - 'valid_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
+      - 'valid_accumulator' (layers.utils.Accumulator): Accumulator for the validation partition
                 performance metrics
-      - 'test_accumulator' (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
+      - 'test_accumulator' (layers.utils.Accumulator): Accumulator for the test partition performance
                 metrics
     """
 
@@ -89,12 +89,12 @@ class MetaInfo(object):
         Params:
         - new_info (list/tuple): The new info with which to update the meta info
           - epoch (int): The number of epochs for which the model has been trained
-          - metrics (layers.performance_layer.Metrics): Contains the training, validation and test metric accumulators
-          - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
+          - metrics (layers.utils.Metrics): Contains the training, validation and test metric accumulators
+          - train_accumulator (layers.utils.Accumulator): Accumulator for the training partition performance
                     metrics
-          - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
+          - valid_accumulator (layers.utils.Accumulator): Accumulator for the validation partition
                     performance metrics
-          - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
+          - test_accumulator (layers.utils.Accumulator): Accumulator for the test partition performance
                     metrics
         """
         latest = self.latest()
@@ -149,12 +149,12 @@ class Saver(object):
         Params:
         - new_info (list/tuple): The new info with which to update the meta info
           - epoch (int): The number of epochs for which the model has been trained
-          - metrics (layers.performance_layer.Metrics): Contains the training, validation and test metric accumulators
-          - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
+          - metrics (layers.utils.Metrics): Contains the training, validation and test metric accumulators
+          - train_accumulator (layers.utils.Accumulator): Accumulator for the training partition performance
                     metrics
-          - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
+          - valid_accumulator (layers.utils.Accumulator): Accumulator for the validation partition
                     performance metrics
-          - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
+          - test_accumulator (layers.utils.Accumulator): Accumulator for the test partition performance
                     metrics
         """
         self.meta.update(new_info)
@@ -171,12 +171,12 @@ class Saver(object):
         - model (model.RNNBase): The model whose weights are to be saved
         - meta_info (list/tuple): The new info with which to update the meta info
           - epoch (int): The number of epochs for which the model has been trained
-          - metrics (layers.performance_layer.Metrics): Contains the training, validation and test metric accumulators
-          - train_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the training partition performance
+          - metrics (layers.utils.Metrics): Contains the training, validation and test metric accumulators
+          - train_accumulator (layers.utils.Accumulator): Accumulator for the training partition performance
                     metrics
-          - valid_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the validation partition
+          - valid_accumulator (layers.utils.Accumulator): Accumulator for the validation partition
                     performance metrics
-          - test_accumulator (layers.PerformanceLayer.Accumulator): Accumulator for the test partition performance
+          - test_accumulator (layers.utils.Accumulator): Accumulator for the test partition performance
                     metrics
         - best_weights (bool): True if the weights correspond to the best accuracy trained so far
         """
