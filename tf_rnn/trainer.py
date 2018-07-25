@@ -207,10 +207,7 @@ def update_accumulator(accumulator: Accumulator, dataset_partition: DataPartitio
       - labels (list): The labels for the minibatch
       - sequence_lengths (list): The list of lengths of each sequence in the minibatch
     """
-    accumulator.update(
-        data=performance_data,
-        beginning=dataset_partition.beginning[batch_num],
-        ending=dataset_partition.ending[batch_num])
+    accumulator.update(data=performance_data, ending=dataset_partition.ending[batch_num])
 # End of update_accumulator()
 
 

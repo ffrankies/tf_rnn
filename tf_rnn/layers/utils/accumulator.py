@@ -9,6 +9,7 @@ from .confusion_matrix import ConfusionMatrix
 # The following imports are only used for type hinting
 from ...logger import Logger
 
+
 class Accumulator(object):
     """Stores the data needed to evaluate the performance of the model on a given partition of the dataset.
 
@@ -54,7 +55,7 @@ class Accumulator(object):
         self._reset_metrics()
     # End of __init__()
 
-    def update(self, data: list, beginning: bool, ending: bool):
+    def update(self, data: list, ending: bool):
         """Adds the performance data from a given minibatch to the PerformanceData object.
 
         Params:
@@ -67,7 +68,6 @@ class Accumulator(object):
           - predictions (list): The predictions made at every timestep, in token format
           - labels (list): The correct predictions for the minibatch
           - sequence_lengths (list): The lengths of each sequence in the minibatch
-        - beginning (boolean): True if this minibatch marks the start of a sequence
         - ending (boolean): True if this minibatch marks the end of a sequence
         """
         loss, accuracy, size, timestep_accuracies, timestep_elements, predictions, labels, sequence_lengths = data

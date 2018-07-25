@@ -2,12 +2,12 @@
 
 @since 0.6.1
 """
-from copy import deepcopy
 
 import tensorflow as tf
 import numpy as np
 
 from .. import constants
+
 
 class PerformancePlaceholders(object):
     """Holds the placeholders for feeding in performance information for a given dataset partition.
@@ -24,11 +24,12 @@ class PerformancePlaceholders(object):
         """
         self.average_loss = tf.placeholder_with_default(input=0.0, shape=(), name='average_loss')
         self.average_accuracy = tf.placeholder_with_default(input=0.0, shape=(), name='average_accuracy')
-        zero_accuracies = np.zeros([max_timesteps], np.float32)
+        zero_accuracies = np.zeros([max_timesteps], np.float32)  # pylint: disable=E1101
         self.timestep_accuracies = tf.placeholder_with_default(input=zero_accuracies, shape=np.shape(zero_accuracies),
-            name='timestep_accuracies')
+                                                               name='timestep_accuracies')
     # End of __init__()
 # End of PerformancePlaceholders()
+
 
 def performance_ops(logits_series, labels_series, sizes_series, truncate):
     """Performs all the performance calculations for a given minibatch
@@ -54,6 +55,7 @@ def performance_ops(logits_series, labels_series, sizes_series, truncate):
     return avg_loss, avg_acc, batch_size, timestep_accs, timestep_sizes, predictions
 # End of performance_ops()
 
+
 def average_loss(logits_series, labels_series, sizes_series, truncate):
     """
     Calculates the average loss for a given minibatch.
@@ -69,16 +71,17 @@ def average_loss(logits_series, labels_series, sizes_series, truncate):
     - size (tf.Tensor): The total number of elements in this minibatch
     """
     with tf.variable_scope(constants.LOSS_CALC):
-        mask, _ = row_length_mask(sizes_series, truncate) # Copied in here so that it can be used for training
+        mask, _ = row_length_mask(sizes_series, truncate)  # Copied in here so that it can be used for training
         ce_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits_series, labels=labels_series,
-            name='ce_losses')
-        ce_loss = tf.multiply(ce_loss, mask, name='mask_losses') # Mask out invalid portions of the calculated losses
+                                                                 name='ce_losses')
+        ce_loss = tf.multiply(ce_loss, mask, name='mask_losses')  # Mask out invalid portions of the calculated losses
         total_batch_loss = tf.reduce_sum(ce_loss, axis=None, name='sum_losses')
         total_batch_size = tf.reduce_sum(sizes_series, axis=None, name='sum_sizes')
         total_batch_size = tf.cast(total_batch_size, dtype=tf.float32, name='cast_sizes_sum_to_float')
-        average_loss = total_batch_loss / total_batch_size
-    return average_loss, total_batch_size
+        loss = total_batch_loss / total_batch_size
+    return loss, total_batch_size
 # End of average_loss()
+
 
 def average_accuracy(logits_series, labels_series, sizes_series, truncate):
     """
@@ -103,6 +106,7 @@ def average_accuracy(logits_series, labels_series, sizes_series, truncate):
         timestep_accuracies = timestep_accuracy(masked_predictions, timestep_lengths)
     return avg_accuracy, timestep_accuracies, timestep_lengths, predictions
 # End of average_loss()
+
 
 def predict_and_mask(logits_series, labels_series, sizes_series, max_row_length):
     """
@@ -130,6 +134,7 @@ def predict_and_mask(logits_series, labels_series, sizes_series, max_row_length)
     return predictions, correct_predictions_masked, timestep_lengths
 # End of predict_and_mask()
 
+
 def row_length_mask(sizes_series, max_row_length):
     """
     Constructs a mask out of the row lengths series.
@@ -147,6 +152,7 @@ def row_length_mask(sizes_series, max_row_length):
     return mask, timestep_lengths
 # End of row_length_mask()
 
+
 def overall_accuracy(masked_predictions, sizes_series):
     """
     Tensorflow operation that calculates the model's accuracy on a given minibatch.
@@ -163,9 +169,10 @@ def overall_accuracy(masked_predictions, sizes_series):
         sizes_series = tf.cast(sizes_series, tf.float32, name='cast_row_lengths_to_float32')
         row_accuracies = tf.divide(row_sums, sizes_series, name='row_accuracies')
         row_accuracies = tf.where(tf.is_nan(row_accuracies), sizes_series, row_accuracies)
-        average_accuracy = tf.reduce_mean(row_accuracies, name='average_accuracy')
-    return average_accuracy
+        accuracy = tf.reduce_mean(row_accuracies, name='average_accuracy')
+    return accuracy
 # End of overall_accuracy()
+
 
 def timestep_accuracy(masked_predictions, timestep_lengths):
     """
