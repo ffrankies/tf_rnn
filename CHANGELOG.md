@@ -7,8 +7,37 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Planned / Unreleased
 
-- Separate performance_layer.py into multiple python modules.
+- Improve performance by removing unnecessary calculations.
+- Remove unnecessary tensorboard logs.
+- Add precision and recall calculations.
 - Use underscores to declare private variables and methods.
+
+## 0.6.1
+
+### Added
+
+- A `utils` sub-package under `layers/`.
+
+### Changed
+
+- Moved `Accumulator`, `ConfusionMatrix` and `Metrics` into separate submodules in `layers/utils/`.
+
+## 0.6.0
+
+### Added
+
+- MIT License.
+- Proper setup.py, to allow the project to be installed locally as a pip project.
+
+### Changed
+
+- Folder structure.
+- Old setup.py module moved to cmd_arg_parser.py
+- Code style-related stuff.
+
+### Removed
+
+- All methods from setup.py that didn't have to do with reading command-line arguments.
 
 ## 0.5.1 - 2018-05-21
 
