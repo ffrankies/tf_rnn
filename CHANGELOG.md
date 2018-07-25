@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## Planned / Unreleased
 
 - Improve performance by removing unnecessary calculations.
-- Remove unnecessary tensorboard logs.
-- Add precision and recall calculations.
+- Fix the loss-starts-at-0 problem in accumulator
+- Plot results of precision and recall calculations.
 - Use underscores to declare private variables and methods.
 
 ## 0.6.1
@@ -19,16 +19,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - A `utils` sub-package under `layers/`.
 - The `AccumulatorData` object, a `namedtuple` for storing the data used to update the `Accumulator`.
 - The `ConfusionMatrix.performance_metrics()` method, for calculating accuracy, precision, recall and f1_score.
+- The `TimestepAccuracies` class for storing cumulative timestep accuracy information within the `Accumulator`.
+- The `Accumulator.best_accuracy()` and `Accumulator.is_best_accuracy()` methods.
 
 ### Changed
 
 - Moved `Accumulator`, `ConfusionMatrix` and `Metrics` into separate submodules in `layers/utils/`.
 - `Accumulator.update()` now takes an `AccumulatorData` object as the `data` parameter, not a `list`.
 - Renamed `plot` to `axes` in `plotter` to avoid name collisions.
+- The `Accumulator` now uses the `TimestepAccuracies` class to store timestep accuracy info.
 
 ### Removed
 
 - Tensorboard no longer logs average accuracy and test partition results, since those are available elsewhere.
+- The `Accumulator.best_accuracy` and `Accumulator.is_best_accuracy` instance variables.
 
 ### Fixed
 

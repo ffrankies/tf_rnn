@@ -2,7 +2,7 @@
 
 @since 0.6.1
 """
-from copy import deepcopy
+
 from collections import namedtuple
 
 from .confusion_matrix import ConfusionMatrix
@@ -12,8 +12,78 @@ from ...logger import Logger
 
 
 AccumulatorData = namedtuple('AccumulatorData',
-                             ['loss', 'accuracy', 'size', 'timestep_accuracies', 'timestep_elements', 'predictions',
+                             ['loss', 'accuracy', 'size', 'timestep_accuracies', 'timestep_counts', 'predictions',
                               'labels', 'sequence_lengths'])
+
+
+class TimestepAccuracies(object):
+    """Keeps track of timestep accuracies.
+    """
+
+    def __init__(self, max_sequence_length: int):
+        """Creates a new TimestepAccuracies object.
+
+        Params:
+        - max_sequence_length (int): The maximum length of a sequence
+        """
+        self.max_sequence_length = max_sequence_length
+        self.timestep_accuracy_list = list()
+        self.timestep_count_list = list()
+        self._incoming_timestep_accuracies = list()
+        self._incoming_timestep_counts = list()
+        self._epoch = 0
+    # End of __init__()
+
+    def next_epoch(self):
+        """Advances the current epoch by 1.
+        """
+        self._epoch += 1
+    # End of next_epoch()
+
+    def update(self, accuracies: list, counts: list, ending: bool):
+        """Updates the timestep accuracies with info from a new minibatch.
+
+        Params:
+        - accuracies (list<float>): The timestep accuracies for a new minibatch
+        - counts (list<int>): The timestep counts for a new minibatch
+        - ending (bool): Whether or not the minibatch is the ending of a sequence
+        """
+        self._extend_timesteps(accuracies, counts)
+        if ending:
+            self._merge_timesteps()
+    # End of update()
+
+    def _extend_timesteps(self, accuracies: list, counts: list):
+        """Appends the timestep accuracies and timestep counts to the next_timestep_counts list.
+
+        Params:
+        - accuracies (list<float>): The timestep accuracies for a new minibatch
+        - counts (list<int>): The timestep counts for a new minibatch
+        """
+        if len(self.timestep_accuracy_list) < self._epoch + 1:
+            self.timestep_accuracy_list.append(list())
+            self.timestep_count_list.append(list())
+        self._incoming_timestep_accuracies.extend(accuracies)
+        self._incoming_timestep_counts.extend(counts)
+    # End of extend_timesteps()
+
+    def _merge_timesteps(self):
+        """Updates the cumulative timestep accuracies for the current epoch with a running average that includes the
+        latest completed sequences.
+        """
+        self._incoming_timestep_accuracies = self._incoming_timestep_accuracies[:self.max_sequence_length]
+        self._incoming_timestep_counts = self._incoming_timestep_counts[:self.max_sequence_length]
+        for index in range(len(self._incoming_timestep_accuracies)):
+            old_avg = self.timestep_accuracy_list[self._epoch][index]
+            old_count = self.timestep_count_list[self._epoch][index]
+            new_avg = self._incoming_timestep_accuracies[index]
+            new_count = self._incoming_timestep_counts[index]
+            self.timestep_accuracy_list[self._epoch][index] = update_average(old_avg, old_count, new_avg, new_count)
+            self.timestep_count_list[self._epoch][index] += new_count
+        self._incoming_timestep_accuracies = list()
+        self._incoming_timestep_counts = list()
+    # End of _merge_timesteps()
+# End of TimestepAccuracies()
 
 
 class Accumulator(object):
@@ -23,20 +93,12 @@ class Accumulator(object):
     - logger (logging.Logger): The logger used by the RNN model
     - max_sequence_length (int): The maximum sequence length for this dataset
     - loss (float): The cumulative average loss for every minibatch
-    - accuracy (float): The cumulative average accuracy for every minibatch
-    - best_accuracy (float): The best accuracy produced so far
-    - is_best_accuracy (boolean): True if the latest produced accuracy is the best accuracy
-    - elements (float): The cumulative total number of valid elements seen so far
-    - timestep_accuracies (list): The cumulative average accuracy for each timestep
-    - timestep_elements (list): The cumulative number of valid elements for each timestep
+    - counts (float): The cumulative total number of valid elements seen so far
+    - timestep_accuracies (TimestepAccuracies): The cumulative average accuracy for each timestep for every epoch
     - losses (list): List of losses for every epoch
-    - accuracies (list): List of accuracies for every epoch
-    - latest_timestep_accuracies (list): The latest timestep accuracies
+    - metrics (list<layers.PerformanceMetrics): List of performance metrics for every epoch
     - confusion_matrix (ConfusionMatrix): The confusion matrix for visualizing prediction accuracies
     - latest_confusion_matrix (ConfusionMatrix): The confusion matrix for the latest completed epoch
-    - Temporary instance variables:
-      - next_timestep_accuracies (list): Incoming average accuracies per timestep
-      - next_timestep_elements (list): Incoming number of valid elements per timestep
     """
 
     def __init__(self, logger: Logger, max_sequence_length: int):
@@ -51,13 +113,9 @@ class Accumulator(object):
         self.max_sequence_length = max_sequence_length
         self.confusion_matrix = ConfusionMatrix(logger)
         self.latest_confusion_matrix = None
-        self.best_accuracy = 0.0
-        self.is_best_accuracy = False
         self.losses = list()
-        self.accuracies = list()
-        self.latest_timestep_accuracies = list()
-        self.next_timestep_accuracies = list()
-        self.next_timestep_elements = list()
+        self.metrics = list()
+        self.timestep_accuracies = TimestepAccuracies(max_sequence_length)
         self._reset_metrics()
     # End of __init__()
 
@@ -69,102 +127,20 @@ class Accumulator(object):
         - ending (boolean): True if this minibatch marks the end of a sequence
         """
         # self.logger.debug("Minibatch loss: %.2f | Minibatch accuracy: %.2f" % (loss, accuracy))
-        self.loss = self._update_average(self.loss, self.elements, data.loss, data.size)
-        self.accuracy = self._update_average(self.accuracy, self.elements, data.accuracy, data.size)
-        self.elements += data.size
-        self.extend_timesteps(data.timestep_accuracies, data.timestep_elements)
-        if ending is True:
-            self._merge_timesteps()
+        self.loss = update_average(self.loss, self.counts, data.loss, data.size)
+        self.counts += data.size
+        self.timestep_accuracies.update(data.timestep_accuracies, data.timestep_counts, ending)
         self.confusion_matrix.update(data.predictions, data.labels, data.sequence_lengths)
         # self.logger.debug("Updated loss: %.2f | Updated accuracy: %.2f" % (self.loss, self.accuracy))
     # End of update()
 
-    def _update_average(self, old_avg: float, old_num: int, new_avg: float, new_num: int):
-        """Updates the old average with new data.
-
-        Params:
-        - old_avg (float): The current average value
-        - old_num (int): The number of elements contributing to the current average
-        - new_avg (float): The new average value
-        - new_num (int): The number of elements contributing to the new average
-        """
-        old_sum = old_avg * old_num
-        new_sum = new_avg * new_num
-        updated_sum = old_sum + new_sum
-        updated_num = old_num + new_num
-        updated_avg = updated_sum / updated_num
-        return updated_avg
-    # End of _update_average()
-
-    def extend_timesteps(self, accuracies: list, sizes: list):
-        """Appends the timestep accuracies and timestep sizes to the next_timestep_elements list.
-
-        Params:
-        - accuracies (list): The list of accuracies for each timestep in the minibatch
-        - sizes (list): The list of the number of valid elements for each timestep in the minibatch
-        """
-        # self.logger.debug('Extending incoming timestep accuracies')
-        if len(accuracies) != len(sizes):
-            error_msg = ("Timestep accuracies and elements for each minibatch must be of same size."
-                         "Accuracies: %d, Elements: %d" % (len(accuracies), len(sizes)))
-            self.logger.error(error_msg)
-            raise ValueError(error_msg)
-        self.next_timestep_accuracies.extend(accuracies)
-        self.next_timestep_elements.extend(sizes)
-    # End of extend_timesteps()
-
-    def _merge_timesteps(self):
-        """Updates the cumulative timestep accuracies.
-        """
-        timestep_accuracies = self.next_timestep_accuracies[:self.max_sequence_length]
-        timestep_elements = self.next_timestep_elements[:self.max_sequence_length]
-        if not self.timestep_accuracies:
-            self._copy_timestep_accuracy_info(timestep_accuracies, timestep_elements)
-        else:
-            self._update_timestep_accuracy_info(timestep_accuracies, timestep_elements)
-        self.next_timestep_accuracies = list()
-        self.next_timestep_elements = list()
-    # End of _merge_timesteps()
-
-    def _copy_timestep_accuracy_info(self, timestep_accuracies: list, timestep_elements: list):
-        """Copies over the next timestep accuracy and elements info into the timestep_accuracies and timestep_elements
-        variables.
-
-        Params:
-        - timestep_accuracies (list<float>): The incoming timestep accuracies
-        - timestep_elements (list<int>): The incoming timestep lengths
-        """
-        self.timestep_accuracies = deepcopy(timestep_accuracies)
-        self.timestep_elements = deepcopy(timestep_elements)
-    # End of _copy_timestep_accuracy_info()
-
-    def _update_timestep_accuracy_info(self, timestep_accuracies: list, timestep_elements: list):
-        """Updates the timestep accuracy information by keeping a running average over all the data presented.
-
-        Params:
-        - timestep_accuracies (list<float>): The incoming timestep accuracies
-        - timestep_elements (list<int>): The incoming timestep lengths
-        """
-        for index, _ in enumerate(timestep_accuracies):
-            old_avg = self.timestep_accuracies[index]
-            old_num = self.timestep_elements[index]
-            new_avg = timestep_accuracies[index]
-            new_num = timestep_elements[index]
-            self.timestep_accuracies[index] = self._update_average(old_avg, old_num, new_avg, new_num)
-            self.timestep_elements[index] += new_num
-    # End of _update_timestep_accuracy_info()
-
     def next_epoch(self):
         """Creates space for storing performance data for the next epoch. Also resets metrics for the next epoch.
         """
-        if self.accuracy >= self.best_accuracy:
-            self.best_accuracy = self.accuracy
-            self.is_best_accuracy = True
-        else:
-            self.is_best_accuracy = False
+        metrics = self.confusion_matrix.performance_metrics()
         self.losses.append(self.loss)
-        self.accuracies.append(self.accuracy)
-        self.latest_timestep_accuracies = deepcopy(self.timestep_accuracies)
+        self.metrics.append(metrics)
+        self.timestep_accuracies.next_epoch()
         self._reset_metrics()
     # End of next_epoch()
 
@@ -174,16 +150,88 @@ class Accumulator(object):
         Creates the following instance variables, if they haven't already been created:
         - loss (float): The cumulative average loss for every minibatch
         - accuracy (float): The cumulative average accuracy for every minibatch
-        - elements (float): The cumulative total number of valid elements seen so far
-        - timestep_accuracies (list): The cumulative average accuracy for each timestep
-        - timestep_elements (list): The cumulative number of valid elements for each timestep
+        - counts (float): The cumulative total number of valid elements seen so far
         """
         self.loss = 0.0
-        self.accuracy = 0.0
-        self.elements = 0
-        self.timestep_accuracies = None
-        self.timestep_elements = None
+        self.counts = 0
         self.latest_confusion_matrix = self.confusion_matrix.copy()
         self.confusion_matrix = ConfusionMatrix(self.logger)
     # End of _reset_metrics()
+
+    def accuracies(self):
+        """Returns the list of accuracies from the list of metrics.
+
+        Returns:
+        - accuracies (list<float>): The list of accuracies for completed epochs
+        """
+        return [metric.accuracy for metric in self.metrics]
+    # End of accuracies()
+
+    def precisions(self):
+        """Returns the list of precision values from the list of metrics.
+
+        Returns:
+        - precisions (list<float>): The list of precision values for completed epochs
+        """
+        return [metric.precision for metric in self.metrics]
+    # End of precisions()
+
+    def recalls(self):
+        """Returns the list of recall values from the list of metrics.
+
+        Returns:
+        - recalls (list<float>): The list of recall values for completed epochs
+        """
+        return [metric.recall for metric in self.metrics]
+    # End of recalls()
+
+    def f1_scores(self):
+        """Returns the list of f1_scores from the list of metrics.
+
+        Returns:
+        - f1_scores (list<float>): The list of f1_scores for completed epochs
+        """
+        return [metric.f1_score for metric in self.metrics]
+    # End of f1_scores()
+
+    def best_accuracy(self):
+        """Returns the best attained accuracy.
+
+        Returns:
+        - accuracy (float): The best attained accuracy
+        """
+        accuracies = self.accuracies()
+        accuracy = max(accuracies)
+        return accuracy
+    # End of best_accuracy()
+
+    def is_best_accuracy(self):
+        """Indicates whether or not the latest accuracy is the best attained accuracy.
+
+        Returns:
+        - indicator (bool): True if the latest accuracy is the best attained accuracy.
+        """
+        accuracies = self.accuracies()
+        latest = accuracies[-1]
+        best = max(accuracies)
+        return latest >= best
+    # End of is_best_accuracy()
 # End of PerformanceData()
+
+
+def update_average(old_avg: float, old_num: int, new_avg: float, new_num: int):
+    """Updates the old average with new data.
+
+    Params:
+    - old_avg (float): The current average value
+    - old_num (int): The number of elements contributing to the current average
+    - new_avg (float): The new average value
+    - new_num (int): The number of elements contributing to the new average
+    """
+    old_sum = old_avg * old_num
+    new_sum = new_avg * new_num
+    updated_sum = old_sum + new_sum
+    updated_num = old_num + new_num
+    updated_avg = updated_sum / updated_num
+    return updated_avg
+# End of update_average()
