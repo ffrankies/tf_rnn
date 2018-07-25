@@ -2,8 +2,12 @@
 
 @since 0.6.1
 """
+
+from . import Accumulator
+
 # The following import is only needed for type hinting
 from ...logger import Logger
+
 
 class Metrics(object):
     """Holds the performance metrics for a given model.
