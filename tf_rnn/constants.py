@@ -1,8 +1,7 @@
-'''
-Contains constants for use within the project.
+"""Contains constants for use within the project.
 
-@since 0.5.0
-'''
+@since 0.6.1
+"""
 
 import time
 import math
@@ -69,7 +68,13 @@ TIMESTEP_ACCURACY = "timestep_accuracy_calculation"
 #########################################
 # TENSORBOARD SUMMARY NAMES
 #########################################
-
+TBOARD_SUMMARY = 'summaries'
+TBOARD_LOSS = 'loss'
+TBOARD_ACCURACY = 'accuracy'
+TBOARD_TIMESTEP_ACCURACY = 'accuracy_at_timestep'
+TBOARD_TRAIN = 'training'
+TBOARD_VALID = 'validation'
+TBOARD_TEST = 'test'
 
 #########################################
 # DEFAULT FILENAMES
