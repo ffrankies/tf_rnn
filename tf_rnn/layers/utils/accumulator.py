@@ -7,9 +7,6 @@ from collections import namedtuple
 
 from .confusion_matrix import ConfusionMatrix
 
-# The following imports are only used for type hinting
-from ...logger import Logger
-
 
 AccumulatorData = namedtuple('AccumulatorData',
                              ['loss', 'accuracy', 'size', 'timestep_accuracies', 'timestep_counts', 'predictions',
@@ -90,32 +87,30 @@ class Accumulator(object):
     """Stores the data needed to evaluate the performance of the model on a given partition of the dataset.
 
     Instance Variables:
-    - logger (logging.Logger): The logger used by the RNN model
     - max_sequence_length (int): The maximum sequence length for this dataset
     - loss (float): The cumulative average loss for every minibatch
     - counts (float): The cumulative total number of valid elements seen so far
     - timestep_accuracies (TimestepAccuracies): The cumulative average accuracy for each timestep for every epoch
     - losses (list): List of losses for every epoch
-    - metrics (list<layers.PerformanceMetrics): List of performance metrics for every epoch
+    - metrics (list<layers.PerformanceMetrics>): List of performance metrics for every epoch
     - confusion_matrix (ConfusionMatrix): The confusion matrix for visualizing prediction accuracies
     - latest_confusion_matrix (ConfusionMatrix): The confusion matrix for the latest completed epoch
     """
 
-    def __init__(self, logger: Logger, max_sequence_length: int):
+    def __init__(self, max_sequence_length: int):
         """Creates a new PerformanceData object.
 
         Params:
-        - logger (logging.Logger): The logger from the model
         - max_sequence_length (int): The maximum sequence length for this dataset
         """
-        self.logger = logger
-        self.logger.debug('Creating a PerformanceData object')
         self.max_sequence_length = max_sequence_length
-        self.confusion_matrix = ConfusionMatrix(logger)
+        self.confusion_matrix = ConfusionMatrix()
         self.latest_confusion_matrix = None
         self.losses = list()
         self.metrics = list()
         self.timestep_accuracies = TimestepAccuracies(max_sequence_length)
+        self.loss = None
+        self.counts = 0
         self._reset_metrics()
     # End of __init__()
 
@@ -126,9 +121,12 @@ class Accumulator(object):
         - data (AccumulatorData): The performance data for the given minibatch
         - ending (boolean): True if this minibatch marks the end of a sequence
         """
-        # self.logger.debug("Minibatch loss: %.2f | Minibatch accuracy: %.2f" % (loss, accuracy))
-        self.loss = update_average(self.loss, self.counts, data.loss, data.size)
-        self.counts += data.size
+        if self.loss is None:
+            self.loss = data.loss
+            self.counts = data.size
+        else:
+            self.loss = update_average(self.loss, self.counts, data.loss, data.size)
+            self.counts += data.size
         self.timestep_accuracies.update(data.timestep_accuracies, data.timestep_counts, ending)
         self.confusion_matrix.update(data.predictions, data.labels, data.sequence_lengths)
         # self.logger.debug("Updated loss: %.2f | Updated accuracy: %.2f" % (self.loss, self.accuracy))
@@ -141,6 +139,8 @@ class Accumulator(object):
         self.losses.append(self.loss)
         self.metrics.append(metrics)
         self.timestep_accuracies.next_epoch()
+        self.loss = None
+        self.counts = 0
         self._reset_metrics()
     # End of next_epoch()
 
@@ -152,10 +152,8 @@ class Accumulator(object):
         - accuracy (float): The cumulative average accuracy for every minibatch
         - counts (float): The cumulative total number of valid elements seen so far
         """
-        self.loss = 0.0
-        self.counts = 0
         self.latest_confusion_matrix = self.confusion_matrix.copy()
-        self.confusion_matrix = ConfusionMatrix(self.logger)
+        self.confusion_matrix = ConfusionMatrix()
     # End of _reset_metrics()
 
     def accuracies(self):

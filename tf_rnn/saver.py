@@ -12,7 +12,7 @@ from . import utils
 
 from .utils import create_model_dir
 from .layers.utils import Metrics
-from .logger import debug, trace
+from .logger import debug
 
 # Classes imported for type hinting only
 from .settings import SettingsNamespace
@@ -37,21 +37,19 @@ class MetaInfo(object):
                 metrics
     """
 
-    def __init__(self, logger: Logger, settings: SettingsNamespace, max_length: int):
+    def __init__(self, settings: SettingsNamespace, max_length: int):
         """Instantiates a MetaInfo object.
 
         Params:
-        - logger (logging.Logger): The logger for the model
         - settings (settings.SettingsNamespace): The settings needed for saving and loading the model
         - max_length (int): The maximum sequence length for the model's dataset
         """
         self.run = 0
         self.model_path = create_model_dir(settings.model_name)
         self.run_info = dict()
-        self.increment_run(logger, max_length)  # Set run to 1
+        self.increment_run(max_length)  # Set run to 1
     # End of __init__()
 
-    @trace()
     def latest(self) -> dict:
         """Grabs the information for the latest run. If the latest run has no information associated with it, creates
         an empty dictionary for it in run_info.
@@ -64,24 +62,21 @@ class MetaInfo(object):
         return self.run_info[self.run]
     # End of latest()
 
-    @trace()
-    def increment_run(self, logger: Logger, max_length: int):
+    def increment_run(self, max_length: int):
         """Increments the run number for this model, creates a directory for saving off weights for the new run, and
         creates an initial dictionary for the run information.
 
         Params:
-        - logger (logging.Logger): The logger for the model
         - max_length (int): The maximum sequence length for the model's dataset
         """
         self.run += 1
         latest = self.latest()
         latest[constants.DIR] = self.model_path + 'run_' + str(self.run) + '/'
         utils.create_directory(latest[constants.DIR])
-        metrics = Metrics(logger, max_length)
+        metrics = Metrics(max_length)
         self.update((-1, metrics))
     # End of increment_run()
 
-    @trace()
     def update(self, new_info: list):
         """
         Updates meta info with latest info.
@@ -138,7 +133,7 @@ class Saver(object):
             with open(self.meta_path, 'rb') as meta_file:  # Read current meta info from file
                 meta_info = dill.load(meta_file)
         else:
-            meta_info = MetaInfo(self.logger, self.settings, max_length)  # New model, so create new meta info
+            meta_info = MetaInfo(self.settings, max_length)  # New model, so create new meta info
         return meta_info
     # End of load_meta()
 

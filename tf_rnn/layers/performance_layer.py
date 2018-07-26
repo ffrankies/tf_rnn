@@ -23,7 +23,7 @@ class PerformancePlaceholders(object):
         Creates a new PerformancePlaceholders object
         """
         self.average_loss = tf.placeholder_with_default(input=0.0, shape=(), name='average_loss')
-        self.average_accuracy = tf.placeholder_with_default(input=0.0, shape=(), name='average_accuracy')
+        # self.average_accuracy = tf.placeholder_with_default(input=0.0, shape=(), name='average_accuracy')
         zero_accuracies = np.zeros([max_timesteps], np.float32)  # pylint: disable=E1101
         self.timestep_accuracies = tf.placeholder_with_default(input=zero_accuracies, shape=np.shape(zero_accuracies),
                                                                name='timestep_accuracies')

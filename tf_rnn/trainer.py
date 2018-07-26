@@ -3,6 +3,8 @@
 @since 0.6.1
 """
 import math
+
+import dill
 import numpy as np
 
 from . import plotter
@@ -39,12 +41,12 @@ def train(model: RNNBase):
         plotter.plot(model, metrics.train, metrics.valid, metrics.test)
         # End of epoch training
 
-    performance_eval(model, final_epoch, metrics.test)
+    performance_eval(model, metrics.test)
     model.saver.save_model(model, [final_epoch, metrics], metrics.valid.is_best_accuracy)
 
     model.logger.info("Finished training the model. Final validation loss: %f | Final test loss: %f | "
                       "Final test accuracy: %f" %
-                      (metrics.valid.losses[-1], metrics.test.losses[-1], metrics.test.accuracies[-1]))
+                      (metrics.valid.losses[-1], metrics.test.losses[-1], metrics.test.accuracies()[-1]))
     plotter.plot(model, metrics.train, metrics.valid, metrics.test)
 # End of train()
 
@@ -209,6 +211,7 @@ def update_accumulator(accumulator: Accumulator, dataset_partition: DataPartitio
     performance_data.extend([dataset_partition.y[batch_num], dataset_partition.sizes[batch_num]])
     data = AccumulatorData._make(performance_data)
     accumulator.update(data=data, ending=dataset_partition.ending[batch_num])
+    return data
 # End of update_accumulator()
 
 
@@ -246,7 +249,6 @@ def validate_minibatch(model: RNNBase, dataset_partition: DataPartition, batch_n
         feed_dict=current_feed_dict
         )
     performance_data = list(performance_data)
-    performance_data.extend([dataset_partition.y[batch_num], dataset_partition.sizes[batch_num]])
     update_accumulator(accumulator, dataset_partition, batch_num, performance_data)
     return current_state
 # End of validate_minibatch()
@@ -268,10 +270,10 @@ def summarize(model: RNNBase, train_accumulator: Accumulator, valid_accumulator:
         [model.summary_ops],
         feed_dict={
             model.train_performance.average_loss: train_accumulator.loss,
-            model.train_performance.average_accuracy: train_accumulator.accuracy,
+            # model.train_performance.average_accuracy: train_accumulator.accuracy,
             model.train_performance.timestep_accuracies: train_accumulator.timestep_accuracies,
             model.validation_performance.average_loss: valid_accumulator.loss,
-            model.validation_performance.average_accuracy: valid_accumulator.accuracy,
+            # model.validation_performance.average_accuracy: valid_accumulator.accuracy,
             model.validation_performance.timestep_accuracies: valid_accumulator.timestep_accuracies,
         })
     model.summary_writer.add_summary(summary[0], epoch_num)
@@ -279,29 +281,23 @@ def summarize(model: RNNBase, train_accumulator: Accumulator, valid_accumulator:
 
 
 @info('Performing a performance evaluation after training')
-def performance_eval(model: RNNBase, epoch_num: int, accumulator: Accumulator):
+def performance_eval(model: RNNBase, accumulator: Accumulator):
     """Performs a final performance evaluation on the test partition of the dataset.
 
     Params:
     - model (model.RNNBase): The RNN model containing the session and tensorflow variable placeholders
-    - epoch_num (int): Total number of epochs + 1 (only used so that the performance summary shows up in tensorboard)
     - accumulator (layers.utils.Accumulator): Accumulator for performance metrics of the test dataset
             partition
-
-    Return:
-    - loss (float): The calculated loss for the test partition of the dataset
-    - accuracy (float): The calculated accuracy for the test partition of the dataset
-    - timestep_accuracies (list): The calculated accuracies for each timestep for the test partition of the dataset
     """
     test_step(model, accumulator)
-    summary = model.session.run(
-        [model.summary_ops],
-        feed_dict={
-            model.test_performance.average_loss: accumulator.loss,
-            model.test_performance.average_accuracy: accumulator.accuracy,
-            model.test_performance.timestep_accuracies: accumulator.timestep_accuracies
-        })
-    model.summary_writer.add_summary(summary[0], epoch_num)
+    # summary = model.session.run(
+    #     [model.summary_ops],
+    #     feed_dict={
+    #         model.test_performance.average_loss: accumulator.loss,
+    #         model.test_performance.average_accuracy: accumulator.accuracy,
+    #         model.test_performance.timestep_accuracies: accumulator.timestep_accuracies
+    #     })
+    # model.summary_writer.add_summary(summary[0], epoch_num)
     accumulator.next_epoch()
 # End of test_final()
 
@@ -321,6 +317,31 @@ def test_step(model: RNNBase, accumulator: Accumulator):
     for batch_num in range(model.dataset.test.num_batches):
         current_state = validate_minibatch(model, model.dataset.test, batch_num, current_state, accumulator)
 # End of test_step()
+
+
+@trace()
+def test_minibatch(model: RNNBase, batch_num: int, current_state: np.array, accumulator: Accumulator) -> np.array:
+    """Calculates the performance of the network on one minibatch, and saves the .
+
+    Params:
+    - model (model.RNNBase): The model to validate
+    - batch_num (int): The current batch number
+    - current_state (np.array): The current hidden state of the model
+    - accumulator (layers.utils.Accumulator): The accumulator for validation performance
+
+    Return:
+    - updated_hidden_state (np.array): The updated state of the hidden layer after validating
+    """
+    current_feed_dict = get_feed_dict(model, model.dataset.test, batch_num, current_state)
+    performance_data, current_state = model.session.run(
+        [model.performance_ops, model.current_state],
+        feed_dict=current_feed_dict
+        )
+    performance_data = list(performance_data)
+    data = update_accumulator(accumulator, model.dataset.test, batch_num, performance_data)
+    save_predictions(data.predictions, model, batch_num)
+    return current_state
+# End of validate_minibatch()
 
 
 @trace()
@@ -344,3 +365,23 @@ def early_stop(valid_accumulator: Accumulator, epoch_num: int, num_epochs: int) 
             should_stop = True
     return should_stop
 # End of early_stop
+
+
+@trace()
+def save_predictions(predictions: np.array, model: RNNBase, batch_num: int):
+    """Saves the predictions made by the RNN during testing for analysis.
+
+    Params:
+    - data (np.array): The predictions made
+    - model (RNNBase): Contains the test partition and saver object
+    - batch_num (int): The batch for which the predictions were made
+    """
+    batch_x = model.dataset.test.x[batch_num]
+    batch_y = model.dataset.test.y[batch_num]
+    ending = model.dataset.test.ending[batch_num]
+    sequences = [x + [y[-1]] for x, y in zip(batch_x, batch_y)]
+    print('Sequences produced')
+    print(sequences[:5])
+    with open(model.saver.latest()[constants.DIR] + 'predictions.pkl', 'ab') as predictions_file:
+        dill.dump(predictions_file, (sequences, predictions, ending))
+# End of save_predictions()

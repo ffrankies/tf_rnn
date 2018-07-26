@@ -151,8 +151,8 @@ class RNNBase(object):
             self.train_performance = PerformancePlaceholders(max_length)
         with tf.variable_scope(constants.VALIDATION_PERFORMANCE):
             self.validation_performance = PerformancePlaceholders(max_length)
-        with tf.variable_scope(constants.TEST_PERFORMANCE):
-            self.test_performance = PerformancePlaceholders(max_length)
+        # with tf.variable_scope(constants.TEST_PERFORMANCE):
+        #     self.test_performance = PerformancePlaceholders(max_length)
     # End of performance_evaluation()
 
     @debug()

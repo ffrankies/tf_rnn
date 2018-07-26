@@ -8,9 +8,6 @@ from copy import deepcopy
 
 import numpy as np
 
-# The following imports are only used for type hinting
-from ...logger import Logger
-
 
 PerformanceMetrics = namedtuple('PerformanceMetrics', ['accuracy', 'precision', 'recall', 'f1_score'])
 
@@ -19,17 +16,14 @@ class ConfusionMatrix(object):
     """An updatable confusion matrix.
 
     Instance Variables:
-    - logger (logging.Logger): For logging purposes
     - matrix (dict): The confusion matrix, as a dictionary
     - row_labels (set): The valid labels for the rows
     - col_labels (set): The valid labels for the columns
     """
 
-    def __init__(self, logger: Logger):
+    def __init__(self):
         """Creates a ConfusionMatrix object.
         """
-        self.logger = logger
-        # logger.debug('Creating a confusion matrix')
         self.matrix = dict()
         self.row_labels = set()
         self.col_labels = set()
@@ -43,7 +37,6 @@ class ConfusionMatrix(object):
         - labels (list): The correct predictions for the given batch
         - sequence_lengths (list): The valid sequence lengths for every row in the given batch
         """
-        # self.logger.debug('Updating confusion matrix')
         for row_index, row in enumerate(predictions):
             row_slice = row[:sequence_lengths[row_index]]
             for column_index, prediction in enumerate(row_slice):
@@ -116,7 +109,7 @@ class ConfusionMatrix(object):
         Returns:
         - confusion_matrix_copy (ConfusionMatrix): A copy of this confusion matrix
         """
-        copy = ConfusionMatrix(self.logger)
+        copy = ConfusionMatrix()
         copy.row_labels = deepcopy(self.row_labels)
         copy.col_labels = deepcopy(self.col_labels)
         copy.matrix = deepcopy(self.matrix)

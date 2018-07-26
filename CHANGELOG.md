@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - The `ConfusionMatrix.performance_metrics()` method, for calculating accuracy, precision, recall and f1_score.
 - The `TimestepAccuracies` class for storing cumulative timestep accuracy information within the `Accumulator`.
 - The `Accumulator.best_accuracy()` and `Accumulator.is_best_accuracy()` methods.
+- The `trainer` module will now save the actual sequences and predictions generated while testing the model.
 
 ### Changed
 
@@ -28,6 +29,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - `Accumulator.update()` now takes an `AccumulatorData` object as the `data` parameter, not a `list`.
 - Renamed `plot` to `axes` in `plotter` to avoid name collisions.
 - The `Accumulator` now uses the `TimestepAccuracies` class to store timestep accuracy info.
+- The `Accumulator`, `ConfusionMatrix` and `MetaInfo` classes no longer accept a logger as an argument.
 
 ### Removed
 

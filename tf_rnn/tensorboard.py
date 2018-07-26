@@ -1,5 +1,6 @@
 """Utility class for creating tensorboard summaries.
-18 November, 2017
+
+@since 0.6.1
 """
 
 import tensorflow as tf
