@@ -236,11 +236,17 @@ class RNNBase(object):
         self.saver = saver.Saver(self.logger, self.settings.general, self.dataset.max_length)
         self.variables = ray.experimental.TensorFlowVariables(self.minibatch_loss_op, self.session)
         if self.settings.general.new_model:
-            self.saver.meta.increment_run(self.logger, self.dataset.max_length)
+            self.saver.meta.increment_run(self.dataset.max_length)
         else:
             self.saver.load_model(self, self.settings.general.best_model)
         self.run_dir = self.saver.meta.latest()[constants.DIR]
-        self.summary_writer, self.summary_ops = tensorboard.init_tensorboard(self)
+        self.summary_writer, self.summary_ops = tensorboard.init_tensorboard(
+            directory=self.run_dir,
+            max_length=self.dataset.max_length,
+            train_performance=self.train_performance,
+            validation_performance=self.validation_performance,
+            graph=self.session.graph
+        )
     # End of init_saver()
 # End of RNNBase()
 

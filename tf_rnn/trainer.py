@@ -170,14 +170,14 @@ def build_feed_dict(model: RNNBase, batch: int, current_state: np.array, trainin
     Return:
     - feed_dict (dict): The dictionary built out of the provided batch and current state
     """
-    x, y, sizes = batch
+    batch_x, batch_y, sizes = batch
     if training:
         dropout = model.settings.rnn.dropout
     else:
         dropout = 1.0
     feed_dict = {
-        model.batch_x_placeholder: x,
-        model.batch_y_placeholder: y,
+        model.batch_x_placeholder: batch_x,
+        model.batch_y_placeholder: batch_y,
         model.batch_sizes: sizes,
         model.hidden_state_placeholder: current_state,
         model.dropout: dropout
@@ -271,10 +271,10 @@ def summarize(model: RNNBase, train_accumulator: Accumulator, valid_accumulator:
         feed_dict={
             model.train_performance.average_loss: train_accumulator.loss,
             # model.train_performance.average_accuracy: train_accumulator.accuracy,
-            model.train_performance.timestep_accuracies: train_accumulator.timestep_accuracies,
+            model.train_performance.timestep_accuracies: train_accumulator.get_timestep_accuracies(),
             model.validation_performance.average_loss: valid_accumulator.loss,
             # model.validation_performance.average_accuracy: valid_accumulator.accuracy,
-            model.validation_performance.timestep_accuracies: valid_accumulator.timestep_accuracies,
+            model.validation_performance.timestep_accuracies: valid_accumulator.get_timestep_accuracies(),
         })
     model.summary_writer.add_summary(summary[0], epoch_num)
 # End of summarize()

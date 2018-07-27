@@ -37,7 +37,8 @@ def plot(model: RNNBase, train_accumulator: Accumulator, valid_accumulator: Accu
     model.logger.info('Plotting results for visualization')
     directory = model.saver.meta.latest()[constants.DIR]
     plot_training_loss(directory, train_accumulator.losses, valid_accumulator.losses)
-    plot_training_accuracy(directory, train_accumulator.accuracies, valid_accumulator.accuracies)
+    plot_training_accuracy(directory, train_accumulator.accuracies(), valid_accumulator.accuracies())
+    plot_f1_score(directory, valid_accumulator)
     plot_timestep_accuracy(directory, test_accumulator)
     plot_confusion_matrix(directory, test_accumulator.latest_confusion_matrix, model.dataset.indexer)
 # End of plot()
@@ -75,9 +76,9 @@ def plot_training_loss(directory: str, training_loss: list, validation_loss: lis
     - validation_loss (list): The list of validation losses
     """
     figure, axes = setup_plot('Training Loss Over Time', 'Epoch', 'Loss')
-    x = range(0, len(training_loss))
-    axes.plot(x, training_loss, label="Training Loss (final=%.2f)" % training_loss[-1])
-    axes.plot(x, validation_loss, label="Validation Loss (final=%.2f)" % validation_loss[-1])
+    x_range = range(0, len(training_loss))
+    axes.plot(x_range, training_loss, label="Training Loss (final=%.2f)" % training_loss[-1])
+    axes.plot(x_range, validation_loss, label="Validation Loss (final=%.2f)" % validation_loss[-1])
     axes.legend(loc='upper right')
     figure.savefig(directory + constants.PLT_TRAIN_LOSS)
 # End of plot_training_loss()
@@ -93,12 +94,33 @@ def plot_training_accuracy(directory: str, training_accuracy: list, validation_a
     - validation_accuracy (list): The list of validation accuracies
     """
     figure, axes = setup_plot('Training Accuracy Over Time', 'Epoch', 'Accuracy')
-    x = range(0, len(training_accuracy))
-    axes.plot(x, training_accuracy, label="Training Accuracy (final=%.2f)" % training_accuracy[-1])
-    axes.plot(x, validation_accuracy, label="Validation Accuracy (final=%.2f)" % validation_accuracy[-1])
+    x_range = range(0, len(training_accuracy))
+    axes.plot(x_range, training_accuracy, label="Training Accuracy (final=%.2f)" % training_accuracy[-1])
+    axes.plot(x_range, validation_accuracy, label="Validation Accuracy (final=%.2f)" % validation_accuracy[-1])
     axes.legend(loc='lower right')
     figure.savefig(directory + constants.PLT_TRAIN_ACCURACY)
 # End of plot_training_accuracy()
+
+
+@trace()
+def plot_f1_score(directory: str, valid_accumulator: Accumulator):
+    """Plots the f1_score (together with precision and recall) for the validation partition.
+
+    Params:
+    - directory (str): The directory in which to save the plot
+    - valid_accumulator (Accumulator): The accumulator that contains the f1_score metrics
+    """
+    figure, axes = setup_plot('F1 Score During Validation Over Time', 'Epoch', 'Value')
+    f1_scores = valid_accumulator.f1_scores()
+    precisions = valid_accumulator.precisions()
+    recalls = valid_accumulator.recalls()
+    x_range = range(0, len(f1_scores))
+    axes.plot(x_range, f1_scores, label="F1 Score (final=%.2f)" % f1_scores[-1])
+    axes.plot(x_range, precisions, label="Precision (final=%.2f)" % precisions[-1])
+    axes.plot(x_range, recalls, label="Recall(final=%.2f)" % recalls[-1])
+    axes.legend(loc='lower right')
+    figure.savefig(directory + constants.PLT_F1_SCORE)
+# End of plot_f1_score()
 
 
 @trace()
@@ -110,16 +132,17 @@ def plot_timestep_accuracy(directory: str, accumulator: Accumulator, timestep_la
     - timestep_accuracy (list): The average accuracy of predictions for each timestep
     - timestep_labels (list): The labels for the timesteps
     """
-    if accumulator.latest_timestep_accuracies is None:
+    if not accumulator.losses:
         return
     figure, axes = setup_plot(
-        "Avg. Accuracy at Each Timestep\nAvg. Overall Accuracy = {:.2f}".format(accumulator.best_accuracy),
+        "Avg. Accuracy at Each Timestep\nAvg. Overall Accuracy = {:.2f}".format(accumulator.best_accuracy()),
         'Timestep', 'Avg. Accuracy')
-    timestep_accuracy = [ratio * 100.0 for ratio in accumulator.latest_timestep_accuracies]
+    timestep_accuracy = [ratio * 100.0 for ratio in accumulator.get_timestep_accuracies()]
     axes.set_ylim(0, 120)
     bar_chart = axes.bar(range(1, len(timestep_accuracy) + 1), timestep_accuracy)
 
     # Add labels to the bar chart
+    # pylint: disable=C0102
     for bar in bar_chart:
         x_pos = bar.get_x() + bar.get_width()/2.
         height = bar.get_height()

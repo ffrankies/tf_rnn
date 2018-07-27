@@ -8,11 +8,11 @@ import tensorflow as tf
 from . import constants
 
 # These imports are only used for type hinting
-from .model import RNNBase
 from .layers import PerformancePlaceholders
 
 
-def init_tensorboard(model: RNNBase) -> tuple:
+def init_tensorboard(directory: str, max_length: int, train_performance: PerformancePlaceholders,
+                     validation_performance: PerformancePlaceholders, graph: tf.Graph) -> tuple:
     """Initialize tensorboard event writer, and add variable summaries to it.
 
     Params:
@@ -22,14 +22,14 @@ def init_tensorboard(model: RNNBase) -> tuple:
     - summary_writer (tf.summary.FileWriter): The tensorboard summary writer
     - summary_ops (tf.Tensor): The tensorflow operations that produce the tensorboard summaries
     """
-    tensorboard_dir = model.run_dir
+    tensorboard_dir = directory
     with tf.variable_scope(constants.TBOARD_SUMMARY):
-        max_timesteps = model.dataset.max_length
-        summarize_partition(constants.TBOARD_TRAIN, model.train_performance, max_timesteps)
-        summarize_partition(constants.TBOARD_VALID, model.validation_performance, max_timesteps)
+        max_timesteps = max_length
+        summarize_partition(constants.TBOARD_TRAIN, train_performance, max_timesteps)
+        summarize_partition(constants.TBOARD_VALID, validation_performance, max_timesteps)
         # summarize_partition(constants.TBOARD_TEST, model.test_performance, max_timesteps)
     merged_summary_ops = tf.summary.merge_all()
-    writer = tf.summary.FileWriter(tensorboard_dir, graph=model.session.graph)
+    writer = tf.summary.FileWriter(tensorboard_dir, graph=graph)
     return writer, merged_summary_ops
 # End of init_tensorboard()
 

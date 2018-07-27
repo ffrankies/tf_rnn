@@ -3,6 +3,7 @@
 @since 0.6.1
 """
 
+from copy import copy
 from collections import namedtuple
 
 from .confusion_matrix import ConfusionMatrix
@@ -70,6 +71,18 @@ class TimestepAccuracies(object):
         """
         self._incoming_timestep_accuracies = self._incoming_timestep_accuracies[:self.max_sequence_length]
         self._incoming_timestep_counts = self._incoming_timestep_counts[:self.max_sequence_length]
+        if self.timestep_accuracy_list[self._epoch]:
+            self._update_running_average()
+        else:
+            self.timestep_accuracy_list[self._epoch] = copy(self._incoming_timestep_accuracies)
+            self.timestep_count_list[self._epoch] = copy(self._incoming_timestep_counts)
+        self._incoming_timestep_accuracies = list()
+        self._incoming_timestep_counts = list()
+    # End of _merge_timesteps()
+
+    def _update_running_average(self):
+        """Updates the running average accuracy for each timestep using the incoming timestep accuracies and counts.
+        """
         for index in range(len(self._incoming_timestep_accuracies)):
             old_avg = self.timestep_accuracy_list[self._epoch][index]
             old_count = self.timestep_count_list[self._epoch][index]
@@ -77,9 +90,7 @@ class TimestepAccuracies(object):
             new_count = self._incoming_timestep_counts[index]
             self.timestep_accuracy_list[self._epoch][index] = update_average(old_avg, old_count, new_avg, new_count)
             self.timestep_count_list[self._epoch][index] += new_count
-        self._incoming_timestep_accuracies = list()
-        self._incoming_timestep_counts = list()
-    # End of _merge_timesteps()
+    # End of _update_running_average()
 # End of TimestepAccuracies()
 
 
@@ -214,6 +225,15 @@ class Accumulator(object):
         best = max(accuracies)
         return latest >= best
     # End of is_best_accuracy()
+
+    def get_timestep_accuracies(self, index: int = -1):
+        """Returns the latest timestep accuracies, or the timestep accuracies for any given epoch.
+
+        Params:
+        - index (int): The index of the epoch to retrieve. Defaults to -1, which retrieves the last epoch
+        """
+        return self.timestep_accuracies.timestep_accuracy_list[index]
+    # End of get_timestep_accuracies()
 # End of PerformanceData()
 
 

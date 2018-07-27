@@ -37,6 +37,7 @@ PLT_TRAIN_LOSS = "training_loss.png"
 PLT_TRAIN_ACCURACY = "training_accuracy.png"
 PLT_TIMESTEP_ACCURACY = "timestep_accuracy.png"
 PLT_CONFUSION_MATRIX = "confusion_matrix.png"
+PLT_F1_SCORE = "f1_score.png"
 
 #########################################
 # META INFO KEYS
