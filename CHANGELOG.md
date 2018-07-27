@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - The `TimestepAccuracies` class for storing cumulative timestep accuracy information within the `Accumulator`.
 - The `Accumulator.best_accuracy()` and `Accumulator.is_best_accuracy()` methods.
 - The `trainer` module will now save the actual sequences and predictions generated while testing the model.
+- The `plotter` now plots f1_scores.
+- The `Accumulator` now has the `get_timestep_accuracies()` method for retrieving timestep accuracies.
 
 ### Changed
 
