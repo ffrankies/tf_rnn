@@ -356,11 +356,11 @@ def early_stop(valid_accumulator: Accumulator, epoch_num: int, num_epochs: int) 
     - should_stop (bool): True if the model has started to overfit the data
     """
     should_stop = False
-    one_tenth = math.ceil(num_epochs/10)
-    if epoch_num >= one_tenth:
-        maximum = max(valid_accumulator.accuracies[-one_tenth:])
-        last_accuracy = valid_accumulator.accuracies[-1]
-        if maximum < valid_accumulator.best_accuracy and last_accuracy < valid_accumulator.best_accuracy*0.98:
+    portion_size = min(10, max(5, math.ceil(num_epochs/10)))  # Keep portion size between 5 and 10
+    if epoch_num >= portion_size:
+        maximum = max(valid_accumulator.accuracies()[-portion_size:])
+        last_accuracy = valid_accumulator.accuracies()[-1]
+        if maximum < valid_accumulator.best_accuracy() and last_accuracy < valid_accumulator.best_accuracy() * 0.98:
             should_stop = True
     return should_stop
 # End of early_stop
@@ -384,6 +384,7 @@ def save_predictions(predictions: np.array, model: RNNBase, batch_num: int):
     with open(model.saver.latest()[constants.DIR] + 'predictions.pkl', 'ab') as predictions_file:
         dill.dump(predictions_file, (sequences, predictions, ending))
 # End of save_predictions()
+
 
 def log_post_epoch(model: RNNBase, epoch_num: int, train_accumulator: Accumulator, valid_accumulator: Accumulator):
     """Logs the epoch number, training loss, and validation loss and accuracy. If it's the first epoch (epoch 0), then
