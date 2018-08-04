@@ -67,8 +67,7 @@ def train_epoch(model: RNNBase, epoch_num: int, train_accumulator: Accumulator, 
     validation_step(model, current_state, valid_accumulator)
 
     summarize(model, train_accumulator, valid_accumulator, epoch_num)
-    model.logger.info("Finished epoch: %d | training_loss: %.2f | validation_loss: %.2f | validation_accuracy: %.2f" %
-                      (epoch_num, train_accumulator.loss, valid_accumulator.loss, valid_accumulator.accuracy))
+    log_post_epoch(model, epoch_num, train_accumulator, valid_accumulator)
 
     train_accumulator.next_epoch()
     valid_accumulator.next_epoch()
@@ -385,3 +384,21 @@ def save_predictions(predictions: np.array, model: RNNBase, batch_num: int):
     with open(model.saver.latest()[constants.DIR] + 'predictions.pkl', 'ab') as predictions_file:
         dill.dump(predictions_file, (sequences, predictions, ending))
 # End of save_predictions()
+
+def log_post_epoch(model: RNNBase, epoch_num: int, train_accumulator: Accumulator, valid_accumulator: Accumulator):
+    """Logs the epoch number, training loss, and validation loss and accuracy. If it's the first epoch (epoch 0), then
+    only logs epoch number and training loss.
+
+    Params:
+    - model (RNNBase): The RNN model doing the logging
+    - epoch_num (int): The number of the current epoch
+    - train_accumulator (layers.utils.Accumulator): The accumulator for training performance
+    - valid_accumulator (layers.utils.Accumulator): The accumulator for validation performance
+    """
+    if epoch_num == 0:
+        model.logger.info("Finished epoch: {:d} | training_loss: {:.2f}".format(epoch_num, train_accumulator.loss))
+    else:
+        model.logger.info("Finished epoch: {:d} | training_loss: {:.2f} | validation_loss: {:.2f} | "
+                          "validation_accuracy: {:.2f}".format(epoch_num, train_accumulator.loss, 
+                          valid_accumulator.loss, valid_accumulator.accuracies()[-1]))
+# End of log_post_epoch()
