@@ -133,7 +133,7 @@ class ConfusionMatrix(object):
         """
         matrix = self.to_array()
         matrix = np.array(matrix)
-        identity = np.identity(len(self.all_labels))
+        identity = np.identity(len(self.all_labels()))
         masked_matrix = matrix * identity
         accuracy = np.sum(masked_matrix) / np.sum(matrix)
         with np.errstate(divide='ignore'):
@@ -145,5 +145,5 @@ class ConfusionMatrix(object):
         precision = np.nan_to_num(recall).mean()
         f1_score = (2 * recall * precision) / (recall + precision)
         return PerformanceMetrics(accuracy, precision, recall, f1_score)
-    # End of performance_matrix()
+    # End of performance_metrics()
 # End of ConfusionMatrix()
