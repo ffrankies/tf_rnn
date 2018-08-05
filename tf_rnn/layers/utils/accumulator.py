@@ -10,7 +10,7 @@ from .confusion_matrix import ConfusionMatrix
 
 
 AccumulatorData = namedtuple('AccumulatorData',
-                             ['loss', 'accuracy', 'size', 'timestep_accuracies', 'timestep_counts', 'predictions',
+                             ['loss', 'size', 'timestep_accuracies', 'timestep_counts', 'predictions',
                               'labels', 'sequence_lengths'])
 
 
@@ -207,10 +207,13 @@ class Accumulator(object):
         """Returns the best attained accuracy.
 
         Returns:
-        - accuracy (float): The best attained accuracy
+        - accuracy (float): The best attained accuracy. If the accumulator has no accuracies yet, returns -1.0
         """
         accuracies = self.accuracies()
-        accuracy = max(accuracies)
+        if accuracies:
+            accuracy = max(accuracies)
+        else:
+            accuracy = -1.0
         return accuracy
     # End of best_accuracy()
 
@@ -221,8 +224,11 @@ class Accumulator(object):
         - indicator (bool): True if the latest accuracy is the best attained accuracy.
         """
         accuracies = self.accuracies()
-        latest = accuracies[-1]
-        best = max(accuracies)
+        if accuracies:
+            latest = accuracies[-1]
+            best = max(accuracies)
+        else:
+            return False
         return latest >= best
     # End of is_best_accuracy()
 

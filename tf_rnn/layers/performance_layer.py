@@ -42,7 +42,6 @@ def performance_ops(logits_series, labels_series, sizes_series, truncate):
 
     Returns:
     - loss (float): The average loss for the given minibatch
-    - accuracy (float): The average accuracy for the given minibatch
     - size (int): The number of valid elements in this minibatch
     - timestep_accuracies (list): The average accuracy for each timestep in this minibatch
     - timestep_elements (list): The number of valid elements for each timestep in this minibatch
@@ -50,9 +49,9 @@ def performance_ops(logits_series, labels_series, sizes_series, truncate):
     """
     # calculate loss and accuracies for a minibatch
     avg_loss, batch_size = average_loss(logits_series, labels_series, sizes_series, truncate)
-    avg_acc, timestep_accs, timestep_sizes, predictions = average_accuracy(
+    _, timestep_accs, timestep_sizes, predictions = average_accuracy(
         logits_series, labels_series, sizes_series, truncate)
-    return avg_loss, avg_acc, batch_size, timestep_accs, timestep_sizes, predictions
+    return avg_loss, batch_size, timestep_accs, timestep_sizes, predictions
 # End of performance_ops()
 
 

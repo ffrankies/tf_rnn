@@ -199,7 +199,6 @@ def update_accumulator(accumulator: Accumulator, dataset_partition: DataPartitio
     - batch_num (int): The index of the batch (within the dataset partition) that is being added to the container
     - performance_data (list): The performance data for the given minibatch
       - loss (float): The average loss for the given minibatch
-      - accuracy (float): The average accuracy for the given minibatch
       - size (int): The number of valid elements in this minibatch
       - timestep_accuracies (list): The average accuracy for each timestep in this minibatch
       - timestep_elements (list): The number of valid elements for each timestep in this minibatch
