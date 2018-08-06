@@ -6,7 +6,7 @@ import pytest
 import logging
 import numpy as np
 
-from tf_rnn.layers.utils import ConfusionMatrix
+from tf_rnn.layers.utils.confusion_matrix import ConfusionMatrix, PerformanceMetrics
 
 from ...test_data import PAD
 
@@ -27,7 +27,7 @@ SIZES_COMBINED_SCRAMBLED_BATCHES_4 = [8, 3, 2, 5, 4, 1, 7, 6]
 
 PREDICTIONS = COMBINED_SCRAMBLED_BATCHES_4
 
-LABELS = COMBINED_SCRAMBLED_BATCHES_4 = [
+LABELS = [
     [0, 1, 2, 3, 5, 5, 1, 7],
     [0, 1, 2, PAD, PAD, PAD, PAD, PAD],
     [0, 1, PAD, PAD, PAD, PAD, PAD, PAD],
@@ -40,32 +40,19 @@ LABELS = COMBINED_SCRAMBLED_BATCHES_4 = [
 
 SIZES = SIZES_COMBINED_SCRAMBLED_BATCHES_4
 
-#
-# Accumulator tests
-#
+EXPECTED_MATRIX = [
+    [4, 0, 0, 0, 0, 0, 0, 0],
+    [4, 4, 0, 0, 0, 0, 1, 0],
+    [0, 3, 3, 0, 0, 0, 0, 0],
+    [0, 0, 3, 2, 0, 0, 0, 0],
+    [0, 0, 0, 3, 0, 0, 0, 0],
+    [0, 0, 0, 0, 4, 3, 0, 0],
+    [0, 0, 0, 0, 0, 0, 1, 0],
+    [0, 0, 0, 0, 0, 0, 0, 1]
+]
 
-def make_data_list(batch, size, loss, accuracy, t_accuracy):
-    """Creates the data for updating an accumulator.
-    """
-    max_size = max(size)
-    t_size = [0] * max_size
-    for i in size:
-        for index, _ in enumerate(range(i)):
-            t_size[index] += 1
-    print('t_size = ', t_size)
-    data = [
-        loss,  # loss
-        accuracy,  # accuracy
-        sum(size),  # number of elements in batch
-        t_accuracy,  # timestep accuracies
-        t_size,  # timestep lengths
-        batch,  # predictions
-        batch,  # labels
-        size  # length of each sequence
-    ]
-    return data
-# End of make_data_list()
- 
+EXPECTED_METRICS = PerformanceMetrics(0.5, 3007/5040, 313/560, 0.5771628483)
+
 
 class TestInsertPredictionIntoConfusionMatrix():
     def test_should_correctly_add_new_prediction(self):
@@ -128,16 +115,7 @@ class TestConfusionMatrixToArray():
         cm = ConfusionMatrix()
         cm.update(PREDICTIONS, LABELS, SIZES)
         matrix = cm.to_array()
-        assert matrix == [
-            [4, 0, 0, 0, 0, 0, 0, 0],
-            [4, 4, 0, 0, 0, 0, 1, 0],
-            [0, 3, 3, 0, 0, 0, 0, 0],
-            [0, 0, 3, 2, 0, 0, 0, 0],
-            [0, 0, 0, 3, 0, 0, 0, 0],
-            [0, 0, 0, 0, 4, 3, 0, 0],
-            [0, 0, 0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1]
-        ]
+        assert matrix == EXPECTED_MATRIX
         assert cm.matrix[0][0] == 4
         assert cm.matrix[1][0] == 4 and cm.matrix[1][1] == 4 and cm.matrix[1][6] == 1
         assert cm.matrix[2][1] == 3 and cm.matrix[2][2] == 3
@@ -146,3 +124,34 @@ class TestConfusionMatrixToArray():
         assert cm.matrix[5][4] == 4 and cm.matrix[5][5] == 3
         assert cm.matrix[6][6] == 1
         assert cm.matrix[7][7] == 1
+
+class TestPerformanceMetrics():
+
+    def setup_method(self):
+        self.cm = ConfusionMatrix()
+        self.cm.update(PREDICTIONS, LABELS, SIZES)
+        
+    def test_does_not_crash_if_matrix_empty(self):
+        cm = ConfusionMatrix()
+        try:
+            cm.performance_metrics()
+        except Exception:
+            pytest.fail()
+
+    def test_does_not_crash(self):
+        try:
+            self.cm.performance_metrics()
+        except Exception:
+            pytest.fail()
+    
+    def test_correctly_calculates_accuracy(self):
+        assert self.cm.performance_metrics().accuracy == EXPECTED_METRICS.accuracy
+
+    def test_correctly_calculates_precision(self):
+        assert self.cm.performance_metrics().precision == EXPECTED_METRICS.precision
+
+    def test_correctly_calculates_recall(self):
+        assert self.cm.performance_metrics().recall == EXPECTED_METRICS.recall
+
+    def test_correctly_calculates_f1_score(self):
+        assert np.allclose([self.cm.performance_metrics().f1_score], [EXPECTED_METRICS.f1_score])

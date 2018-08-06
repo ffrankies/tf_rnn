@@ -131,6 +131,8 @@ class ConfusionMatrix(object):
         Returns:
         - performance_metrics (PerformanceMetrics): The performance matrix for this confusion matrix
         """
+        if self.is_empty():
+            return PerformanceMetrics(-1.0, -1.0, -1.0, -1.0)
         matrix = self.to_array()
         matrix = np.array(matrix)
         identity = np.identity(len(self.all_labels()))
@@ -142,7 +144,7 @@ class ConfusionMatrix(object):
             # precision = true positives / true positives + false positives
             precision = masked_matrix.sum(axis=1) / matrix.sum(axis=1)
         recall = np.nan_to_num(recall).mean()
-        precision = np.nan_to_num(recall).mean()
+        precision = np.nan_to_num(precision).mean()
         f1_score = (2 * recall * precision) / (recall + precision)
         return PerformanceMetrics(accuracy, precision, recall, f1_score)
     # End of performance_metrics()
