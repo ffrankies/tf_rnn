@@ -1,13 +1,14 @@
 """Test for the confusion_matrix module.
+
+@since 0.6.1
 """
 import pytest
 import logging
 import numpy as np
 
-from tf_rnn.layers.performance_layer import *
-from ...test_data import *
+from tf_rnn.layers.utils import ConfusionMatrix
 
-LOGGER = logging.getLogger('TEST')
+from ...test_data import PAD
 
 MAX_LENGTH = 8
 
@@ -49,7 +50,7 @@ def make_data_list(batch, size, loss, accuracy, t_accuracy):
     max_size = max(size)
     t_size = [0] * max_size
     for i in size:
-        for index, j in enumerate(range(i)):
+        for index, _ in enumerate(range(i)):
             t_size[index] += 1
     print('t_size = ', t_size)
     data = [
@@ -68,7 +69,7 @@ def make_data_list(batch, size, loss, accuracy, t_accuracy):
 
 class TestInsertPredictionIntoConfusionMatrix():
     def test_should_correctly_add_new_prediction(self):
-        cm = ConfusionMatrix(LOGGER)
+        cm = ConfusionMatrix()
         cm.insert_prediction(0, 1)
         assert 1 in cm.row_labels
         assert 0 in cm.col_labels
@@ -77,7 +78,7 @@ class TestInsertPredictionIntoConfusionMatrix():
         assert cm.matrix[1][0] == 1
 
     def test_should_correctly_update_old_prediction(self):
-        cm = ConfusionMatrix(LOGGER)
+        cm = ConfusionMatrix()
         cm.insert_prediction(0, 1)
         cm.insert_prediction(0, 1)
         assert 1 in cm.row_labels
@@ -91,12 +92,12 @@ class TestUpdateConfusionMatrix():
         predictions = []
         labels = []
         sizes = []
-        cm = ConfusionMatrix(LOGGER)
+        cm = ConfusionMatrix()
         cm.update(predictions, labels, sizes)
         assert len(cm.matrix.keys()) == 0
 
     def test_should_correctly_update_with_batch_data(self):
-        cm = ConfusionMatrix(LOGGER)
+        cm = ConfusionMatrix()
         cm.update(PREDICTIONS, LABELS, SIZES)
         assert cm.row_labels == cm.col_labels
         assert PAD not in cm.row_labels and PAD not in cm.col_labels
@@ -119,12 +120,12 @@ class TestUpdateConfusionMatrix():
 
 class TestConfusionMatrixToArray():
     def test_should_return_empty_array_when_matrix_is_empty(self):
-        cm = ConfusionMatrix(LOGGER)
+        cm = ConfusionMatrix()
         matrix = cm.to_array()
         assert matrix == []
 
     def test_should_correctly_convert_matrix_with_data_to_array(self):
-        cm = ConfusionMatrix(LOGGER)
+        cm = ConfusionMatrix()
         cm.update(PREDICTIONS, LABELS, SIZES)
         matrix = cm.to_array()
         assert matrix == [
