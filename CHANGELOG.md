@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Dataset classes now expect data to already be shuffled [planned]
 - Dataset classes now expect data sequences to be split into training, validation and testing partitions [planned]
+- Dataset classes now saves and loads partitions as needed for training, validation and testing
+- `constants` now has information about where data partitions are stored
 
 ### For later
 
