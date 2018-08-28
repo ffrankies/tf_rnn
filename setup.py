@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="tf_rnn",
-    version="0.6.0",
+    version="0.6.2",
     author="ffrankies",
     author_email="wanyef@mail.gvsu.edu",
     description="Tensorflow implementation of an RNN for generating sequences",

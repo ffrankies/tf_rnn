@@ -7,10 +7,23 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Planned / Unreleased
 
+### For 0.6.2
+
+- Dataset classes now expect data to already be shuffled [planned]
+- Dataset classes now expect data sequences to be split into training, validation and testing partitions [planned]
+
+### For later
+
 - Improve performance by removing unnecessary calculations.
 - Fix the loss-starts-at-0 problem in accumulator.
 - Use underscores to declare private variables and methods.
 - Add custom errors, and use them where necessary.
+
+## 0.6.2
+
+### Changed
+
+- `shuffle_seed` has been moved from `Settings.rnn` to `Settings.data`
 
 ## 0.6.1
 
