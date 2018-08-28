@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - `shuffle_seed` has been moved from `Settings.rnn` to `Settings.data`
+- `END` tokens now indexed for padding
+- `trainer.get_feed_dict()` parameter changed from `dataset` to `partition` for clarity
 
 ## 0.6.1
 

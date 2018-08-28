@@ -117,22 +117,22 @@ def train_minibatch(model: RNNBase, batch_num: int, current_state: np.array, acc
 
 
 @trace()
-def get_feed_dict(model: RNNBase, dataset: DatasetBase, batch_num: int, current_state: np.array,
+def get_feed_dict(model: RNNBase, partition: DataPartition, batch_num: int, current_state: np.array,
                   training: bool = False) -> dict:
     """Obtains the information needed for running tensorflow operations as a feed dictionary.
 
     Params:
     - model (model.RNNBase): The model containing the operations
-    - dataset (dataset.DataPartition): The dataset from which to extract the batch information
-    - batch_num (int): The index of the batch in the dataset
+    - partition (dataset.DataPartition): The partition from which to extract the batch information
+    - batch_num (int): The index of the batch in the dataset partition
     - current_state (np.array): The current hidden state of the RNN
     - training (bool): Whether or not this batch is being trained on (default: False)
 
     Return:
     - feed_dict (dict): The dictionary holding the necessary information for running tensorflow operations
     """
-    batch = dataset.get_batch(batch_num)
-    beginning = dataset.beginning[batch_num]
+    batch = partition.get_batch(batch_num)
+    beginning = partition.beginning[batch_num]
     current_state = reset_state(current_state, beginning)
     feed_dict = build_feed_dict(model, batch, current_state, training)
     return feed_dict

@@ -193,8 +193,8 @@ class DatasetBase(object):
         - partition (DataPartition): The partition containing data in batch format
         """
         if constants.END_TOKEN in self.indexer.token_to_index:
-            x_pad_token = constants.END_TOKEN
-            y_pad_token = constants.END_TOKEN
+            x_pad_token = self.indexer.to_index(constants.END_TOKEN)
+            y_pad_token = self.indexer.to_index(constants.END_TOKEN)
         else:
             x_pad_token = inputs[0][-1]
             y_pad_token = labels[0][-1]
