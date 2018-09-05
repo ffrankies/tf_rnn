@@ -26,9 +26,18 @@ END_TOKEN = ']'
 # DEFAULT DIRECTORIES
 #########################################
 MODEL_DIR = "models/"
+MODEL_DATA_DIR = "data/"
 DATASETS_DIR = "datasets/"
 TENSORBOARD = "tensorboard/"
 RAW_DATA_DIR = "raw_data/"
+
+#########################################
+# DATA PARTITION FILES
+#########################################
+PART_META = "meta_partition.pkl"
+PART_TRAIN = "train_partition.pkl"
+PART_VALID = "valid_partition.pkl"
+PART_TEST = "test_partition.pkl"
 
 #########################################
 # PLOT NAMES

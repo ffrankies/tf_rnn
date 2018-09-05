@@ -12,7 +12,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Dataset classes now expect data to already be shuffled [planned]
 - Dataset classes now expect data sequences to be split into training, validation and testing partitions [planned]
 - Dataset classes now saves and loads partitions as needed for training, validation and testing
-- `constants` now has information about where data partitions are stored
 
 ### For later
 
@@ -23,11 +22,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## 0.6.2
 
+### Added
+
+- `constants` now has information about where data partitions are stored
+
 ### Changed
 
 - `shuffle_seed` has been moved from `Settings.rnn` to `Settings.data`
 - `END` tokens now indexed for padding
 - `trainer.get_feed_dict()` parameter changed from `dataset` to `partition` for clarity
+
+### Removed
+
+- The `shuffle` method from the `DatasetBase` class
 
 ## 0.6.1
 

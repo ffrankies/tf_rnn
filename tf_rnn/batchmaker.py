@@ -2,11 +2,11 @@
 The batches are converted into numpy arrays towards the end for them to play nice with tensorflow
 (i.e. avoid the "ValueError: setting an array element with a sequence" error)
 
-Copyright (c) 2017-2018 Frank Derry Wanye
-@since 0.6.0
+@since 0.6.2
 """
 import math
-
+import multiprocessing
+from collections import namedtuple
 from typing import Any
 
 import numpy as np
@@ -14,8 +14,16 @@ import numpy as np
 from .logger import trace
 
 
+TRUNCATE_LENGTH = None
+X_PAD_TOKEN = None
+Y_PAD_TOKEN = None
+
+
+Batch = namedtuple('Batch', ['x', 'y', 'sequence_lengths', 'beginning', 'ending'])
+
+
 @trace()
-def make_batches(input_data: list, labels: list, batch_size: int, truncate: int, x_pad_token: Any,
+def make_batches(input_data: list, labels: list, batch_size: int, truncate_length: int, x_pad_token: Any,
                  y_pad_token: Any) -> tuple:
     """Converts both the input data and labels into batches of size 'batch_size'.
 
@@ -23,7 +31,7 @@ def make_batches(input_data: list, labels: list, batch_size: int, truncate: int,
     - input_data (list): The input data to be made into batches
     - labels (list): The labels to be made into batches
     - batch_size (int): The size of the batches
-    - truncate (int): The maximum width or length of the batches
+    - truncate_length (int): The maximum width or length of the batches
     - x_pad_token (list or int): The token with which to pad the input data batches
     - y_pad_token (list or int): The token with which to pad the label data batches
 
@@ -32,13 +40,22 @@ def make_batches(input_data: list, labels: list, batch_size: int, truncate: int,
     - outputs (list): The padded batches of output labels
     - timestep_lengths (list): The true timestep lengths of the lables batches
     """
+    global TRUNCATE_LENGTH, X_PAD_TOKEN, Y_PAD_TOKEN
+    TRUNCATE_LENGTH = truncate_length
+    X_PAD_TOKEN = x_pad_token
+    Y_PAD_TOKEN = y_pad_token
     data = sort_by_length([input_data, labels])
     data = group_into_batches(data, batch_size)
-    x_data = truncate_batches(data[0], truncate)
-    y_data = truncate_batches(data[1], truncate)
+    batch_data = zip(data[0], data[1])  # create tuples of input, label data pairs
+    thread_pool = multiprocessing.Pool(processes=5)
+    batches = thread_pool.starmap(process_batch, batch_data)
+    print(batches[0])
+    exit()
+    x_data = truncate_batches(data[0], truncate_length)
+    y_data = truncate_batches(data[1], truncate_length)
     lengths = get_row_lengths(y_data)
-    x_data = pad_batches(x_data, truncate, x_pad_token)
-    y_data = pad_batches(y_data, truncate, y_pad_token)
+    x_data = pad_batches(x_data, truncate_length, x_pad_token)
+    y_data = pad_batches(y_data, truncate_length, y_pad_token)
     return (x_data, y_data, lengths)
 # End of make_batches()
 
@@ -88,6 +105,31 @@ def group_into_batches(data: list, batch_size: int) -> list:
 # End of group_into_batches()
 
 
+def process_batch(input_data: list, label_data: list) -> list:
+    """Creates a batch out of input and label data.
+
+    Params:
+    - input_data (list): The input data for the batch
+    - label_data (list): The label data for the batch
+
+    Returns:
+    - batches (list<Batch>): The list of truncated batches created out of the given data
+    """
+    global X_PAD_TOKEN, Y_PAD_TOKEN
+    batch_input = truncate_batch(input_data)
+    batch_labels = truncate_batch(label_data)
+    sequence_lengths = get_row_lengths(batch_labels)[:3]
+    batch_input = pad_batches(batch_input, X_PAD_TOKEN)
+    batch_labels = pad_batches(batch_labels, Y_PAD_TOKEN)
+    batches = list()
+    for index in range(len(batch_input)):
+        batch = Batch(batch_input[index], batch_labels[index], sequence_lengths[index][1], sequence_lengths[index][0],
+                      sequence_lengths[index][2])
+        batches.append(batch)
+    return batches
+# End of process_batch()
+
+
 @trace()
 def truncate_batches(data: list, truncate: int) -> list:
     """Truncates each example in each batch in data, so that no row is longer than 'truncate' values long. The truncated
@@ -103,6 +145,7 @@ def truncate_batches(data: list, truncate: int) -> list:
     Raises:
     - ValueError when the batch size is less than 1
     """
+    raise DeprecationWarning()
     if truncate < 1:
         raise ValueError('The length of each batch cannot be less than 1.')
     truncated_batches = list()
@@ -117,8 +160,28 @@ def truncate_batches(data: list, truncate: int) -> list:
 
 
 @trace()
-def truncate_batch(index: int, last_index: int, truncate: int, batch: list) -> list:
-    """Truncates each example in the batch, so that no row is longer than 'truncate' values long.
+def truncate_batch(batch_data: list) -> list:
+    """Truncates each sequence in the given batch. This may result in multiple batches.
+
+    Params:
+    - batch_data (list<list<Any>>): The batch data to truncate.
+
+    Returns:
+    - truncated_batch (list<list<Any>>): The truncated batch
+    """
+    global TRUNCATE_LENGTH
+    max_length = max(map(len, batch_data))
+    truncated_batches = list()
+    times_to_truncate = math.ceil(max_length / TRUNCATE_LENGTH)
+    for i in range(times_to_truncate):
+        truncated_batch = _truncate_batch(i, times_to_truncate-1, batch_data)
+        truncated_batches.append(truncated_batch)
+    return truncated_batches
+# End of truncate_batch()
+
+
+def _truncate_batch(index: int, last_index: int, batch: list) -> list:
+    """Truncates each example in the batch, so that no row is longer than 'truncate_length' values long.
     Also surrounds the batch with two boolean indicators:
     - The indicator at the start of the batch is true if it is the beginning of the example sequence
     - The indicator at the end of the batch is true if it is the ending of the example sequence
@@ -127,20 +190,20 @@ def truncate_batch(index: int, last_index: int, truncate: int, batch: list) -> l
     - index (int): The index of the resulting batch partition (dictates at what point in the batch the truncation
         starts)
     - last_index (int): The index of the last batch partition
-    - truncate (int): The length to which the batches should be truncated
     - batch (list): The full-length batch on which to perform the truncation
 
     Returns:
     - truncated_batch_section (list): The truncated section of the batch
     """
-    start = index * truncate
-    end = start + truncate
+    global TRUNCATE_LENGTH
+    start = index * TRUNCATE_LENGTH
+    end = start + TRUNCATE_LENGTH
     beginning = [True] if index == 0 else [False]
     ending = [True] if index == last_index else [False]
     truncated_batch_section = [example[start:end] for example in batch]
     truncated_batch_section = beginning + truncated_batch_section + ending
     return truncated_batch_section
-# End of truncate_batch()
+# End of _truncate_batch()
 
 
 @trace()
@@ -165,25 +228,22 @@ def get_row_lengths(data: list) -> list:
 
 
 @trace()
-def pad_batches(data: list, truncate: int, pad_token: Any) -> np.array:
-    """Pads every row in the data batches so that it's the same length as the value of 'truncate'.
+def pad_batches(data: list, pad_token: Any) -> np.array:
+    """Pads every row in the data batches so that it's the same length as the value of 'truncate_length'.
 
     Params:
     - data (list): The batches of data to be padded
-    - truncate (int): The size to which every batch should be padded
     - pad_token (list or int): The token with which to pad the input data batches
 
     Returns:
     - padded_batches (np.array): The padded batches of data
     """
-    if truncate < 1:
-        raise ValueError("The length of each batch cannot be less than 1.")
     padded_batches = list()
     pad_token = get_pad_token(data, pad_token)
     for batch in data:
         padded_batch = list()
         for sequence in batch[1:-1]:
-            padded_sequence = pad_sequence(sequence, truncate, pad_token)
+            padded_sequence = pad_sequence(sequence, pad_token)
             padded_batch.append(padded_sequence)
         padded_batches.append(np.array(padded_batch))
     return np.array(padded_batches)
@@ -212,19 +272,19 @@ def get_pad_token(data: list, pad_token: Any) -> Any:
 
 
 @trace()
-def pad_sequence(sequence: list, truncate: int, pad_token: Any) -> np.array:
+def pad_sequence(sequence: list, pad_token: Any) -> np.array:
     """Pads a single sequence with the given pad token.
 
     Params:
     - sequence (list): The sequence to pad
-    - truncate (int): The maximum length of every sequence
     - pad_token (numeric/list): The token to be used for padding
 
     Return:
     - padded_sequence (np.array): The padded sequence
     """
+    global TRUNCATE_LENGTH
     padded_sequence = list(sequence)
-    while len(padded_sequence) < truncate:
+    while len(padded_sequence) < TRUNCATE_LENGTH:
         padded_sequence.append(pad_token)
     return np.array(padded_sequence)
 # End of pad_sequence()

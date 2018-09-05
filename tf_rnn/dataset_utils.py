@@ -458,24 +458,25 @@ def load_dataset(logger: Logger, dataset: str) -> tuple:
 
     logger.info("Loading saved dataset.")
     with open(path, "rb") as dataset_file:
-        data = dill.load(dataset_file)
-        dataset_type = data[0]
-        token_level = data[1]
-        vocabulary = data[2]
-        index_to_token = data[3]
+        meta = dill.load(dataset_file)
+        dataset_type = meta[0]
+        token_level = meta[1]
+        vocabulary = meta[2]
+        index_to_token = meta[3]
         # token_to_index = data[4]
-        x_train = data[5]
-        y_train = data[6]
+        test_data = dill.load(dataset_file)
+        valid_data = dill.load(dataset_file)
+        train_data = dill.load(dataset_file)
 
         logger.info("The dataset type is: %s" % dataset_type)
         logger.info("The tokenizing level is: %s" % token_level)
         logger.info("Size of vocabulary is: %d" % len(vocabulary))
         logger.info("Some words from vocabulary: \n%s" % index_to_token[:50])
-        logger.info("Number of examples: %d" % len(x_train))
-        logger.info("Sample training input: \n%s" % x_train[:5])
-        logger.info("Sample training labels: \n%s" % y_train[:5])
+        logger.info("Number of examples: {}".format(len(train_data[0]) + len(valid_data[0]) + len(test_data[0])))
+        logger.info("Sample training input: \n%s" % train_data[0][:5])
+        logger.info("Sample training labels: \n%s" % train_data[1][:5])
     # End with
-    return data
+    return meta, test_data, valid_data, train_data
 # End of load_dataset()
 
 if __name__ == "__main__":

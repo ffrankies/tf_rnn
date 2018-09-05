@@ -6,6 +6,8 @@ import random
 import math
 from typing import Any
 
+import dill
+
 from . import dataset_utils
 from . import batchmaker
 from . import constants
@@ -13,6 +15,7 @@ from . import indexer
 from .logger import info, debug, trace
 
 # These variables are only imported for type hinting
+from io import TextIOWrapper
 from .logger import Logger
 from .settings import SettingsNamespace
 
@@ -88,38 +91,48 @@ class DatasetBase(object):
 
         Params:
         - logger (logger.Logger): The logger to be used by this class
-        - rnn_settings (settings.SettingsNamespace): The settings containing number of features and shuffle seed
+        - rnn_settings (settings.SettingsNamespace): The settings containing number of features
         - train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
         """
         self.logger = logger
         self.settings = train_settings
         self.num_features = rnn_settings.num_features
-        self.shuffle_seed = rnn_settings.shuffle_seed
+        # self.shuffle_seed = rnn_settings.shuffle_seed
     # End of __init__()
 
     @debug()
     def load_dataset(self, dataset_name: str) -> tuple:
         """Loads the specified dataset. Instantiates variables for the class.
-        Creates the following fields:
 
         Params:
         - dataset_name (string): The name of the dataset to load
 
         Return:
-        - inputs (list): The list of inputs from the dataset
-        - labels (list): The list of outputs from the dataset
+        - dataset_file (TextIOWrapper): The opened file pointer to the dataset file
         """
-        dataset_params = dataset_utils.load_dataset(self.logger, dataset_name)
-        self.data_type = dataset_params[0]
-        self.token_level = dataset_params[1]
-        # Skip vocabulary - we don't really need it
-        index_to_token = dataset_params[3]
-        token_to_index = dataset_params[4]
+        self.logger.info('Loading saved dataset info')
+        dataset_path = constants.DATASETS_DIR + dataset_name
+        dataset_file = open(dataset_path, 'rb')
+        meta_info = dill.load(dataset_file)
+        print("Meta info: ", meta_info)
+        self._set_meta(meta_info)
+        return dataset_file
+    # End of load_dataset()
+
+    def _set_meta(self, meta_info: tuple):
+        """Sets the meta parameters of this class from the loaded dataset.
+
+        Params:
+        - meta_info (tuple<Any>): The meta info for the loaded dataset
+        """
+        self.data_type = meta_info[0]
+        self.token_level = meta_info[1]
+        index_to_token = meta_info[3]
+        token_to_index = meta_info[4]
         self.indexer = indexer.Indexer(self.num_features, index_to_token, token_to_index)
         self.vocabulary_size = self.extract_vocabulary_size(index_to_token)
-        self.max_length = self.longest_example(dataset_params[6])
-        return dataset_params[5], dataset_params[6]
-    # End of load_dataset()
+        self.max_length = meta_info[5]
+    # End of _set_meta()
 
     @debug()
     def extract_vocabulary_size(self, index_to_token: list) -> Any:
@@ -157,27 +170,6 @@ class DatasetBase(object):
                 longest_length = label_length
         return longest_length
     # End of longest_example()
-
-    @debug()
-    def shuffle(self, inputs: list, labels: list) -> tuple:
-        """Shuffles the inputs and labels to remove any ordering present in the dataset.
-        The inputs and labels are joined together before they are shuffled, to ensure that they still correctly
-        correspond to each other.
-
-        Params:
-        - inputs (list): The inputs from the dataset
-        - labels (list): The labels from the dataset
-
-        Return:
-        - shuffled inputs (list): The shuffled inputs
-        - shuffled lables (list): The shuffled labels
-        """
-        dataset = zip(inputs, labels)  # Returns an iterable
-        dataset = list(dataset)
-        random.shuffle(dataset, lambda: self.shuffle_seed)
-        shuffled_inputs, shuffled_labels = ([a for a,b in dataset], [b for a,b in dataset])
-        return shuffled_inputs, shuffled_labels
-    # End of shuffle()
 
     @trace()
     def make_partition(self, inputs: list, labels: list, num_sequences: int = None) -> DataPartition:
@@ -227,13 +219,13 @@ class SimpleDataset(DatasetBase):
         - train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
         """
         DatasetBase.__init__(self, logger, rnn_settings, train_settings)
-        inputs, labels = self.load_dataset(rnn_settings.dataset)
-        self.train, self.valid, self.test = self.extract_partitions(inputs, labels)
+        dataset_file = self.load_dataset(rnn_settings.dataset)
+        self.extract_partitions(dataset_file)
     # End of __init__()
 
     @info('Creating dataset partitions')
     @debug()
-    def extract_partitions(self, inputs: list, labels: list) -> tuple:
+    def extract_partitions(self, dataset_file: TextIOWrapper) -> tuple:
         """Extracts the training, validation and testing partition from the dataset. The size of the partitions
         follows the following ratio: 70:20:10
 
@@ -246,6 +238,13 @@ class SimpleDataset(DatasetBase):
         - valid (DataPartition): The namespace containing the validation inputs, labels and sizes
         - test (DataPartition): The namespace containing the test inputs, labels and sizes
         """
+        partition_data = dill.load(dataset_file)  # test partition
+        self.make_partition(partition_data[0], partition_data[1], len(partition_data[0]))
+        partition_data = dill.load(dataset_file)  # validation partition
+        self.make_partition(partition_data[0], partition_data[1], len(partition_data[0]))
+        partition_data = dill.load(dataset_file)  # training partition
+        self.make_partition(partition_data[0], partition_data[1], len(partition_data[0]))
+        exit()
         data = self.shuffle(inputs, labels)
         test_cutoff = math.floor(len(inputs) * 0.1)
         valid_cutoff = math.floor(len(inputs) * 0.3)
