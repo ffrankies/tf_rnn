@@ -49,15 +49,8 @@ def make_batches(input_data: list, labels: list, batch_size: int, truncate_lengt
     batch_data = zip(data[0], data[1])  # create tuples of input, label data pairs
     thread_pool = multiprocessing.Pool(processes=5)
     batches = thread_pool.starmap(process_batch, batch_data)
-
-    print(batches[0])
-    exit()
-    x_data = truncate_batches(data[0], truncate_length)
-    y_data = truncate_batches(data[1], truncate_length)
-    lengths = get_sequence_lengths(y_data)
-    x_data = pad_batches(x_data, truncate_length, x_pad_token)
-    y_data = pad_batches(y_data, truncate_length, y_pad_token)
-    return (x_data, y_data, lengths)
+    batches = combine_batch_lists(batches)
+    return batches
 # End of make_batches()
 
 
@@ -262,30 +255,17 @@ def pad_sequence(sequence: list, pad_token: Any) -> np.array:
 # End of pad_sequence()
 
 
-@trace()
-def truncate_batches(data: list, truncate: int) -> list:
-    """Truncates each example in each batch in data, so that no row is longer than 'truncate' values long. The truncated
-    parts become new batches in the data.
+def combine_batch_lists(batch_lists: list) -> np.array:
+    """Combines lists of batches produced my the multiprocessing module into a single batch list.
 
     Params:
-    - data (list): The data batches to be truncated
-    - truncate (int): The length to which the batches should be truncated
+    - batch_lists (list<list<Batch>>): The list of lists of batches
 
     Returns:
-    - truncated_batches (list): The truncated batches of data
-
-    Raises:
-    - ValueError when the batch size is less than 1
+    - batches (list<Batch>): The combined list of batches
     """
-    raise DeprecationWarning()
-    if truncate < 1:
-        raise ValueError('The length of each batch cannot be less than 1.')
-    truncated_batches = list()
-    for batch in data:
-        max_length = max(map(len, batch))
-        times_to_truncate = math.ceil(max_length / truncate)
-        for i in range(times_to_truncate):
-            truncated_batch_section = truncate_batch(i, times_to_truncate-1, truncate, batch)
-            truncated_batches.append(truncated_batch_section)
-    return truncated_batches
-# End of truncate_batches()
+    batches = list()
+    for batch_list in batch_lists:
+        batches.extend(batch_list)
+    return batches
+# End of combine_batch_lists()
