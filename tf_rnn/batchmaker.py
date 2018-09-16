@@ -49,11 +49,12 @@ def make_batches(input_data: list, labels: list, batch_size: int, truncate_lengt
     batch_data = zip(data[0], data[1])  # create tuples of input, label data pairs
     thread_pool = multiprocessing.Pool(processes=5)
     batches = thread_pool.starmap(process_batch, batch_data)
+
     print(batches[0])
     exit()
     x_data = truncate_batches(data[0], truncate_length)
     y_data = truncate_batches(data[1], truncate_length)
-    lengths = get_row_lengths(y_data)
+    lengths = get_sequence_lengths(y_data)
     x_data = pad_batches(x_data, truncate_length, x_pad_token)
     y_data = pad_batches(y_data, truncate_length, y_pad_token)
     return (x_data, y_data, lengths)
@@ -118,45 +119,16 @@ def process_batch(input_data: list, label_data: list) -> list:
     global X_PAD_TOKEN, Y_PAD_TOKEN
     batch_input = truncate_batch(input_data)
     batch_labels = truncate_batch(label_data)
-    sequence_lengths = get_row_lengths(batch_labels)[:3]
+    sequence_lengths = get_sequence_lengths(batch_labels)[:3]
     batch_input = pad_batches(batch_input, X_PAD_TOKEN)
     batch_labels = pad_batches(batch_labels, Y_PAD_TOKEN)
     batches = list()
     for index in range(len(batch_input)):
-        batch = Batch(batch_input[index], batch_labels[index], sequence_lengths[index][1], sequence_lengths[index][0],
-                      sequence_lengths[index][2])
+        batch = Batch(batch_input[index], batch_labels[index], sequence_lengths[index][1:-1], 
+                      sequence_lengths[index][0], sequence_lengths[index][-1])
         batches.append(batch)
     return batches
 # End of process_batch()
-
-
-@trace()
-def truncate_batches(data: list, truncate: int) -> list:
-    """Truncates each example in each batch in data, so that no row is longer than 'truncate' values long. The truncated
-    parts become new batches in the data.
-
-    Params:
-    - data (list): The data batches to be truncated
-    - truncate (int): The length to which the batches should be truncated
-
-    Returns:
-    - truncated_batches (list): The truncated batches of data
-
-    Raises:
-    - ValueError when the batch size is less than 1
-    """
-    raise DeprecationWarning()
-    if truncate < 1:
-        raise ValueError('The length of each batch cannot be less than 1.')
-    truncated_batches = list()
-    for batch in data:
-        max_length = max(map(len, batch))
-        times_to_truncate = math.ceil(max_length / truncate)
-        for i in range(times_to_truncate):
-            truncated_batch_section = truncate_batch(i, times_to_truncate-1, truncate, batch)
-            truncated_batches.append(truncated_batch_section)
-    return truncated_batches
-# End of truncate_batches()
 
 
 @trace()
@@ -207,7 +179,7 @@ def _truncate_batch(index: int, last_index: int, batch: list) -> list:
 
 
 @trace()
-def get_row_lengths(data: list) -> list:
+def get_sequence_lengths(data: list) -> list:
     """Returns the lengths of every row in the given data. The data must be arranged in batches or the function will
     fail.
 
@@ -224,7 +196,7 @@ def get_row_lengths(data: list) -> list:
         item_row_lengths += [batch[-1]]
         batch_lengths.append(item_row_lengths)
     return batch_lengths
-# End of get_row_lengths()
+# End of get_sequence_lengths()
 
 
 @trace()
@@ -288,3 +260,32 @@ def pad_sequence(sequence: list, pad_token: Any) -> np.array:
         padded_sequence.append(pad_token)
     return np.array(padded_sequence)
 # End of pad_sequence()
+
+
+@trace()
+def truncate_batches(data: list, truncate: int) -> list:
+    """Truncates each example in each batch in data, so that no row is longer than 'truncate' values long. The truncated
+    parts become new batches in the data.
+
+    Params:
+    - data (list): The data batches to be truncated
+    - truncate (int): The length to which the batches should be truncated
+
+    Returns:
+    - truncated_batches (list): The truncated batches of data
+
+    Raises:
+    - ValueError when the batch size is less than 1
+    """
+    raise DeprecationWarning()
+    if truncate < 1:
+        raise ValueError('The length of each batch cannot be less than 1.')
+    truncated_batches = list()
+    for batch in data:
+        max_length = max(map(len, batch))
+        times_to_truncate = math.ceil(max_length / truncate)
+        for i in range(times_to_truncate):
+            truncated_batch_section = truncate_batch(i, times_to_truncate-1, truncate, batch)
+            truncated_batches.append(truncated_batch_section)
+    return truncated_batches
+# End of truncate_batches()
