@@ -36,9 +36,7 @@ def make_batches(input_data: list, labels: list, batch_size: int, truncate_lengt
     - y_pad_token (list or int): The token with which to pad the label data batches
 
     Returns:
-    - inputs (list): The padded input data batches
-    - outputs (list): The padded batches of output labels
-    - timestep_lengths (list): The true timestep lengths of the lables batches
+    - batches (list<Batch>): The list of Batches produced
     """
     global TRUNCATE_LENGTH, X_PAD_TOKEN, Y_PAD_TOKEN
     TRUNCATE_LENGTH = truncate_length
