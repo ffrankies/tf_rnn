@@ -1,6 +1,6 @@
 """An object for storing a dataset for training.
 
-@since 0.6.0
+@since 0.6.2
 """
 import random
 import math
@@ -32,23 +32,30 @@ class DataPartition(object):
     - num_batches (int): The number of batches in this partition
     """
 
-    def __init__(self, inputs: list, labels: list, sizes: list, num_sequences: int = None):
+    def __init__(self, batches: list, path: str, num_sequences: int = None):
         """Creates a DataPartition object.
 
         Params:
-        - inputs (list): The inputs in this partition
-        - labels (list): The labels in this partition
-        - sizes (list): The size of each input in this partition
+        - batches (list<Batch>): The list of batches that make up the partition
         - num_sequences (int): The total number of sequences in this partition
         """
-        self.x = inputs
-        self.y = labels
-        self.sizes = [size_of_batch[1:-1] for size_of_batch in sizes]
-        self.beginning = [size_of_batch[0] for size_of_batch in sizes]
-        self.ending = [size_of_batch[-1] for size_of_batch in sizes]
-        self.num_batches = len(self.sizes)
+        self.num_batches = len(batches)
         self.num_sequences = num_sequences
+        self.path = path
+        self.is_file_open = False
+        self._save_partition(batches)
     # End of __init__()
+
+    def _save_partition(self, batches: list):
+        """Saves the partition's batches as individual objects into a file.
+
+        Params:
+        - batches (list<Batch>): The list of batches that make up the partition
+        """
+        with open(self.path, 'wb') as partition_file:
+            for batch in batches:
+                dill.dump(batch, partition_file, protocol=dill.HIGHEST_PROTOCOL) 
+    # End of _save_partition()
 
     def get_batch(self, batch_num: int) -> tuple:
         """Obtains the inputs, labels and sizes for a particular batch in the partition.
@@ -86,18 +93,17 @@ class DatasetBase(object):
       - max_length (int): The length (number of time-steps in) the longest example in the dataset
     """
 
-    def __init__(self, logger: Logger, rnn_settings: SettingsNamespace, train_settings: SettingsNamespace):
+    def __init__(self, logger: Logger, train_settings: SettingsNamespace, model_path: str):
         """Creates a Batches object.
 
         Params:
         - logger (logger.Logger): The logger to be used by this class
-        - rnn_settings (settings.SettingsNamespace): The settings containing number of features
         - train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
+        - model_path (str): The path to the model directory
         """
         self.logger = logger
         self.settings = train_settings
-        self.num_features = rnn_settings.num_features
-        # self.shuffle_seed = rnn_settings.shuffle_seed
+        self.data_path = model_path + constants.MODEL_DATA_DIR
     # End of __init__()
 
     @debug()
@@ -127,11 +133,12 @@ class DatasetBase(object):
         """
         self.data_type = meta_info[0]
         self.token_level = meta_info[1]
-        index_to_token = meta_info[3]
-        token_to_index = meta_info[4]
+        self.num_features = meta_info[2]
+        index_to_token = meta_info[4]
+        token_to_index = meta_info[5]
         self.indexer = indexer.Indexer(self.num_features, index_to_token, token_to_index)
         self.vocabulary_size = self.extract_vocabulary_size(index_to_token)
-        self.max_length = meta_info[5]
+        self.max_length = meta_info[6]
     # End of _set_meta()
 
     @debug()
@@ -172,27 +179,29 @@ class DatasetBase(object):
     # End of longest_example()
 
     @trace()
-    def make_partition(self, inputs: list, labels: list, num_sequences: int = None) -> DataPartition:
+    def make_partition(self, partition_data: tuple, path: str) -> DataPartition:
         """Creates a partition out of the given portion of the dataset. The partition will contain data broken into
         batches.
 
         Params:
-        - inputs (list): The inputs for the partition
-        - labels (list): The labels for the partition
-        - num_sequences (int): The number of sequences that will be present in the partition
+        - partition_data (tuple<list<Any>,list<Any>>): The partition inputs and labels
+        - path (str): The path to the partition file
 
         Return:
         - partition (DataPartition): The partition containing data in batch format
         """
+        inputs = partition_data[0]
+        labels = partition_data[1]
+        num_sequences = len(inputs)
         if constants.END_TOKEN in self.indexer.token_to_index:
             x_pad_token = self.indexer.to_index(constants.END_TOKEN)
             y_pad_token = self.indexer.to_index(constants.END_TOKEN)
         else:
             x_pad_token = inputs[0][-1]
             y_pad_token = labels[0][-1]
-        input_batches, label_batches, sizes = batchmaker.make_batches(
-            inputs, labels, self.settings.batch_size, self.settings.truncate, x_pad_token, y_pad_token)
-        return DataPartition(input_batches, label_batches, sizes, num_sequences)
+        batches = batchmaker.make_batches(inputs, labels, self.settings.batch_size, self.settings.truncate,
+                                          x_pad_token, y_pad_token)
+        return DataPartition(batches, num_sequences, path)
     # End of make_partition()
 # End of DatasetBase
 
@@ -209,17 +218,16 @@ class SimpleDataset(DatasetBase):
       - train (DataPartition): The current partition of the dataset to be used for training
     """
 
-    def __init__(self, logger: Logger, rnn_settings: SettingsNamespace, train_settings: SettingsNamespace):
+    def __init__(self, logger: Logger, train_settings: SettingsNamespace, model_path: str, dataset: str):
         """Creates a SimpleDataset object.
 
         Params:
         - logger (logger.Logger): The logger to be used by this class
-        - rnn_settings (settings.SettingsNamespace): The settings containing the dataset name, number of features and
-            the shuffle seed
         - train_settings (settings.SettingsNamespace): The settings containing truncate and batch_size values
+        - model_path (str): The path to the model directory
         """
-        DatasetBase.__init__(self, logger, rnn_settings, train_settings)
-        dataset_file = self.load_dataset(rnn_settings.dataset)
+        DatasetBase.__init__(self, logger, train_settings, model_path)
+        dataset_file = self.load_dataset(dataset)
         self.extract_partitions(dataset_file)
     # End of __init__()
 
@@ -230,8 +238,7 @@ class SimpleDataset(DatasetBase):
         follows the following ratio: 70:20:10
 
         Params:
-        - inputs (list): The inputs from the dataset
-        - labels (list): The labels from the dataset
+        - dataset_file (TextIOWrapper): The file pointer to the opened dataset file
 
         Return:
         - train (DataPartition): The namespace containing the training inputs, labels and sizes
@@ -239,21 +246,12 @@ class SimpleDataset(DatasetBase):
         - test (DataPartition): The namespace containing the test inputs, labels and sizes
         """
         partition_data = dill.load(dataset_file)  # test partition
-        self.make_partition(partition_data[0], partition_data[1], len(partition_data[0]))
+        test = self.make_partition(partition_data, self.data_path + constants.PART_TEST)
         partition_data = dill.load(dataset_file)  # validation partition
-        self.make_partition(partition_data[0], partition_data[1], len(partition_data[0]))
+        valid = self.make_partition(partition_data, self.data_path + constants.PART_VALID)
         partition_data = dill.load(dataset_file)  # training partition
-        self.make_partition(partition_data[0], partition_data[1], len(partition_data[0]))
-        exit()
-        data = self.shuffle(inputs, labels)
-        test_cutoff = math.floor(len(inputs) * 0.1)
-        valid_cutoff = math.floor(len(inputs) * 0.3)
-        test_data = data[0][:test_cutoff], data[1][:test_cutoff]
-        valid_data = data[0][test_cutoff:valid_cutoff], data[1][test_cutoff:valid_cutoff]
-        train_data = data[0][valid_cutoff:], data[1][valid_cutoff:]
-        train = self.make_partition(train_data[0], train_data[1], len(train_data))
-        valid = self.make_partition(valid_data[0], valid_data[1], len(valid_data))
-        test = self.make_partition(test_data[0], test_data[1], len(test_data))
+        train = self.make_partition(partition_data, self.data_path + constants.PART_TRAIN)
+        dataset_file.close()
         return train, valid, test
     # End of extract_partitions()
 # End of CrossValidationDataset()

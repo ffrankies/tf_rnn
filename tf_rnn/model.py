@@ -1,8 +1,6 @@
-"""
-An RNN model implementation in tensorflow.
+"""An RNN model implementation in tensorflow.
 
-Copyright (c) 2017-2018 Frank Derry Wanye
-@since 0.5.0
+@since 0.6.2
 """
 
 import abc
@@ -33,8 +31,7 @@ def create_model(settings, dataset):
     - settings (SettingsNamespace): The RNN settings
     - dataset (DatasetBase): The dataset to be used. Defaults to None, in which case a SimpleDataset is created
     """
-    print(settings)
-    if settings.rnn.num_features > 1 or len(settings.rnn.input_names) > 1:
+    if len(settings.rnn.input_names) > 1:
         rnn_model = MultiFeatureRNN(model_settings=settings, model_dataset=dataset)
     else:
         rnn_model = BasicRNN(model_settings=settings, model_dataset=dataset)
@@ -93,7 +90,8 @@ class RNNBase(object):
         self.logger.info("RNN settings: %s" % self.settings)
         self.dataset = model_dataset
         if model_dataset is None:
-            self.dataset = dataset.SimpleDataset(self.logger, self.settings.rnn, self.settings.train)
+            self.dataset = dataset.SimpleDataset(self.logger, self.settings.train, self.model_path,
+                                                 self.settings.rnn.dataset)
         self.create_graph()
     # End of __init__()
 
