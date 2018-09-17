@@ -47,6 +47,7 @@ class DataPartition(object):
         Params:
         - batches (list<Batch>): The list of batches that make up the partition
         """
+        print('path = ', self.path)
         with open(self.path, 'wb') as partition_file:
             for batch in batches:
                 dill.dump(batch, partition_file, protocol=dill.HIGHEST_PROTOCOL) 
@@ -212,7 +213,7 @@ class DatasetBase(object):
             y_pad_token = labels[0][-1]
         batches = batchmaker.make_batches(inputs, labels, self.settings.batch_size, self.settings.truncate,
                                           x_pad_token, y_pad_token)
-        return DataPartition(batches, num_sequences, path)
+        return DataPartition(batches, path, num_sequences)
     # End of make_partition()
 # End of DatasetBase
 
