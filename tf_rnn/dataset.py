@@ -48,7 +48,6 @@ class DataPartition(object):
         Params:
         - batches (list<Batch>): The list of batches that make up the partition
         """
-        print('path = ', self.path)
         with open(self.path, 'wb') as partition_file:
             for batch in batches:
                 dill.dump(batch, partition_file, protocol=dill.HIGHEST_PROTOCOL) 
