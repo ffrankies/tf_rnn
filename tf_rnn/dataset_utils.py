@@ -398,18 +398,13 @@ def create_training_data(logger: Logger, data: list, token_to_index: dict) -> tu
         for index, sentence in enumerate(data):
             data[index] = [word if word in token_to_index else constants.UNKNOWN for word in sentence]
 
-    print('Passed if statement')
     logger.info('Creating training data.')
     data = tokens_to_indexes(logger, data, token_to_index)
-    print('Converted tokens to indexes')
     x_train = [item[:-1] for item in data]
-    print('Got training data')
     y_train = [item[1:] for item in data]
-    print('Got training labels')
 
     if isinstance(y_train[0][0], (list, tuple)):
         y_train = [[word[0] for word in row] for row in y_train]  # Training labels only have one outcome
-    print('Only locations in labels')
     return x_train, y_train
 # End of create_training_data()
 
@@ -461,20 +456,23 @@ def load_dataset(logger: Logger, dataset: str) -> tuple:
         meta = dill.load(dataset_file)
         dataset_type = meta[0]
         token_level = meta[1]
-        vocabulary = meta[2]
-        index_to_token = meta[3]
-        # token_to_index = data[4]
+        num_features = meta[2]
+        vocabulary = meta[3]
+        index_to_token = meta[4]
+        # token_to_index = data[5]
+        # max_sequence_length = data[6]
         test_data = dill.load(dataset_file)
         valid_data = dill.load(dataset_file)
         train_data = dill.load(dataset_file)
 
-        logger.info("The dataset type is: %s" % dataset_type)
-        logger.info("The tokenizing level is: %s" % token_level)
-        logger.info("Size of vocabulary is: %d" % len(vocabulary))
-        logger.info("Some words from vocabulary: \n%s" % index_to_token[:50])
-        logger.info("Number of examples: {}".format(len(train_data[0]) + len(valid_data[0]) + len(test_data[0])))
-        logger.info("Sample training input: \n%s" % train_data[0][:5])
-        logger.info("Sample training labels: \n%s" % train_data[1][:5])
+        logger.info("The dataset type is: {:s}".format(dataset_type))
+        logger.info("The tokenizing level is: {:s}".format(token_level))
+        logger.info("The number of features present is {:d}".format(num_features))
+        logger.info("Size of vocabulary is: {:d}".format(len(vocabulary)))
+        logger.info("Some words from vocabulary: \n{}".format(index_to_token[:50]))
+        logger.info("Number of examples: {:d}".format(len(train_data[0]) + len(valid_data[0]) + len(test_data[0])))
+        logger.info("Sample training input: \n{}".format(train_data[0][:5]))
+        logger.info("Sample training labels: \n{}".format(train_data[1][:5]))
     # End with
     return meta, test_data, valid_data, train_data
 # End of load_dataset()
