@@ -242,7 +242,7 @@ class SimpleDataset(DatasetBase):
         """
         DatasetBase.__init__(self, logger, train_settings, model_path)
         dataset_file = self.load_dataset(dataset)
-        self.extract_partitions(dataset_file)
+        self.train, self.valid, self.test = self.extract_partitions(dataset_file)
     # End of __init__()
 
     @info('Creating dataset partitions')
@@ -259,7 +259,6 @@ class SimpleDataset(DatasetBase):
         - valid (DataPartition): The namespace containing the validation inputs, labels and sizes
         - test (DataPartition): The namespace containing the test inputs, labels and sizes
         """
-
         partition_data = dill.load(dataset_file)  # test partition
         test = self.make_partition(partition_data, self.data_path + constants.PART_TEST)
         partition_data = dill.load(dataset_file)  # validation partition
