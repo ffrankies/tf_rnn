@@ -122,7 +122,6 @@ def process_batch(input_data: list, label_data: list) -> list:
 # End of process_batch()
 
 
-@trace()
 def truncate_batch(batch_data: list) -> list:
     """Truncates each sequence in the given batch. This may result in multiple batches.
 
@@ -169,7 +168,6 @@ def _truncate_batch(index: int, last_index: int, batch: list) -> list:
 # End of _truncate_batch()
 
 
-@trace()
 def get_sequence_lengths(data: list) -> list:
     """Returns the lengths of every row in the given data. The data must be arranged in batches or the function will
     fail.
@@ -190,7 +188,6 @@ def get_sequence_lengths(data: list) -> list:
 # End of get_sequence_lengths()
 
 
-@trace()
 def pad_batches(data: list, pad_token: Any) -> np.array:
     """Pads every row in the data batches so that it's the same length as the value of 'truncate_length'.
 
@@ -213,7 +210,6 @@ def pad_batches(data: list, pad_token: Any) -> np.array:
 # End of pad_batches()
 
 
-@trace()
 def get_pad_token(data: list, pad_token: Any) -> Any:
     """Determines the correct padding token. If there are multiple inputs, the pad token is replicated for each feature.
 
@@ -234,7 +230,6 @@ def get_pad_token(data: list, pad_token: Any) -> Any:
 # End of get_pad_token()
 
 
-@trace()
 def pad_sequence(sequence: list, pad_token: Any) -> np.array:
     """Pads a single sequence with the given pad token.
 
