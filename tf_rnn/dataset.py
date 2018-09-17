@@ -21,15 +21,8 @@ from .settings import SettingsNamespace
 
 
 class DataPartition(object):
-    """Stores a portion of a dataset.
-
-    Instance Variables:
-    - x (list): The inputs of this partition, as padded batches
-    - y (list): The outputs/labels of this partition, as padded batches
-    - sizes (list): The sizes of the examples in this partition
-    - beginning (boolean): True if this batch contains the beginning of a sequence
-    - ending (boolean): True if this batch contains the ending of a sequence
-    - num_batches (int): The number of batches in this partition
+    """Contains references to a dataset partition. To prevent loading large files into memory, the partition only
+    provides sequential access to the batches, and loads a single batch at a time.
     """
 
     def __init__(self, batches: list, path: str, num_sequences: int = None):
@@ -37,12 +30,14 @@ class DataPartition(object):
 
         Params:
         - batches (list<Batch>): The list of batches that make up the partition
+        - path (str): The path to the dataset partition file
         - num_sequences (int): The total number of sequences in this partition
         """
         self.num_batches = len(batches)
         self.num_sequences = num_sequences
         self.path = path
-        self.is_file_open = False
+        self.index = 0
+        self._file_handler = None
         self._save_partition(batches)
     # End of __init__()
 
@@ -57,22 +52,38 @@ class DataPartition(object):
                 dill.dump(batch, partition_file, protocol=dill.HIGHEST_PROTOCOL) 
     # End of _save_partition()
 
-    def get_batch(self, batch_num: int) -> tuple:
-        """Obtains the inputs, labels and sizes for a particular batch in the partition.
+    def __iter__(self):
+        """Turns this class into an Iterable object.
+        """
+        return self
+    # End of __iter__()
 
-        Params:
-        - batch_num (int): The index of the requested batch
+    def __next__(self):
+        """The 'iterating' method for this class.
+
+        Returns:
+        - batch (Batch): The next batch in the partition
+        """
+        if self.index == 0:
+            self._file_handler = open(self.path, 'rb')
+        if self.index == self.num_batches:
+            self.index = 0
+            self._file_handler.close()
+            raise StopIteration
+        batch = self.next_batch()
+        self.index += 1
+        return batch
+    # End of __next__()
+
+    def next_batch(self) -> tuple:
+        """Loads the next batch from the opened partition file using dill.
 
         Return:
-        - inputs (list): The inputs for the requested batch
-        - labels (list): The labels for the requested batch
-        - sizes (list): The sizes for the requested batch
+        - batch (Batch): The next batch in the partition
         """
-        x = self.x[batch_num]
-        y = self.y[batch_num]
-        sizes = self.sizes[batch_num]
-        return x, y, sizes
-    # End of get_batch()
+        batch = dill.load(self._file_handler)
+        return batch
+    # End of next_batch()
 # End of DataPartition()
 
 
