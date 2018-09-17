@@ -3,6 +3,7 @@
 @since 0.6.1
 """
 import math
+import os
 
 import dill
 import numpy as np
@@ -366,11 +367,14 @@ def save_predictions(predictions: np.array, model: RNNBase, batch: Batch):
     - model (RNNBase): Contains the test partition and saver object
     - batch (Batch): The batch for which the predictions were made
     """
+    predictions_path = model.saver.meta.latest()[constants.DIR] + 'predictions.csv'
+    if not os.path.isfile(predictions_path):
+        with open(predictions_path, 'w') as predictions_file:
+            predictions_file.write('sequence | prediction | ending?\n')
     sequences = [x + [y[-1]] for x, y in zip(batch.x, batch.y)]
-    print('Sequences produced')
-    print(sequences[:5])
-    with open(model.saver.latest()[constants.DIR] + 'predictions.pkl', 'ab') as predictions_file:
-        dill.dump(predictions_file, (sequences, predictions, batch.ending))
+    with open(predictions_path, 'a') as predictions_file:
+        for sequence, prediction in zip(sequences, predictions):
+            predictions_file.write("{} | {} | {}\n".format(sequence, prediction, batch.ending))
 # End of save_predictions()
 
 
