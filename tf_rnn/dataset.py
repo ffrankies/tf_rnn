@@ -133,7 +133,6 @@ class DatasetBase(object):
         dataset_path = constants.DATASETS_DIR + dataset_name
         dataset_file = open(dataset_path, 'rb')
         meta_info = dill.load(dataset_file)
-        print("Meta info: ", meta_info)
         self._set_meta(meta_info)
         return dataset_file
     # End of load_dataset()
