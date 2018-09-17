@@ -13,6 +13,7 @@ from . import batchmaker
 from . import constants
 from . import indexer
 from .logger import info, debug, trace
+from .utils import create_directory
 
 # These variables are only imported for type hinting
 from io import TextIOWrapper
@@ -116,6 +117,7 @@ class DatasetBase(object):
         self.logger = logger
         self.settings = train_settings
         self.data_path = model_path + constants.MODEL_DATA_DIR
+        create_directory(self.data_path)
     # End of __init__()
 
     @debug()
@@ -257,6 +259,7 @@ class SimpleDataset(DatasetBase):
         - valid (DataPartition): The namespace containing the validation inputs, labels and sizes
         - test (DataPartition): The namespace containing the test inputs, labels and sizes
         """
+
         partition_data = dill.load(dataset_file)  # test partition
         test = self.make_partition(partition_data, self.data_path + constants.PART_TEST)
         partition_data = dill.load(dataset_file)  # validation partition
