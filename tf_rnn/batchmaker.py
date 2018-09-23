@@ -45,8 +45,8 @@ def make_batches(input_data: list, labels: list, batch_size: int, truncate_lengt
     data = sort_by_length([input_data, labels])
     data = group_into_batches(data, batch_size)
     batch_data = zip(data[0], data[1])  # create tuples of input, label data pairs
-    thread_pool = multiprocessing.Pool(processes=5)
-    batches = thread_pool.starmap(process_batch, batch_data)
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count() * 2) as thread_pool:
+        batches = thread_pool.starmap(process_batch, batch_data)
     batches = combine_batch_lists(batches)
     return batches
 # End of make_batches()
