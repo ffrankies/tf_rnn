@@ -3,6 +3,7 @@
 @since 0.6.1
 """
 import math
+import os
 
 import dill
 import numpy as np
@@ -13,6 +14,7 @@ from . import constants
 from .logger import info, debug, trace
 
 # Only imported for type hints
+from .batchmaker import Batch
 from .model import RNNBase
 from .dataset import DatasetBase, DataPartition
 from .layers.utils import Accumulator, AccumulatorData
@@ -85,55 +87,51 @@ def train_step(model: RNNBase, epoch_num: int, current_state: np.array, accumula
     - current_state (np.array): The current state of the hidden layer
     - accumulator (layers.utils.Accumulator): The accumulator for training performance
     """
-    for batch_num in range(model.dataset.train.num_batches):
+    for batch in model.dataset.train:
         if epoch_num == 0:
-            validate_minibatch(model, model.dataset.train, batch_num, current_state, accumulator)
+            validate_minibatch(model, batch, current_state, accumulator)
         else:
-            current_state = train_minibatch(model, batch_num, current_state, accumulator)
+            current_state = train_minibatch(model, batch, current_state, accumulator)
 # End of train_step()
 
 
 @trace()
-def train_minibatch(model: RNNBase, batch_num: int, current_state: np.array, accumulator: Accumulator) -> np.array:
+def train_minibatch(model: RNNBase, batch: Batch, current_state: np.array, accumulator: Accumulator) -> np.array:
     """Trains one minibatch.
 
     Params:
     - model (model.RNNBase): The model to train
-    - batch_num (int): The current batch number
+    - batch (Batch): The batch to be used for training
     - current_state (np.array): The current hidden state of the model
     - accumulator (layers.utils.Accumulator): The accumulator for training performance
 
     Return:
     - updated_hidden_state (np.array): The updated state of the hidden layer after training
     """
-    current_feed_dict = get_feed_dict(model, model.dataset.train, batch_num, current_state)
+    current_feed_dict = get_feed_dict(model, batch, current_state)
     performance_data, _, current_state = model.session.run(
         [model.performance_ops, model.train_step_fun, model.current_state],
         feed_dict=current_feed_dict)
     performance_data = list(performance_data)
-    update_accumulator(accumulator, model.dataset.train, batch_num, performance_data)
+    update_accumulator(accumulator, batch, performance_data)
     return current_state
 # End of train_minibatch()
 
 
 @trace()
-def get_feed_dict(model: RNNBase, partition: DataPartition, batch_num: int, current_state: np.array,
-                  training: bool = False) -> dict:
+def get_feed_dict(model: RNNBase, batch: Batch, current_state: np.array, training: bool = False) -> dict:
     """Obtains the information needed for running tensorflow operations as a feed dictionary.
 
     Params:
     - model (model.RNNBase): The model containing the operations
-    - partition (dataset.DataPartition): The partition from which to extract the batch information
-    - batch_num (int): The index of the batch in the dataset partition
+    - batch (Batch): The batch whose information will make up the feed dict
     - current_state (np.array): The current hidden state of the RNN
     - training (bool): Whether or not this batch is being trained on (default: False)
 
     Return:
     - feed_dict (dict): The dictionary holding the necessary information for running tensorflow operations
     """
-    batch = partition.get_batch(batch_num)
-    beginning = partition.beginning[batch_num]
-    current_state = reset_state(current_state, beginning)
+    current_state = reset_state(current_state, batch.beginning)
     feed_dict = build_feed_dict(model, batch, current_state, training)
     return feed_dict
 # End of get_feed_dict()
@@ -157,27 +155,26 @@ def reset_state(current_state: np.array, beginning: bool) -> np.array:
 
 
 @trace()
-def build_feed_dict(model: RNNBase, batch: int, current_state: np.array, training: bool = False) -> dict:
+def build_feed_dict(model: RNNBase, batch: Batch, current_state: np.array, training: bool = False) -> dict:
     """Builds a dictionary to feed into the model for performing tensorflow operations.
 
     Params:
     - model (model.RNNBase): The model for which to build the feed dictionary
-    - batch (tuple): Contains the inputs, outputs and sizes of the current batch
+    - batch (Batch): Contains the inputs, outputs and sequence lengths of the current batch
     - current_state (np.array): The current hidden state of the RNN
     - training (bool): Whether or not this batch is being trained on (default: False)
 
     Return:
     - feed_dict (dict): The dictionary built out of the provided batch and current state
     """
-    batch_x, batch_y, sizes = batch
     if training:
         dropout = model.settings.rnn.dropout
     else:
         dropout = 1.0
     feed_dict = {
-        model.batch_x_placeholder: batch_x,
-        model.batch_y_placeholder: batch_y,
-        model.batch_sizes: sizes,
+        model.batch_x_placeholder: batch.x,
+        model.batch_y_placeholder: batch.y,
+        model.batch_sizes: batch.sequence_lengths,
         model.hidden_state_placeholder: current_state,
         model.dropout: dropout
         }
@@ -186,8 +183,7 @@ def build_feed_dict(model: RNNBase, batch: int, current_state: np.array, trainin
 
 
 @trace()
-def update_accumulator(accumulator: Accumulator, dataset_partition: DataPartition, batch_num: int,
-                       performance_data: list):
+def update_accumulator(accumulator: Accumulator, batch: Batch, performance_data: list) -> AccumulatorData:
     """Adds a batch's performance data to the specified Accumulator object.
 
     Note: The Accumulator contains calculated inputs, but the rest of the data is obtained from
@@ -195,8 +191,7 @@ def update_accumulator(accumulator: Accumulator, dataset_partition: DataPartitio
 
     Params:
     - accumulator (layers.utils.Accumulator): The accumulator to update with new performance data
-    - dataset_partition (dataset.DatasetPartition): The dataset partition containing the remainder of the batch data
-    - batch_num (int): The index of the batch (within the dataset partition) that is being added to the container
+    - batch (Batch): The batch about which the performance data was gathered
     - performance_data (list): The performance data for the given minibatch
       - loss (float): The average loss for the given minibatch
       - size (int): The number of valid elements in this minibatch
@@ -206,9 +201,9 @@ def update_accumulator(accumulator: Accumulator, dataset_partition: DataPartitio
       - labels (list): The labels for the minibatch
       - sequence_lengths (list): The list of lengths of each sequence in the minibatch
     """
-    performance_data.extend([dataset_partition.y[batch_num], dataset_partition.sizes[batch_num]])
+    performance_data.extend([batch.y, batch.sequence_lengths])
     data = AccumulatorData._make(performance_data)
-    accumulator.update(data=data, ending=dataset_partition.ending[batch_num])
+    accumulator.update(data=data, ending=batch.ending)
     return data
 # End of update_accumulator()
 
@@ -222,32 +217,31 @@ def validation_step(model: RNNBase, current_state: np.array, accumulator: Accumu
     - current_state (np.array): The current state of the hidden layer
     - accumulator (layers.utils.Accumulator): The accumulator for validation performance
     """
-    for batch_num in range(model.dataset.valid.num_batches):
-        current_state = validate_minibatch(model, model.dataset.valid, batch_num, current_state, accumulator)
+    for batch in model.dataset.valid:
+        current_state = validate_minibatch(model, batch, current_state, accumulator)
 # End of validation_step()
 
 
 @trace()
-def validate_minibatch(model: RNNBase, dataset_partition: DataPartition, batch_num: int, current_state: np.array,
-                       accumulator: Accumulator) -> np.array:
+def validate_minibatch(model: RNNBase, batch: Batch, current_state: np.array, accumulator: Accumulator) -> np.array:
     """Calculates the performance of the network on one minibatch, logs the performance to tensorflow.
 
     Params:
     - model (model.RNNBase): The model to validate
-    - batch_num (int): The current batch number
+    - batch (Batch): The batch to be used for validation
     - current_state (np.array): The current hidden state of the model
     - accumulator (layers.utils.Accumulator): The accumulator for validation performance
 
     Return:
     - updated_hidden_state (np.array): The updated state of the hidden layer after validating
     """
-    current_feed_dict = get_feed_dict(model, dataset_partition, batch_num, current_state)
+    current_feed_dict = get_feed_dict(model, batch, current_state)
     performance_data, current_state = model.session.run(
         [model.performance_ops, model.current_state],
         feed_dict=current_feed_dict
         )
     performance_data = list(performance_data)
-    update_accumulator(accumulator, dataset_partition, batch_num, performance_data)
+    update_accumulator(accumulator, batch, performance_data)
     return current_state
 # End of validate_minibatch()
 
@@ -302,8 +296,7 @@ def performance_eval(model: RNNBase, accumulator: Accumulator):
 
 @debug('Evaluating model\'s performance on test partition')
 def test_step(model: RNNBase, accumulator: Accumulator):
-    """
-    Finds the performance of the trained model on the testing partition of the dataset. Used as the definitive
+    """Finds the performance of the trained model on the testing partition of the dataset. Used as the definitive
     performance test for the model.
 
     Params:
@@ -312,34 +305,34 @@ def test_step(model: RNNBase, accumulator: Accumulator):
                 partition
     """
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
-    for batch_num in range(model.dataset.test.num_batches):
-        current_state = validate_minibatch(model, model.dataset.test, batch_num, current_state, accumulator)
+    for batch in model.dataset.test:
+        current_state = test_minibatch(model, batch, current_state, accumulator)
 # End of test_step()
 
 
 @trace()
-def test_minibatch(model: RNNBase, batch_num: int, current_state: np.array, accumulator: Accumulator) -> np.array:
+def test_minibatch(model: RNNBase, batch: Batch, current_state: np.array, accumulator: Accumulator) -> np.array:
     """Calculates the performance of the network on one minibatch, and saves the .
 
     Params:
     - model (model.RNNBase): The model to validate
-    - batch_num (int): The current batch number
+    - batch (Batch): The batch to be used for testing the model
     - current_state (np.array): The current hidden state of the model
     - accumulator (layers.utils.Accumulator): The accumulator for validation performance
 
     Return:
     - updated_hidden_state (np.array): The updated state of the hidden layer after validating
     """
-    current_feed_dict = get_feed_dict(model, model.dataset.test, batch_num, current_state)
+    current_feed_dict = get_feed_dict(model, batch, current_state)
     performance_data, current_state = model.session.run(
         [model.performance_ops, model.current_state],
         feed_dict=current_feed_dict
         )
     performance_data = list(performance_data)
-    data = update_accumulator(accumulator, model.dataset.test, batch_num, performance_data)
-    save_predictions(data.predictions, model, batch_num)
+    data = update_accumulator(accumulator, batch, performance_data)
+    save_predictions(data.predictions, model, batch)
     return current_state
-# End of validate_minibatch()
+# End of test_minibatch()
 
 
 @trace()
@@ -366,22 +359,22 @@ def early_stop(valid_accumulator: Accumulator, epoch_num: int, num_epochs: int) 
 
 
 @trace()
-def save_predictions(predictions: np.array, model: RNNBase, batch_num: int):
+def save_predictions(predictions: np.array, model: RNNBase, batch: Batch):
     """Saves the predictions made by the RNN during testing for analysis.
 
     Params:
     - data (np.array): The predictions made
     - model (RNNBase): Contains the test partition and saver object
-    - batch_num (int): The batch for which the predictions were made
+    - batch (Batch): The batch for which the predictions were made
     """
-    batch_x = model.dataset.test.x[batch_num]
-    batch_y = model.dataset.test.y[batch_num]
-    ending = model.dataset.test.ending[batch_num]
-    sequences = [x + [y[-1]] for x, y in zip(batch_x, batch_y)]
-    print('Sequences produced')
-    print(sequences[:5])
-    with open(model.saver.latest()[constants.DIR] + 'predictions.pkl', 'ab') as predictions_file:
-        dill.dump(predictions_file, (sequences, predictions, ending))
+    predictions_path = model.saver.meta.latest()[constants.DIR] + 'predictions.csv'
+    if not os.path.isfile(predictions_path):
+        with open(predictions_path, 'w') as predictions_file:
+            predictions_file.write('sequence | prediction | ending?\n')
+    sequences = [x + [y[-1]] for x, y in zip(batch.x, batch.y)]
+    with open(predictions_path, 'a') as predictions_file:
+        for sequence, prediction in zip(sequences, predictions):
+            predictions_file.write("{} | {} | {}\n".format(sequence, prediction, batch.ending))
 # End of save_predictions()
 
 

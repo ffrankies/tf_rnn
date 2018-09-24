@@ -3,31 +3,72 @@
 Keeps a running log of changes to the project codebase.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
-and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+and this project plans to adhere to [Semantic Versioning](http://semver.org/spec/v2.0.0.html) once it reaches version 1.0.0.
 
-## Planned / Unreleased
+## Planned
 
-### For 0.6.2
+### For 0.6.3
 
-- Dataset classes now expect data to already be shuffled [planned]
-- Dataset classes now expect data sequences to be split into training, validation and testing partitions [planned]
-- Dataset classes now saves and loads partitions as needed for training, validation and testing
-- `constants` now has information about where data partitions are stored
+- Add support for having separate vocabularies for input and output features
 
 ### For later
 
-- Improve performance by removing unnecessary calculations.
+- Non-custom variables in `SettingsNamespace`s should be pre-defined so that IDEs could apply auto-completion to them
+- Fix tensorflow deprecation warning for calling softmax with dim instead of axis
+  ```
+  calling softmax (from tensorflow.python.ops.nn_ops) with dim is deprecated and will be removed in a future version.
+  Instructions for updating:
+  dim is deprecated, use axis instead
+  ```
 - Fix the loss-starts-at-0 problem in accumulator.
-- Use underscores to declare private variables and methods.
 - Add custom errors, and use them where necessary.
+- Properly set requirements.txt (currently there are version discrepancies)
+
+### Continuously Working On...
+
+- Improve performance by removing unnecessary calculations.
+- Use underscores to declare private variables and methods.
+
+## Unreleased
+
+### Added
+
+### Changed
+
+### Removed
+
+### Deprecated
+
+### Fixed
+
+### Security
 
 ## 0.6.2
+
+### Added
+
+- `constants` now has information about where data partitions are stored
+- The predictions made on the test partition are now being saved to a CSV file
 
 ### Changed
 
 - `shuffle_seed` has been moved from `Settings.rnn` to `Settings.data`
 - `END` tokens now indexed for padding
 - `trainer.get_feed_dict()` parameter changed from `dataset` to `partition` for clarity
+- `DatasetBase` class now expects data to already be shuffled
+- `DatasetBase` class now expects data sequences to be split into training, validation and testing partitions
+- `batchmaker` module now makes batches using a `multiprocessing.Pool` to speed things up
+- Batches are now stored in a `Batch` namedtuple defined in `batchmaker`
+- The `DataPartition` class now saves the partition to a file upon creation
+- The `DataPartition` class is now an iterable - items returned are batches
+- The `num_features` and `shuffle_seed` parameters have been moved from `settings.rnn` to `settings.data`
+- Renamed `row_lengths` and `get_row_lengths` to `sequence_lengths` and `get_sequence_lengths` for clarity
+
+### Removed
+
+- The `shuffle` method from the `DatasetBase` class
+- The 'CrossValidationDataset' class
+- `trace` statements used by the `batchmaker` functions being called within the `multiprocessing.Pool`
 
 ## 0.6.1
 

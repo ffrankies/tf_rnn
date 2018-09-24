@@ -26,9 +26,18 @@ END_TOKEN = ']'
 # DEFAULT DIRECTORIES
 #########################################
 MODEL_DIR = "models/"
+MODEL_DATA_DIR = "data/"
 DATASETS_DIR = "datasets/"
 TENSORBOARD = "tensorboard/"
 RAW_DATA_DIR = "raw_data/"
+
+#########################################
+# DATA PARTITION FILES
+#########################################
+PART_META = "meta_partition.pkl"
+PART_TRAIN = "train_partition.pkl"
+PART_VALID = "valid_partition.pkl"
+PART_TEST = "test_partition.pkl"
 
 #########################################
 # PLOT NAMES
@@ -103,7 +112,6 @@ EMBED_SIZE_STR = 'embed_size'
 HIDDEN_SIZE_STR = 'hidden_size'
 LAYERS_STR = 'layers'
 DROPOUT_STR = 'dropout'
-NUM_FEATURES_STR = 'num_features'
 INPUT_NAMES_STR = 'input_names'
 SHUFFLE_SEED_STR = 'shuffle_seed'
 # TRAIN
@@ -126,6 +134,7 @@ MODE_STR = 'mode'
 TOKEN_LEVEL_STR = 'token_level'
 ADD_START_TOKEN_STR = 'add_start_token'
 ADD_END_TOKEN_STR = 'add_end_token'
+NUM_FEATURES_STR = 'num_features'
 
 #########################################
 # LOGGING LEVELS
@@ -160,7 +169,6 @@ EMBED_SIZE = 100
 HIDDEN_SIZE = 100
 LAYERS = 2
 DROPOUT = 0.5
-NUM_FEATURES = 1
 INPUT_NAMES = ['token']
 # TRAIN
 BATCH_SIZE = 5
@@ -183,6 +191,7 @@ TOKEN_LEVEL = TOKEN_LEVEL_CHOICES[0]
 ADD_START_TOKEN = False
 ADD_END_TOKEN = False
 SHUFFLE_SEED = 0.2345
+NUM_FEATURES = 1
 
 #########################################
 # ARG DEFAULTS
@@ -191,22 +200,21 @@ GENERAL_ARGS = {
     MODEL_NAME_STR: MODEL_NAME,
     NEW_MODEL_STR: NEW_MODEL,
     BEST_MODEL_STR: BEST_MODEL
-    }
+}
 LOGGING_ARGS = {
     LOG_NAME_STR: LOG_NAME,
     LOG_DIR_STR: LOG_DIR,
     LOG_FILENAME_STR: LOG_FILENAME,
     LOG_LEVEL_STR: LOG_LEVEL
-    }
+}
 RNN_ARGS = {
     DATASET_STR: DATASET,
     EMBED_SIZE_STR: EMBED_SIZE,
     HIDDEN_SIZE_STR: HIDDEN_SIZE,
     LAYERS_STR: LAYERS,
     DROPOUT_STR: DROPOUT,
-    NUM_FEATURES_STR: NUM_FEATURES,
     INPUT_NAMES_STR: INPUT_NAMES
-    }
+}
 TRAIN_ARGS = {
     BATCH_SIZE_STR: BATCH_SIZE,
     PATIENCE_STR: PATIENCE,
@@ -214,7 +222,7 @@ TRAIN_ARGS = {
     EPOCHS_STR: EPOCHS,
     ANNEAL_STR: ANNEAL,
     TRUNCATE_STR: TRUNCATE
-    }
+}
 DATA_ARGS = {
     # Config file not added here because it's not needed to create the dataset
     RAW_DATA_STR: RAW_DATA,
@@ -228,5 +236,6 @@ DATA_ARGS = {
     TOKEN_LEVEL_STR: TOKEN_LEVEL,
     ADD_START_TOKEN_STR: ADD_START_TOKEN,
     ADD_END_TOKEN_STR: ADD_END_TOKEN,
-    SHUFFLE_SEED_STR: SHUFFLE_SEED
-    }
+    SHUFFLE_SEED_STR: SHUFFLE_SEED,
+    NUM_FEATURES_STR: NUM_FEATURES
+}
