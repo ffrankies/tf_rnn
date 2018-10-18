@@ -16,6 +16,7 @@ from .logger import info, debug, trace
 # Only imported for type hints
 from .batchmaker import Batch
 from .model import RNNBase
+from .observer import Observer
 from .dataset import DatasetBase, DataPartition
 from .layers.utils import Accumulator, AccumulatorData
 
@@ -32,8 +33,10 @@ def train(model: RNNBase):
     """
     # Create accumulators, pass them to the training, validation and testing steps
     metrics = model.saver.meta.latest()[constants.METRICS]
+    Observer.init(model.dataset.valid, 10, model.run_dir)
     final_epoch = model.settings.train.epochs + 1
     for epoch_num in range(model.saver.meta.latest()[constants.EPOCH]+1, final_epoch):
+        Observer.set_epoch(epoch_num)
         train_epoch(model, epoch_num, metrics.train, metrics.valid)
         model.saver.save_model(model, [epoch_num, metrics], metrics.valid.is_best_accuracy)
         if early_stop(metrics.valid, epoch_num, model.settings.train.epochs):
@@ -204,6 +207,7 @@ def update_accumulator(accumulator: Accumulator, batch: Batch, performance_data:
     performance_data.extend([batch.y, batch.sequence_lengths])
     data = AccumulatorData._make(performance_data)
     accumulator.update(data=data, ending=batch.ending)
+    Observer.observe(data)
     return data
 # End of update_accumulator()
 
