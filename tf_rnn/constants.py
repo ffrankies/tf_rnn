@@ -1,6 +1,6 @@
 """Contains constants for use within the project.
 
-@since 0.6.1
+@since 0.6.3
 """
 
 import time
@@ -93,6 +93,7 @@ LATEST_WEIGHTS = "latest_weights.pkl"
 BEST_WEIGHTS = "best_weights.pkl"
 PLOT = "loss_plot.png"
 META = "meta.pkl"
+OBSERVER_FILE = "observer.txt"
 
 #########################################
 # ARG KEY NAMES
