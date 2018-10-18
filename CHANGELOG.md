@@ -9,6 +9,10 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 
 ### For 0.6.3
 
+- Add support for an "observer" that shows what the network is predicting during validation (and testing).
+
+### For 0.6.4
+
 - Add support for having separate vocabularies for input and output features
 
 ### For later
@@ -32,6 +36,8 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 ## Unreleased
 
 ### Added
+
+- Added an Observer static class for comparing predictions and labels during training.
 
 ### Changed
 
