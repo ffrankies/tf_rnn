@@ -96,48 +96,6 @@ META = "meta.pkl"
 OBSERVER_FILE = "observer.txt"
 
 #########################################
-# ARG KEY NAMES
-#########################################
-# GENERAL
-MODEL_NAME_STR = 'model_name'
-NEW_MODEL_STR = 'new_model'
-BEST_MODEL_STR = 'best_model'
-# LOGGING
-LOG_NAME_STR = 'log_name'
-LOG_DIR_STR = 'log_dir'
-LOG_FILENAME_STR = 'log_filename'
-LOG_LEVEL_STR = 'log_level'
-# RNN
-DATASET_STR = 'dataset'
-EMBED_SIZE_STR = 'embed_size'
-HIDDEN_SIZE_STR = 'hidden_size'
-LAYERS_STR = 'layers'
-DROPOUT_STR = 'dropout'
-INPUT_NAMES_STR = 'input_names'
-SHUFFLE_SEED_STR = 'shuffle_seed'
-# TRAIN
-BATCH_SIZE_STR = 'batch_size'
-PATIENCE_STR = 'patience'
-LEARN_RATE_STR = 'learn_rate'
-EPOCHS_STR = 'epochs'
-ANNEAL_STR = 'anneal'
-TRUNCATE_STR = 'truncate'
-# DATA
-CONFIG_FILE_STR = 'config_file'
-RAW_DATA_STR = 'raw_data'
-DATASET_NAME_STR = 'dataset_name'
-SOURCE_TYPE_STR = 'source_type'
-VOCAB_SIZE_STR = 'vocab_size'
-NUM_ROWS_STR = 'num_rows'
-NUM_EXAMPLES_STR = 'num_examples'
-TYPE_STR = 'type'
-MODE_STR = 'mode'
-TOKEN_LEVEL_STR = 'token_level'
-ADD_START_TOKEN_STR = 'add_start_token'
-ADD_END_TOKEN_STR = 'add_end_token'
-NUM_FEATURES_STR = 'num_features'
-
-#########################################
 # LOGGING LEVELS
 #########################################
 ERROR = 'Error'
