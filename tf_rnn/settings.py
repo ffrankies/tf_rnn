@@ -16,14 +16,20 @@ class SettingsNamespace(object):
     """
 
     def __init__(self, dictionary: dict):
-        """
-        Creates a SettingsNamespace out of the given dictionary object.
+        """Creates a SettingsNamespace out of the given dictionary object.
 
         Params:
-        dictionary (dict): The dictionary to convert to a Namespace
+        - dictionary (dict): The dictionary to convert to a Namespace
         """
         self.__dict__.update(dictionary)
     # End of __init__()
+
+    def __str__(self):
+        """Creates a string representation of the given namespace object, using the namespace object's class name,
+        followed by all the variables it holds.
+        """
+        return "{}: {}\n".format(self.__class__.__name__, self.__dict__)
+    # End of __str__()
 # End of SettingsNamespace
 
 
@@ -43,6 +49,7 @@ class GeneralSettings(SettingsNamespace):
         self.model_name: str = constants.MODEL_NAME
         self.new_model: bool = constants.NEW_MODEL  # TODO: rename
         self.best_model: bool = constants.BEST_MODEL  # TODO: rename
+        SettingsNamespace.__init__(self, parameters)
     # End of __init__()
 # End of GeneralSettings
 
@@ -171,19 +178,14 @@ class Settings(object, metaclass=Singleton):
     # End of __init__()
 
     def __str__(self) -> str:
-        """Creates a string representation of the Settings object.
+        """Creates a string representation of the Settings object by printing out every sub-settings object on a new
+        line.
 
         Return:
         - settings_string (str): A string representation of the Namespaces comprising this Settings object.
         """
-        settings_dicts = {
-            'general': vars(self.general),
-            'logging': vars(self.logging),
-            'rnn': vars(self.rnn),
-            'train': vars(self.train),
-            'data': vars(self.data)
-            }
-        return str(settings_dicts)
+        return "{}: \n{}{}{}{}{}".format(self.__class__.__name__, self.general, self.logging, self.rnn, self.train,
+                                         self.data)
     # End of __str__()
 
     def get_config_dicts(self, dataset_only: bool) -> tuple:
