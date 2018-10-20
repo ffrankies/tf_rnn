@@ -165,6 +165,8 @@ class DatasetSettings(SettingsNamespace):
         self.token_level = constants.TOKEN_LEVEL
         self.add_start_token = constants.ADD_START_TOKEN
         self.add_end_token = constants.ADD_END_TOKEN
+        self.shuffle_seed = constants.SHUFFLE_SEED
+        self.num_features = constants.NUM_FEATURES
         SettingsNamespace.__init__(self, parameters)
     # End of __init__()
 # End of DatasetSettings
