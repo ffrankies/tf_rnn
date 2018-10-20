@@ -17,11 +17,11 @@ class Observer(object):
     It is a Singleton so that the object doesn't have to be passed around the training functions.
     """
 
-    _current_epoch: int
-    _current_batch: int  
-    _current_sequence: int
-    _sequence_indexes: list
-    _observer_path: str
+    _current_epoch
+    _current_batch
+    _current_sequence
+    _sequence_indexes
+    _observer_path
 
     @classmethod
     def init(cls, partition: DataPartition, num_sequences: int, run_dir: str) -> type:
