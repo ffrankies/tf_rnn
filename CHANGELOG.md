@@ -13,6 +13,7 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 
 ### For 0.6.4
 
+- Either re-write or remove Logger.getMessage(), since it takes up a disproportionate amount of time.
 - Add support for having separate vocabularies for input and output features
 
 ### For later
@@ -51,7 +52,12 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 
 ### Changed
 
+- String representation of `Settings` now more readable
+- `Settings` no longer relies on a dictionary of default values in `constants`, decreasing code duplication
+
 ### Removed
+
+- `constants.py` no longer holds dictionaries of default settings values
 
 ### Deprecated
 
