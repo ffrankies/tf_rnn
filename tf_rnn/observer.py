@@ -15,11 +15,6 @@ from .layers.utils.accumulator import AccumulatorData
 class Observer(object):
     """A singleton Observer class for observing and evaluating the predictions made by the network during training.
     It is a Singleton so that the object doesn't have to be passed around the training functions.
-
-    TODO:
-    - options for Observer
-    - Convert Observed sequences from indexes to their tokens
-    - Observer -> _Observer as a static class, and create new Observer() that's a wrapper for it (for testing purposes)
     """
 
     _current_epoch: int
