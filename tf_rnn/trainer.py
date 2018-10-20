@@ -207,7 +207,6 @@ def update_accumulator(accumulator: Accumulator, batch: Batch, performance_data:
     performance_data.extend([batch.y, batch.sequence_lengths])
     data = AccumulatorData._make(performance_data)
     accumulator.update(data=data, ending=batch.ending)
-    Observer.observe(data)
     return data
 # End of update_accumulator()
 
@@ -245,7 +244,8 @@ def validate_minibatch(model: RNNBase, batch: Batch, current_state: np.array, ac
         feed_dict=current_feed_dict
         )
     performance_data = list(performance_data)
-    update_accumulator(accumulator, batch, performance_data)
+    accumulator_data = update_accumulator(accumulator, batch, performance_data)
+    Observer.observe(accumulator_data, model.dataset.indexer)
     return current_state
 # End of validate_minibatch()
 

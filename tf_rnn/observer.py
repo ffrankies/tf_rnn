@@ -8,6 +8,7 @@ import random
 from . import constants
 from .utils import create_directory
 from .dataset import DataPartition
+from .indexer import Indexer
 from .layers.utils.accumulator import AccumulatorData
 
 
@@ -65,11 +66,12 @@ class Observer(object):
     # End of set_epoch()
 
     @classmethod
-    def observe(cls, data: AccumulatorData) -> type:
+    def observe(cls, data: AccumulatorData, indexer: Indexer) -> type:
         """Observes predictions made by the RNN. This method is meant to be called after every batch.
 
         Params:
         - data (AccumulatorData): The data passed to the accumulator
+        - indexer (Indexer): The indexer, for translating indexes back to tokens
 
         Returns:
         - class (type): The Observer class type, for chaining function calls (in case that's needed)
@@ -80,7 +82,9 @@ class Observer(object):
                 cls._current_sequence += 1
             if cls._current_sequence in cls._sequence_indexes:
                 predicted = data.predictions[index]
+                predicted = indexer.to_tokens(predicted)
                 actual = data.labels[index]
+                actual = indexer.to_tokens(actual)
                 cls._print_sample(predicted, actual)
         return cls
     # End of observe()
