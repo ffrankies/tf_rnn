@@ -71,6 +71,7 @@ class LoggingSettings(SettingsNamespace):
         self.log_dir: str = constants.LOG_DIR  # TODO: possibly remove
         self.log_filename: str = constants.LOG_FILENAME  # TODO: possibly remove
         self.log_level: str = constants.LOG_LEVEL  # TODO: possibly remove
+        SettingsNamespace.__init__(self, parameters)
     # End of __init__()
 # End of LoggingSettings
 
@@ -95,6 +96,7 @@ class RNNSettings(SettingsNamespace):
         self.dropout: float = constants.DROPOUT  # TODO: possibly rename
         self.input_names: list = constants.INPUT_NAMES
         self.shuffle_seed: float = constants.SHUFFLE_SEED  # TODO: remove
+        SettingsNamespace.__init__(self, parameters)
     # End of __init__()
 # End of RNNSettings
 
@@ -118,6 +120,7 @@ class TrainingSettings(SettingsNamespace):
         self.epochs: int = constants.EPOCHS
         self.anneal: float = constants.ANNEAL  # TODO: possibly remove
         self.truncate: int = constants.TRUNCATE
+        SettingsNamespace.__init__(self, parameters)
     # End of __init__()
 # End of TrainingSettings
 
@@ -148,6 +151,7 @@ class DatasetSettings(SettingsNamespace):
         self.token_level: str = constants.TOKEN_LEVEL
         self.add_start_token: bool = constants.ADD_START_TOKEN
         self.add_end_token: bool = constants.ADD_END_TOKEN
+        SettingsNamespace.__init__(self, parameters)
     # End of __init__()
 # End of DatasetSettings
 
