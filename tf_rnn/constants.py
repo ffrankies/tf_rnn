@@ -1,6 +1,6 @@
 """Contains constants for use within the project.
 
-@since 0.6.1
+@since 0.6.3
 """
 
 import time
@@ -93,48 +93,7 @@ LATEST_WEIGHTS = "latest_weights.pkl"
 BEST_WEIGHTS = "best_weights.pkl"
 PLOT = "loss_plot.png"
 META = "meta.pkl"
-
-#########################################
-# ARG KEY NAMES
-#########################################
-# GENERAL
-MODEL_NAME_STR = 'model_name'
-NEW_MODEL_STR = 'new_model'
-BEST_MODEL_STR = 'best_model'
-# LOGGING
-LOG_NAME_STR = 'log_name'
-LOG_DIR_STR = 'log_dir'
-LOG_FILENAME_STR = 'log_filename'
-LOG_LEVEL_STR = 'log_level'
-# RNN
-DATASET_STR = 'dataset'
-EMBED_SIZE_STR = 'embed_size'
-HIDDEN_SIZE_STR = 'hidden_size'
-LAYERS_STR = 'layers'
-DROPOUT_STR = 'dropout'
-INPUT_NAMES_STR = 'input_names'
-SHUFFLE_SEED_STR = 'shuffle_seed'
-# TRAIN
-BATCH_SIZE_STR = 'batch_size'
-PATIENCE_STR = 'patience'
-LEARN_RATE_STR = 'learn_rate'
-EPOCHS_STR = 'epochs'
-ANNEAL_STR = 'anneal'
-TRUNCATE_STR = 'truncate'
-# DATA
-CONFIG_FILE_STR = 'config_file'
-RAW_DATA_STR = 'raw_data'
-DATASET_NAME_STR = 'dataset_name'
-SOURCE_TYPE_STR = 'source_type'
-VOCAB_SIZE_STR = 'vocab_size'
-NUM_ROWS_STR = 'num_rows'
-NUM_EXAMPLES_STR = 'num_examples'
-TYPE_STR = 'type'
-MODE_STR = 'mode'
-TOKEN_LEVEL_STR = 'token_level'
-ADD_START_TOKEN_STR = 'add_start_token'
-ADD_END_TOKEN_STR = 'add_end_token'
-NUM_FEATURES_STR = 'num_features'
+OBSERVER_FILE = "observer.txt"
 
 #########################################
 # LOGGING LEVELS
@@ -177,6 +136,7 @@ LEARN_RATE = 0.05
 EPOCHS = 10
 ANNEAL = 0.5
 TRUNCATE = 10
+NUM_SEQUENCES_TO_OBSERVE = 10
 # DATA
 CONFIG_FILE = None
 RAW_DATA = 'stories.csv'
@@ -192,50 +152,3 @@ ADD_START_TOKEN = False
 ADD_END_TOKEN = False
 SHUFFLE_SEED = 0.2345
 NUM_FEATURES = 1
-
-#########################################
-# ARG DEFAULTS
-#########################################
-GENERAL_ARGS = {
-    MODEL_NAME_STR: MODEL_NAME,
-    NEW_MODEL_STR: NEW_MODEL,
-    BEST_MODEL_STR: BEST_MODEL
-}
-LOGGING_ARGS = {
-    LOG_NAME_STR: LOG_NAME,
-    LOG_DIR_STR: LOG_DIR,
-    LOG_FILENAME_STR: LOG_FILENAME,
-    LOG_LEVEL_STR: LOG_LEVEL
-}
-RNN_ARGS = {
-    DATASET_STR: DATASET,
-    EMBED_SIZE_STR: EMBED_SIZE,
-    HIDDEN_SIZE_STR: HIDDEN_SIZE,
-    LAYERS_STR: LAYERS,
-    DROPOUT_STR: DROPOUT,
-    INPUT_NAMES_STR: INPUT_NAMES
-}
-TRAIN_ARGS = {
-    BATCH_SIZE_STR: BATCH_SIZE,
-    PATIENCE_STR: PATIENCE,
-    LEARN_RATE_STR: LEARN_RATE,
-    EPOCHS_STR: EPOCHS,
-    ANNEAL_STR: ANNEAL,
-    TRUNCATE_STR: TRUNCATE
-}
-DATA_ARGS = {
-    # Config file not added here because it's not needed to create the dataset
-    RAW_DATA_STR: RAW_DATA,
-    DATASET_NAME_STR: DATASET_NAME,
-    SOURCE_TYPE_STR: SOURCE_TYPE,
-    VOCAB_SIZE_STR: VOCAB_SIZE,
-    NUM_ROWS_STR: NUM_ROWS,
-    NUM_EXAMPLES_STR: NUM_EXAMPLES,
-    TYPE_STR: TYPE,
-    MODE_STR: MODE,
-    TOKEN_LEVEL_STR: TOKEN_LEVEL,
-    ADD_START_TOKEN_STR: ADD_START_TOKEN,
-    ADD_END_TOKEN_STR: ADD_END_TOKEN,
-    SHUFFLE_SEED_STR: SHUFFLE_SEED,
-    NUM_FEATURES_STR: NUM_FEATURES
-}

@@ -9,6 +9,11 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 
 ### For 0.6.3
 
+- Add support for an "observer" that shows what the network is predicting during validation (and testing).
+
+### For 0.6.4
+
+- Either re-write or remove Logger.getMessage(), since it takes up a disproportionate amount of time.
 - Add support for having separate vocabularies for input and output features
 
 ### For later
@@ -23,6 +28,10 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 - Fix the loss-starts-at-0 problem in accumulator.
 - Add custom errors, and use them where necessary.
 - Properly set requirements.txt (currently there are version discrepancies)
+- Update type hints in documentation (and in function parameters) to the correct standard
+- Add type hints to initialized variables, where needed
+- Turn Logger into a static class, to prevent overhead from re-instantiation of the class
+- Turn Settings into a static class, for same reason as above
 
 ### Continuously Working On...
 
@@ -33,9 +42,22 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 
 ### Added
 
+- Added an Observer static class for comparing predictions and labels during training.
+- Added extensible settings subclasses:
+  - GeneralSettings
+  - LoggingSettings
+  - RNNSettings
+  - TrainingSettings
+  - DatasetSettings
+
 ### Changed
 
+- String representation of `Settings` now more readable
+- `Settings` no longer relies on a dictionary of default values in `constants`, decreasing code duplication
+
 ### Removed
+
+- `constants.py` no longer holds dictionaries of default settings values
 
 ### Deprecated
 

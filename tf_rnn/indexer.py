@@ -1,6 +1,6 @@
 """Contains the Indexer object - it's used for converting tokens to indexes and indexes back to tokens.
 
-Copyright (c) 2017-2018 Frank Derry Wanye
+TODO: Rename to Translator or something like that
 
 @since 0.5.0
 """

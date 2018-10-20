@@ -16,6 +16,7 @@ from .logger import info, debug, trace
 # Only imported for type hints
 from .batchmaker import Batch
 from .model import RNNBase
+from .observer import Observer
 from .dataset import DatasetBase, DataPartition
 from .layers.utils import Accumulator, AccumulatorData
 
@@ -32,8 +33,10 @@ def train(model: RNNBase):
     """
     # Create accumulators, pass them to the training, validation and testing steps
     metrics = model.saver.meta.latest()[constants.METRICS]
+    Observer.init(model.dataset.valid, model.settings.train.num_sequences_to_observe, model.run_dir)
     final_epoch = model.settings.train.epochs + 1
     for epoch_num in range(model.saver.meta.latest()[constants.EPOCH]+1, final_epoch):
+        Observer.set_epoch(epoch_num)
         train_epoch(model, epoch_num, metrics.train, metrics.valid)
         model.saver.save_model(model, [epoch_num, metrics], metrics.valid.is_best_accuracy)
         if early_stop(metrics.valid, epoch_num, model.settings.train.epochs):
@@ -241,7 +244,8 @@ def validate_minibatch(model: RNNBase, batch: Batch, current_state: np.array, ac
         feed_dict=current_feed_dict
         )
     performance_data = list(performance_data)
-    update_accumulator(accumulator, batch, performance_data)
+    accumulator_data = update_accumulator(accumulator, batch, performance_data)
+    Observer.observe(accumulator_data, model.dataset.indexer)
     return current_state
 # End of validate_minibatch()
 

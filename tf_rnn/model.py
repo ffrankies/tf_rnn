@@ -1,6 +1,6 @@
 """An RNN model implementation in tensorflow.
 
-@since 0.6.2
+@since 0.6.3
 """
 
 import abc
@@ -87,7 +87,7 @@ class RNNBase(object):
         self.settings = settings.Settings() if model_settings is None else model_settings
         self.model_path = utils.create_model_dir(self.settings.general.model_name)
         self.logger = Logger(self.model_path)
-        self.logger.info("RNN settings: %s" % self.settings)
+        self.logger.info(self.settings)
         self.dataset = model_dataset
         if model_dataset is None:
             self.dataset = dataset.SimpleDataset(self.logger, self.settings.train, self.model_path,
