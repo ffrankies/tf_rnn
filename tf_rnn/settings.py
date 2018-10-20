@@ -28,7 +28,7 @@ class SettingsNamespace(object):
         """Creates a string representation of the given namespace object, using the namespace object's class name,
         followed by all the variables it holds.
         """
-        return "{}: {}\n".format(self.__class__.__name__, self.__dict__)
+        return "{}: {}".format(self.__class__.__name__, self.__dict__)
     # End of __str__()
 # End of SettingsNamespace
 
@@ -188,8 +188,8 @@ class Settings(object, metaclass=Singleton):
         Return:
         - settings_string (str): A string representation of the Namespaces comprising this Settings object.
         """
-        return "{}: \n{}{}{}{}{}".format(self.__class__.__name__, self.general, self.logging, self.rnn, self.train,
-                                         self.data)
+        subsettings: list = [self.general, self.logging, self.rnn, self.train, self.data]
+        return "{}: \n{}".format(self.__class__.__name__, "\n".join(map(str, subsettings)))
     # End of __str__()
 
     def get_config_dicts(self, dataset_only: bool) -> tuple:
