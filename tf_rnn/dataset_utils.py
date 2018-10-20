@@ -49,13 +49,6 @@ def get_settings(dataset_only: bool = False) -> settings.Settings:
     - args (settings.Settings): The settings needed for creating a dataset
     """
     settings_obj = settings.Settings(dataset_only)
-    required_keys = constants.DATA_ARGS.keys()
-    received_keys = vars(settings_obj.data).keys()
-    for key in required_keys:
-        if key not in received_keys:
-            print('ERROR: Need to pass in dataset arguments to run this script.')
-            print('Correct usage: python dataset_maker.py dataset [args...]')
-            exit(-1)
     return settings_obj
 # End of parse_arguments()
 
