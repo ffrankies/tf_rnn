@@ -1,7 +1,6 @@
-"""
-A Python3 collection of Namespaces for the different model settings.
+"""A Python3 collection of Namespaces for the different model settings.
 
-@since 0.6.0
+@since 0.6.3
 """
 import argparse  # I want to see if I can get rid of this - it's only use is type hinting
 
@@ -13,7 +12,7 @@ from .utils import Singleton
 
 
 class SettingsNamespace(object):
-    """A Namespace object for easy accessibility to inner variables.
+    """An extensible Namespace object for easy accessibility to inner variables.
     """
 
     def __init__(self, dictionary: dict):
@@ -26,6 +25,124 @@ class SettingsNamespace(object):
         self.__dict__.update(dictionary)
     # End of __init__()
 # End of SettingsNamespace
+
+
+class GeneralSettings(SettingsNamespace):
+    """A namespace object for the general RNN settings.
+    """
+
+    def __init__(self, parameters: dict):
+        """Creates default parameters for general settings, and then updates them with the given dictionary.
+        
+        TODO:
+        - Change parameters names to better ones
+        
+        Params:
+        - parameters (dict[str, Any]): The parameters with which to update the general settings 
+        """
+        self.model_name: str = constants.MODEL_NAME
+        self.new_model: bool = constants.NEW_MODEL  # TODO: rename
+        self.best_model: bool = constants.BEST_MODEL  # TODO: rename
+    # End of __init__()
+# End of GeneralSettings
+
+
+class LoggingSettings(SettingsNamespace):
+    """A namespace object for storing the settings for the RNN's logger.
+    """
+
+    def __init__(self, parameters: dict):
+        """Creates default parameters for logging settings, and then updates them with the given dictionary.
+
+        TODO:
+        - Get rid of unused logging parameters
+
+        Params:
+        - parameters (dict[str, Any]): The parameters with which to update the logging settings 
+        """
+        self.log_name: str = constants.LOG_NAME  # TODO: possibly remove
+        self.log_dir: str = constants.LOG_DIR  # TODO: possibly remove
+        self.log_filename: str = constants.LOG_FILENAME  # TODO: possibly remove
+        self.log_level: str = constants.LOG_LEVEL  # TODO: possibly remove
+    # End of __init__()
+# End of LoggingSettings
+
+
+class RNNSettings(SettingsNamespace):
+    """A namespace object for storing the RNN settings.
+    """
+
+    def __init__(self, parameters: dict):
+        """Creates default parameters for the RNN settings, and then updates them with the given dictionary.
+
+        TODO:
+        - Get rid of unused RNN logging parameters
+
+        Params:
+        - parameters (dict[str, Any]): The parameters with which to update the RNN settings 
+        """
+        self.dataset: str = constants.DATASET
+        self.embed_size: int = constants.EMBED_SIZE
+        self.hidden_size: int = constants.HIDDEN_SIZE
+        self.layers: int = constants.LAYERS  # TODO: possibly rename
+        self.dropout: float = constants.DROPOUT  # TODO: possibly rename
+        self.input_names: list = constants.INPUT_NAMES
+        self.shuffle_seed: float = constants.SHUFFLE_SEED  # TODO: remove
+    # End of __init__()
+# End of RNNSettings
+
+
+class TrainingSettings(SettingsNamespace):
+    """A namespace object for RNN training settings.
+    """
+
+    def __init__(self, parameters: dict):
+        """Creates default parameters for RNN training settings, and then updates them with the given dictionary.
+
+        TODO:
+        - Get rid of unused training parameters
+
+        Params:
+        - parameters (dict[str, Any]): The parameters with which to update the training settings 
+        """
+        self.batch_size: int = constants.BATCH_SIZE
+        self.patience: int = constants.PATIENCE
+        self.learn_rate: float = constants.LEARN_RATE
+        self.epochs: int = constants.EPOCHS
+        self.anneal: float = constants.ANNEAL  # TODO: possibly remove
+        self.truncate: int = constants.TRUNCATE
+    # End of __init__()
+# End of TrainingSettings
+
+
+class DatasetSettings(SettingsNamespace):
+    """A namespace object for logging dataset settings.
+    """
+
+    def __init__(self, parameters: dict):
+        """Creates default parameters for dataset settings, and then updates them with the given dictionary.
+
+        TODO:
+        - Get rid of unused dataset parameters
+        - Figure out why the config file is one of the dataset settings
+
+        Params:
+        - parameters (dict[str, Any]): The parameters with which to update the dataset settings 
+        """
+        self.config_file: str = constants.CONFIG_FILE  # Why is this here?
+        self.raw_data: str = constants.RAW_DATA
+        self.dataset_name: str = constants.DATASET_NAME
+        self.source_type: str = constants.SOURCE_TYPE
+        self.vocab_size: int = constants.VOCAB_SIZE
+        self.num_rows: int = constants.NUM_ROWS  # TODO: rename
+        self.num_examples: int = constants.NUM_EXAMPLES  # TODO: possibly rename
+        self.type: str = constants.TYPE  # TODO: rename
+        self.mode: str = constants.MODE  # TODO: rename
+        self.token_level: str = constants.TOKEN_LEVEL
+        self.add_start_token: bool = constants.ADD_START_TOKEN
+        self.add_end_token: bool = constants.ADD_END_TOKEN
+    # End of __init__()
+# End of DatasetSettings
 
 
 class Settings(object, metaclass=Singleton):
@@ -46,11 +163,11 @@ class Settings(object, metaclass=Singleton):
         - dataset_only (bool): True if only settings for the dataset should be provided
         """
         config_dicts = self.get_config_dicts(dataset_only)
-        self.general = SettingsNamespace(config_dicts[0])
-        self.logging = SettingsNamespace(config_dicts[1])
-        self.rnn = SettingsNamespace(config_dicts[2])
-        self.train = SettingsNamespace(config_dicts[3])
-        self.data = SettingsNamespace(config_dicts[4])
+        self.general = GeneralSettings(config_dicts[0])
+        self.logging = LoggingSettings(config_dicts[1])
+        self.rnn = RNNSettings(config_dicts[2])
+        self.train = TrainingSettings(config_dicts[3])
+        self.data = DatasetSettings(config_dicts[4])
     # End of __init__()
 
     def __str__(self) -> str:

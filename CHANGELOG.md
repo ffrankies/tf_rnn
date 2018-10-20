@@ -27,6 +27,10 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 - Fix the loss-starts-at-0 problem in accumulator.
 - Add custom errors, and use them where necessary.
 - Properly set requirements.txt (currently there are version discrepancies)
+- Update type hints in documentation (and in function parameters) to the correct standard
+- Add type hints to initialized variables, where needed
+- Turn Logger into a static class, to prevent overhead from re-instantiation of the class
+- Turn Settings into a static class, for same reason as above
 
 ### Continuously Working On...
 
@@ -38,6 +42,12 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 ### Added
 
 - Added an Observer static class for comparing predictions and labels during training.
+- Added extensible settings subclasses:
+  - GeneralSettings
+  - LoggingSettings
+  - RNNSettings
+  - TrainingSettings
+  - DatasetSettings
 
 ### Changed
 
