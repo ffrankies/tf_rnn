@@ -33,7 +33,7 @@ def train(model: RNNBase):
     """
     # Create accumulators, pass them to the training, validation and testing steps
     metrics = model.saver.meta.latest()[constants.METRICS]
-    Observer.init(model.dataset.valid, 10, model.run_dir)
+    Observer.init(model.dataset.valid, model.settings.train.num_sequences_to_observe, model.run_dir)
     final_epoch = model.settings.train.epochs + 1
     for epoch_num in range(model.saver.meta.latest()[constants.EPOCH]+1, final_epoch):
         Observer.set_epoch(epoch_num)

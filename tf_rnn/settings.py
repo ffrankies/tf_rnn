@@ -133,6 +133,7 @@ class TrainingSettings(SettingsNamespace):
         self.epochs: int = constants.EPOCHS
         self.anneal: float = constants.ANNEAL  # TODO: possibly remove
         self.truncate: int = constants.TRUNCATE
+        self.num_sequences_to_observe: int = constants.NUM_SEQUENCES_TO_OBSERVE
         SettingsNamespace.__init__(self, parameters)
     # End of __init__()
 # End of TrainingSettings

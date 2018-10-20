@@ -1,8 +1,6 @@
-"""Utility module for parsing command-line arguments
+"""Utility module for parsing command-line arguments.
 
-Copyright (c) 2017-2018 Frank Derry Wanye
-
-@since 0.6.0
+@since 0.6.3
 """
 
 import argparse
@@ -31,7 +29,7 @@ def parse_arguments(dataset_only: bool = False) -> argparse.Namespace:
     arg_parse = argparse.ArgumentParser()
     subparsers = arg_parse.add_subparsers(help='Sub-command help.')
     config_parser = subparsers.add_parser('config', help='Pick a config file for setting up the network.')
-    config_parser.add_argument(constants.CONFIG_FILE_STR, help='The name of the config file holding network settings.')
+    config_parser.add_argument('config_file', help='The name of the config file holding network settings.')
     add_options_parser(subparsers, dataset_only)
     return arg_parse.parse_args()
 # End of parse_arguments()
@@ -193,6 +191,8 @@ def add_train_arguments(parser: argparse.ArgumentParser):
                        help='The backpropagate truncate value.')
     group.add_argument('-b', '--batch_size', type=int, default=constants.BATCH_SIZE,
                        help='The size of the batches into which to split the training data.')
+    group.add_argument('-u', '--num_sequences_to_observe', type=int, default=constants.NUM_SEQUENCES_TO_OBSERVE,
+                       help='The number of sequences for the Observer to observe.')
 # End of add_train_arguments()
 
 
