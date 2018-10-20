@@ -15,13 +15,14 @@ class SettingsNamespace(object):
     """An extensible Namespace object for easy accessibility to inner variables.
     """
 
-    def __init__(self, dictionary: dict):
+    def __init__(self, parameters: dict = None):
         """Creates a SettingsNamespace out of the given dictionary object.
 
         Params:
-        - dictionary (dict): The dictionary to convert to a Namespace
+        - parameters (dict[str, Any]): The parameters with which to update the settings namespace. If none are given,
+                                       does nothing.
         """
-        self.__dict__.update(dictionary)
+        self.update(parameters)
     # End of __init__()
 
     def __str__(self):
@@ -30,6 +31,18 @@ class SettingsNamespace(object):
         """
         return "{}: {}".format(self.__class__.__name__, self.__dict__)
     # End of __str__()
+
+    def update(self, parameters: dict):
+        """Updates the class parameters with the given ones. Overwrites any existing parameters with newly provided
+        ones. Any class parameters not present in the given dictionary will be left as is.
+
+        Params:
+        - parameters (dict[str, Any]): The parameters with which to update the settings namespace. If none are given,
+                                       does nothing.
+        """
+        if parameters:
+            self.__dict__.update(parameters)
+    # End of update()
 # End of SettingsNamespace
 
 
@@ -37,7 +50,7 @@ class GeneralSettings(SettingsNamespace):
     """A namespace object for the general RNN settings.
     """
 
-    def __init__(self, parameters: dict):
+    def __init__(self, parameters: dict = None):
         """Creates default parameters for general settings, and then updates them with the given dictionary.
         
         TODO:
@@ -58,7 +71,7 @@ class LoggingSettings(SettingsNamespace):
     """A namespace object for storing the settings for the RNN's logger.
     """
 
-    def __init__(self, parameters: dict):
+    def __init__(self, parameters: dict = None):
         """Creates default parameters for logging settings, and then updates them with the given dictionary.
 
         TODO:
@@ -80,7 +93,7 @@ class RNNSettings(SettingsNamespace):
     """A namespace object for storing the RNN settings.
     """
 
-    def __init__(self, parameters: dict):
+    def __init__(self, parameters: dict = None):
         """Creates default parameters for the RNN settings, and then updates them with the given dictionary.
 
         TODO:
@@ -105,7 +118,7 @@ class TrainingSettings(SettingsNamespace):
     """A namespace object for RNN training settings.
     """
 
-    def __init__(self, parameters: dict):
+    def __init__(self, parameters: dict = None):
         """Creates default parameters for RNN training settings, and then updates them with the given dictionary.
 
         TODO:
@@ -129,7 +142,7 @@ class DatasetSettings(SettingsNamespace):
     """A namespace object for logging dataset settings.
     """
 
-    def __init__(self, parameters: dict):
+    def __init__(self, parameters: dict = None):
         """Creates default parameters for dataset settings, and then updates them with the given dictionary.
 
         TODO:
@@ -173,12 +186,18 @@ class Settings(object, metaclass=Singleton):
         Params:
         - dataset_only (bool): True if only settings for the dataset should be provided
         """
-        config_dicts = self.get_config_dicts(dataset_only)
-        self.general = GeneralSettings(config_dicts[0])
-        self.logging = LoggingSettings(config_dicts[1])
-        self.rnn = RNNSettings(config_dicts[2])
-        self.train = TrainingSettings(config_dicts[3])
-        self.data = DatasetSettings(config_dicts[4])
+        # Set up subsettings with default parameters
+        self.general = GeneralSettings()
+        self.logging = LoggingSettings()
+        self.rnn = RNNSettings()
+        self.train = TrainingSettings()
+        self.data = DatasetSettings()
+        config_dicts = self._get_config_dicts(dataset_only)
+        self.general.update(config_dicts[0])
+        self.logging.update(config_dicts[1])
+        self.rnn.update(config_dicts[2])
+        self.train.update(config_dicts[3])
+        self.data.update(config_dicts[4])
     # End of __init__()
 
     def __str__(self) -> str:
@@ -189,10 +208,10 @@ class Settings(object, metaclass=Singleton):
         - settings_string (str): A string representation of the Namespaces comprising this Settings object.
         """
         subsettings: list = [self.general, self.logging, self.rnn, self.train, self.data]
-        return "{}: \n{}".format(self.__class__.__name__, "\n".join(map(str, subsettings)))
+        return "{}: \n\t{}".format(self.__class__.__name__, "\n\t".join(map(str, subsettings)))
     # End of __str__()
 
-    def get_config_dicts(self, dataset_only: bool) -> tuple:
+    def _get_config_dicts(self, dataset_only: bool) -> tuple:
         """Obtains the configuration dictionaries from either the config file or the command-line arguments.
 
         Params:
@@ -203,14 +222,13 @@ class Settings(object, metaclass=Singleton):
         """
         args = cmd_arg_parser.parse_arguments(dataset_only)
         if 'config_file' in args and args.config_file is not None:
-            config_dicts = self.parse_config_yml(args.config_file)
-            config_dicts = self.set_defaults(config_dicts)
+            config_dicts = self._parse_config_yml(args.config_file)
         else:
-            config_dicts = self.parse_config_args(args)
+            config_dicts = self._parse_config_args(args)
         return config_dicts
-    # End of get_config_dicts()
+    # End of _get_config_dicts()
 
-    def parse_config_yml(self, config_file: str) -> str:
+    def _parse_config_yml(self, config_file: str) -> str:
         """Parses the YAML config file into multiple dictionaries.
 
         Params:
@@ -219,7 +237,7 @@ class Settings(object, metaclass=Singleton):
         Return:
         - config_dicts (tuple<dict>): A list of dictionaries, each representing a different section of the settings
         """
-        yaml_settings = self.read_yml(config_file)
+        yaml_settings = self._read_yml(config_file)
         # Break settings into categories
         general = yaml_settings.get('general')
         logging = yaml_settings.get('logging')
@@ -227,9 +245,9 @@ class Settings(object, metaclass=Singleton):
         train = yaml_settings.get('train')
         data = yaml_settings.get('data')
         return general, logging, rnn, train, data
-    # End of parse_config_yml()
+    # End of _parse_config_yml()
 
-    def read_yml(self, yml_file: str) -> dict:
+    def _read_yml(self, yml_file: str) -> dict:
         """Reads the contents of a YAML file and returns the file contents as a dictionary.
 
         Params:
@@ -241,51 +259,9 @@ class Settings(object, metaclass=Singleton):
         with open(yml_file, 'r') as stream:
             yml_contents = yaml.safe_load(stream)
         return yml_contents
-    # End of read_yml()
+    # End of _read_yml()
 
-    def set_defaults(self, dictionaries: tuple) -> tuple:
-        """Sets None values in dictionaries to default values.
-        This is unnecessary when command-line options are passed in, since defaults get set automatically for those.
-
-        Params:
-        - dictionaries (tuple<dict>): The dictionaries whose defaults should be set
-
-        Return:
-        - dictionaries_with_defaults (tuple<dict>): The dictionaries with default values in place of None values
-        """
-        general = self.set_default_values(dictionaries[0], constants.GENERAL_ARGS)
-        logging = self.set_default_values(dictionaries[1], constants.LOGGING_ARGS)
-        rnn = self.set_default_values(dictionaries[2], constants.RNN_ARGS)
-        train = self.set_default_values(dictionaries[3], constants.TRAIN_ARGS)
-        data = self.set_default_values(dictionaries[4], constants.DATA_ARGS)
-        return general, logging, rnn, train, data
-    # End of set_defaults()
-
-    def set_default_values(self, user_dict: dict, default_dict: dict) -> dict:
-        """Sets None values in user_dict to default values from default_dict.
-        Also adds default values for parameters that haven't been named in the user_dict.
-
-        Params:
-        - user_dict (dict<string, any>): The dictionary containing user-provided values
-        - default_dict (dict<string, any>): The dictionary containing default values
-
-        Return:
-        - user_dict_with_defaults (dict<string,any>): The user_dict with None values replaced with defaults
-        """
-        changed_dict = dict()
-        if user_dict is not None:
-            for key, value in user_dict.items():
-                if value is None:
-                    changed_dict[key] = default_dict[key]
-                else:
-                    changed_dict[key] = value
-            for key, value in default_dict.items():
-                if key not in changed_dict.keys():
-                    changed_dict[key] = value
-        return changed_dict
-    # End of set_default_values()
-
-    def parse_config_args(self, args: argparse.Namespace) -> tuple:
+    def _parse_config_args(self, args: argparse.Namespace) -> tuple:
         """Parses the contents of the command-line arguments into multiple dictionaries.
 
         Params:
@@ -295,15 +271,15 @@ class Settings(object, metaclass=Singleton):
         - arg_dictionaries (tuple<dict>): A list of dictionaries, each representing a different section of the settings
         """
         # Create dicts for individual categories
-        general = self.get_arg_subset(args, constants.GENERAL_ARGS.keys())
-        logging = self.get_arg_subset(args, constants.LOGGING_ARGS.keys())
-        rnn = self.get_arg_subset(args, constants.RNN_ARGS.keys())
-        train = self.get_arg_subset(args, constants.TRAIN_ARGS.keys())
-        data = self.get_arg_subset(args, constants.DATA_ARGS.keys())
+        general = self.get_arg_subset(args, vars(self.general).keys())
+        logging = self.get_arg_subset(args, vars(self.logging).keys())
+        rnn = self.get_arg_subset(args, vars(self.rnn).keys())
+        train = self.get_arg_subset(args, vars(self.train).keys())
+        data = self.get_arg_subset(args, vars(self.data).keys())
         return general, logging, rnn, train, data
-    # End of parse_config_args()
+    # End of _parse_config_args()
 
-    def get_arg_subset(self, args: argparse.Namespace, arg_keys: list) -> dict:
+    def _get_arg_subset(self, args: argparse.Namespace, arg_keys: list) -> dict:
         """Creates a dictionary containing the given keys from the command_line args.
 
         Params:
@@ -318,5 +294,5 @@ class Settings(object, metaclass=Singleton):
         for arg_key in arg_keys:
             new_dict[arg_key] = arg_dict.get(arg_key)
         return new_dict
-    # End of get_arg_subset()
+    # End of _get_arg_subset()
 # End of Settings()
