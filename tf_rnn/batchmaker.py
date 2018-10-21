@@ -43,11 +43,12 @@ def make_batches(input_data: list, labels: list, batch_size: int, truncate_lengt
     X_PAD_TOKEN = x_pad_token
     Y_PAD_TOKEN = y_pad_token
     data = sort_by_length([input_data, labels])
-    data = group_into_batches(data, batch_size)
-    batch_data = zip(data[0], data[1])  # create tuples of input, label data pairs
+    manager = multiprocessing.Manager()
+    batch_queue = group_into_batches(data, batch_size, manager)
+    processed_batch_queue = manager.Queue()
     with multiprocessing.Pool(processes=multiprocessing.cpu_count() * 2) as thread_pool:
-        batches = thread_pool.starmap(process_batch, batch_data)
-    batches = combine_batch_lists(batches)
+        thread_pool.apply(process_batch, (batch_queue, processed_batch_queue))
+    batches = combine_batch_lists(processed_batch_queue)
     return batches
 # End of make_batches()
 
@@ -71,54 +72,54 @@ def sort_by_length(data: list) -> list:
 
 
 @trace()
-def group_into_batches(data: list, batch_size: int) -> list:
+def group_into_batches(data: list, batch_size: int, manager: multiprocessing.Manager) -> list:
     """Group each item in data into batches of size 'batch_size'.
 
     Params:
-    - data (list): The data to be grouped into batches
+    - data (list[list[list[numeric]]]): The data to be grouped into batches
     - batch_size (int): The size of the data batches
+    - manager (multiprocessing.Manager): The manager from which to create a Queue
 
     Returns:
-    - batches (list): The data items, in batch form
+    - batch_queue (multiprocessing.Queue): A managed Queue holding batches to be processed
 
     Raises:
     - ValueError when the batch size is less than 1
     """
     if batch_size < 1:
         raise ValueError('The size of the batches cannot be less than 1.')
-    batched_data = list()
-    for item in data:
-        batched_data_item = [item[i:i+batch_size] for i in range(0, len(item), batch_size)]
-        if len(batched_data_item) is not 0:
-            while len(batched_data_item[-1]) < batch_size:
-                batched_data_item[-1].append([])
-        batched_data.append(batched_data_item)
-    return batched_data
+    batch_queue = manager.Queue()
+    inputs, labels = data
+    for index in range(0, len(inputs), batch_size):
+        batch_inputs = inputs[index:index+batch_size]
+        batch_labels = labels[index:index+batch_size]
+        while len(batch_inputs) < batch_size:  # Pad last batch if there aren't enough sequences
+            batch_inputs.append([])
+            batch_labels.append([])
+        batch_queue.put((batch_inputs, batch_labels))
+    return batch_queue
 # End of group_into_batches()
 
 
-def process_batch(input_data: list, label_data: list) -> list:
+def process_batch(batch_queue: multiprocessing.Queue, processed_batch_queue: multiprocessing.Queue) -> list:
     """Creates a batch out of input and label data.
 
     Params:
-    - input_data (list): The input data for the batch
-    - label_data (list): The label data for the batch
-
-    Returns:
-    - batches (list<Batch>): The list of truncated batches created out of the given data
+    - batch_queue (multiprocessing.Queue): The managed Queue containing the batches to be processed
+    - processed_batch_queue (multiprocessing.Queue): The managed Queue into which to put processed batches
     """
     global X_PAD_TOKEN, Y_PAD_TOKEN
-    batch_input = truncate_batch(input_data)
-    batch_labels = truncate_batch(label_data)
-    sequence_lengths = get_sequence_lengths(batch_labels)[:3]
-    batch_input = pad_batches(batch_input, X_PAD_TOKEN)
-    batch_labels = pad_batches(batch_labels, Y_PAD_TOKEN)
-    batches = list()
-    for index in range(len(batch_input)):
-        batch = Batch(batch_input[index], batch_labels[index], sequence_lengths[index][1:-1], 
-                      sequence_lengths[index][0], sequence_lengths[index][-1])
-        batches.append(batch)
-    return batches
+    while not batch_queue.empty():
+        input_data, label_data = batch_queue.get()
+        batch_input = truncate_batch(input_data)
+        batch_labels = truncate_batch(label_data)
+        sequence_lengths = get_sequence_lengths(batch_labels)[:3]
+        batch_input = pad_batches(batch_input, X_PAD_TOKEN)
+        batch_labels = pad_batches(batch_labels, Y_PAD_TOKEN)
+        for index in range(len(batch_input)):
+            batch = Batch(batch_input[index], batch_labels[index], sequence_lengths[index][1:-1], 
+                        sequence_lengths[index][0], sequence_lengths[index][-1])
+            processed_batch_queue.put(batch)
 # End of process_batch()
 
 
@@ -248,17 +249,17 @@ def pad_sequence(sequence: list, pad_token: Any) -> np.array:
 # End of pad_sequence()
 
 
-def combine_batch_lists(batch_lists: list) -> np.array:
-    """Combines lists of batches produced my the multiprocessing module into a single batch list.
+def combine_batch_lists(processed_batch_queue: multiprocessing.Queue) -> np.array:
+    """Combines processed batches produced my the multiprocessing module into a single batch list.
 
     Params:
-    - batch_lists (list<list<Batch>>): The list of lists of batches
+    - processed_batch_queue (multiprocessing.Queue): The Queue of processed batches
 
     Returns:
     - batches (list<Batch>): The combined list of batches
     """
     batches = list()
-    for batch_list in batch_lists:
-        batches.extend(batch_list)
+    while not processed_batch_queue.empty():
+        batches.append(processed_batch_queue.get())
     return batches
 # End of combine_batch_lists()
