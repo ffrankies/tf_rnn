@@ -42,6 +42,20 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 
 ### Added
 
+### Changed
+
+### Removed
+
+### Deprecated
+
+### Fixed
+
+### Security
+
+## 0.6.3
+
+### Added
+
 - Added an Observer static class for comparing predictions and labels during training.
 - Added extensible settings subclasses:
   - GeneralSettings
@@ -54,16 +68,11 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 
 - String representation of `Settings` now more readable
 - `Settings` no longer relies on a dictionary of default values in `constants`, decreasing code duplication
+- `batchmaker.py` now uses Queues and a Manager for multiprocessing.
 
 ### Removed
 
 - `constants.py` no longer holds dictionaries of default settings values
-
-### Deprecated
-
-### Fixed
-
-### Security
 
 ## 0.6.2
 
