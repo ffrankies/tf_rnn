@@ -1,8 +1,6 @@
-"""
-Wrapper for the python logging module - saves logs to multiple files based on severity level.
+"""Wrapper for the python logging module - saves logs to multiple files based on severity level.
 
-Copyright (c) 2017-2018 Frank Derry Wanye
-@since 0.5.0
+@since 0.6.4
 """
 
 import logging
@@ -35,19 +33,17 @@ class Logger(object, metaclass=Singleton):
         Params:
         - log_directory (str): The path to the directory where the logs should be stored
         """
-        print("initting with log_dir = ", log_directory)
-        
         if log_directory[-1] != '/':
             log_directory += '/'
             
         create_directory(log_directory)
-        self.error_logger = self.create_logger(constants.ERROR, log_directory)
-        self.info_logger = self.create_logger(constants.INFO, log_directory)
-        self.debug_logger = self.create_logger(constants.DEBUG, log_directory)
-        self.trace_logger = self.create_logger(constants.TRACE, log_directory)
+        self.error_logger = self._create_logger(constants.ERROR, log_directory)
+        self.info_logger = self._create_logger(constants.INFO, log_directory)
+        self.debug_logger = self._create_logger(constants.DEBUG, log_directory)
+        self.trace_logger = self._create_logger(constants.TRACE, log_directory)
     # End of __init__()
 
-    def create_logger(self, severity_level: str, log_directory: str) -> logging.Logger:
+    def _create_logger(self, severity_level: str, log_directory: str) -> logging.Logger:
         """Creates a logger at the given level, using the severity level as the name of the logger
 
         Params:
@@ -69,7 +65,7 @@ class Logger(object, metaclass=Singleton):
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         return logger
-    # End of create_logger()
+    # End of _create_logger()
 
     def error(self, message: str):
         """Logs a message at the error severity level.
@@ -142,14 +138,12 @@ class LogDecorator(object):
         self.logger = logger
     # End of __init__()
 
-    def getMessage(self, function: Callable, *args: tuple, **kwargs: dict) -> tuple:
+    def _get_message(self, function: Callable) -> tuple:
         """Returns the message to log. If no message is passed to the decorator, logs the function called and its 
         arguments.
 
         Params:
         - function (Callable): The function that is being decorated
-        - args: The args passed to the function
-        - kwargs: The keyword args passed to the function
 
         Returns:
         - message (str): The message to log
@@ -158,14 +152,10 @@ class LogDecorator(object):
             self.logger = Logger()
         if self.message:
             message = self.message
-        else:  # Use function definition as message
-            if not args or not args[0]:  # If no args, or not enough args passed,
-                msg_args = ()                                # don't try to read them
-            else:
-                msg_args = args[0]
-            message = "{} (args: {!s:.100}, kwargs: {!s:.200})".format(function.__name__, msg_args, kwargs)
+        else:  # Use function name
+            message = "{}".format(function.__name__)
         return message
-    # End of getMessage()
+    # End of _get_message()
 # End of LogDecorator()
 
 
@@ -183,7 +173,7 @@ class error(LogDecorator):
         def wrapped_function(*args: tuple, **kwargs: dict) -> Any:
             """Returns the decorated function, which spews out the error log message before it is called.
             """
-            message = self.getMessage(function, args, kwargs)
+            message = self._get_message(function)
             self.logger.error(message)
             return function(*args, **kwargs)
         # End of wrapped_function
@@ -207,7 +197,7 @@ class info(LogDecorator):
         def wrapped_function(*args: tuple, **kwargs: dict) -> Any:
             """Returns the decorated function, which spews out the info log message before it is called.
             """
-            message = self.getMessage(function, args, kwargs)
+            message = self._get_message(function)
             self.logger.info(message)
             return function(*args, **kwargs)
         # End of wrapped_function
@@ -231,7 +221,7 @@ class debug(LogDecorator):
         def wrapped_function(*args: tuple, **kwargs: dict) -> Any:
             """Returns the decorated function, which spews out the debug log message before it is called.
             """
-            message = self.getMessage(function, args, kwargs)
+            message = self._get_message(function)
             self.logger.debug(message)
             return function(*args, **kwargs)
         # End of wrapped_function
@@ -255,7 +245,7 @@ class trace(LogDecorator):
         def wrapped_function(*args: tuple, **kwargs: dict) -> Any:
             """Returns the decorated function, which spews out the trace log message before it is called.
             """
-            message = self.getMessage(function, args, kwargs)
+            message = self._get_message(function)
             self.logger.trace(message)
             return function(*args, **kwargs)
         # End of wrapped_function

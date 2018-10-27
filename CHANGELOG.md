@@ -7,31 +7,25 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 
 ## Planned
 
-### For 0.6.3
-
-- Add support for an "observer" that shows what the network is predicting during validation (and testing).
-
 ### For 0.6.4
 
-- Either re-write or remove Logger.getMessage(), since it takes up a disproportionate amount of time.
-- Add support for having separate vocabularies for input and output features
-
-### For later
-
-- Non-custom variables in `SettingsNamespace`s should be pre-defined so that IDEs could apply auto-completion to them
 - Fix tensorflow deprecation warning for calling softmax with dim instead of axis
   ```
   calling softmax (from tensorflow.python.ops.nn_ops) with dim is deprecated and will be removed in a future version.
   Instructions for updating:
   dim is deprecated, use axis instead
   ```
+
+### For later
+
 - Fix the loss-starts-at-0 problem in accumulator.
 - Add custom errors, and use them where necessary.
 - Properly set requirements.txt (currently there are version discrepancies)
 - Update type hints in documentation (and in function parameters) to the correct standard
-- Add type hints to initialized variables, where needed
-- Turn Logger into a static class, to prevent overhead from re-instantiation of the class
-- Turn Settings into a static class, for same reason as above
+- ~Add type hints to initialized variables, where needed~ (Breaks python 3.5 compatibility, which only allows type hints in function declaration, apparently)
+- ~Turn Logger into a static class, to prevent overhead from re-instantiation of the class~ (unneeded. As observed through profiler, initializing a Singleton doesn't cost much)
+- ~Turn Settings into a static class, for same reason as above~ (unneeded. As observed through profiler, initializing a Singleton doesn't cost much)
+- Add support for having separate vocabularies for input and output features
 
 ### Continuously Working On...
 
@@ -43,6 +37,10 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 ### Added
 
 ### Changed
+
+- Private methods in `Logger` and `LogDecorator` got renamed to use python's underscore convention
+- `LogDecorator.getMessage()` renamed to `_get_message()`
+- `LogDecorator.getMessage()` now only prints the function name, to reduce time spent on logging
 
 ### Removed
 
