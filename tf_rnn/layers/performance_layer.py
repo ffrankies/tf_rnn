@@ -132,7 +132,7 @@ def predict_and_mask(logits_series: tf.Tensor, labels_series: tf.Tensor, sequenc
     """
     with tf.variable_scope(constants.PREDICTIONS_MASK):
         mask, timestep_lengths = row_length_mask(sequence_length_series, max_row_length)
-        predictions = tf.nn.softmax(logits_series, dim=-1, name='logits_softmax')
+        predictions = tf.nn.softmax(logits_series, axis=-1, name='logits_softmax')
         predictions = tf.argmax(predictions, axis=-1, name='logits_argmax', output_type=tf.int32)
         correct_predictions = tf.equal(predictions, labels_series)
         correct_predictions = tf.cast(correct_predictions, tf.float32)

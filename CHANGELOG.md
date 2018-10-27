@@ -9,13 +9,6 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 
 ### For 0.6.4
 
-- Fix tensorflow deprecation warning for calling softmax with dim instead of axis
-  ```
-  calling softmax (from tensorflow.python.ops.nn_ops) with dim is deprecated and will be removed in a future version.
-  Instructions for updating:
-  dim is deprecated, use axis instead
-  ```
-
 ### For later
 
 - Fix the loss-starts-at-0 problem in accumulator.
@@ -41,12 +34,15 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 - Private methods in `Logger` and `LogDecorator` got renamed to use python's underscore convention
 - `LogDecorator.getMessage()` renamed to `_get_message()`
 - `LogDecorator.getMessage()` now only prints the function name, to reduce time spent on logging
+- Improved documentation and some variable names in `layers/performance_layer.py`
 
 ### Removed
 
 ### Deprecated
 
 ### Fixed
+
+- Fixed tensorflow deprecation warning for calling softmax with the `dim` parameter instead of `axis`
 
 ### Security
 
