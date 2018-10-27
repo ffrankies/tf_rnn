@@ -23,7 +23,6 @@ class PerformancePlaceholders(object):
         Creates a new PerformancePlaceholders object
         """
         self.average_loss = tf.placeholder_with_default(input=0.0, shape=(), name='average_loss')
-        # self.average_accuracy = tf.placeholder_with_default(input=0.0, shape=(), name='average_accuracy')
         zero_accuracies = np.zeros([max_timesteps], np.float32)  # pylint: disable=E1101
         self.timestep_accuracies = tf.placeholder_with_default(input=zero_accuracies, shape=np.shape(zero_accuracies),
                                                                name='timestep_accuracies')
@@ -47,7 +46,6 @@ def performance_ops(logits_series, labels_series, sizes_series, truncate):
     - timestep_elements (list): The number of valid elements for each timestep in this minibatch
     - predictions (tf.Tensor): The predictions made at every timestep
     """
-    # calculate loss and accuracies for a minibatch
     avg_loss, batch_size = average_loss(logits_series, labels_series, sizes_series, truncate)
     _, timestep_accs, timestep_sizes, predictions = average_accuracy(
         logits_series, labels_series, sizes_series, truncate)
