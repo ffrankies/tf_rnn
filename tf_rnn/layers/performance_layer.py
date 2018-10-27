@@ -1,6 +1,6 @@
 """Contains functions for setting up the performance evaluation layer for a tensorflow-based RNN.
 
-@since 0.6.1
+@since 0.6.4
 """
 
 import tensorflow as tf
