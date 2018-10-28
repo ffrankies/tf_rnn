@@ -14,7 +14,6 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 ### For later
 
 - Add custom errors, and use them where necessary.
-- Properly set requirements.txt (currently there are version discrepancies)
 - Update type hints in documentation (and in function parameters) to the correct standard
 - ~Add type hints to initialized variables, where needed~ (Breaks python 3.5 compatibility, which only allows type hints in function declaration, apparently)
 - ~Turn Logger into a static class, to prevent overhead from re-instantiation of the class~ (unneeded. As observed through profiler, initializing a Singleton doesn't cost much)
@@ -45,6 +44,7 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 ### Fixed
 
 - Fixed tensorflow deprecation warning for calling softmax with the `dim` parameter instead of `axis`
+- Properly set requirements.txt
 
 ### Security
 
