@@ -134,13 +134,11 @@ class Accumulator(object):
         """
         if self.loss is None:
             self.loss = data.loss
-            self.counts = data.size
         else:
             self.loss = update_average(self.loss, self.counts, data.loss, data.size)
-            self.counts += data.size
+        self.counts += data.size
         self.timestep_accuracies.update(data.timestep_accuracies, data.timestep_counts, ending)
         self.confusion_matrix.update(data.predictions, data.labels, data.sequence_lengths)
-        # self.logger.debug("Updated loss: %.2f | Updated accuracy: %.2f" % (self.loss, self.accuracy))
     # End of update()
 
     def next_epoch(self):

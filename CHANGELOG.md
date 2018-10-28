@@ -9,9 +9,10 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 
 ### For 0.6.4
 
+- ~Fix the loss-starts-at-0 problem in accumulator.~ Already fixed
+
 ### For later
 
-- Fix the loss-starts-at-0 problem in accumulator.
 - Add custom errors, and use them where necessary.
 - Properly set requirements.txt (currently there are version discrepancies)
 - Update type hints in documentation (and in function parameters) to the correct standard
@@ -35,6 +36,7 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 - `LogDecorator.getMessage()` renamed to `_get_message()`
 - `LogDecorator.getMessage()` now only prints the function name, to reduce time spent on logging
 - Improved documentation and some variable names in `layers/performance_layer.py`
+- Refactored the `accumulator.update()` method
 
 ### Removed
 
