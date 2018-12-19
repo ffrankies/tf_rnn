@@ -22,10 +22,9 @@ class SettingsNamespace(object):
 
         Params:
             parameters (Dict[str, Any]): The parameters with which to update the settings namespace. If none are given,
-                                       does nothing.
+                                         does nothing.
         """
-        if parameters:
-            self.update(parameters)
+        self.update(parameters)
     # End of __init__()
 
     def __str__(self):
@@ -35,13 +34,13 @@ class SettingsNamespace(object):
         return "{}: {}".format(self.__class__.__name__, self.__dict__)
     # End of __str__()
 
-    def update(self, parameters: Dict):
+    def update(self, parameters: Dict = None):
         """Updates the class parameters with the given ones. Overwrites any existing parameters with newly provided
         ones. Any class parameters not present in the given dictionary will be left as is.
 
         Params:
             parameters (Dict[str, Any]): The parameters with which to update the settings namespace. If none are given,
-                                       does nothing.
+                                         does nothing.
         """
         if parameters:
             self.__dict__.update(parameters)
