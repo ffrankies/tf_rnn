@@ -37,6 +37,14 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 
 ### Added
 
+- The output_indexes dataset setting, which allows the user to select which features the network will be predicting (previously, it was simply 0).
+
+### Fixed
+
+- Type hinting in settings.py
+
+### Added
+
 ### Changed
 
 - Private methods in `Logger` and `LogDecorator` got renamed to use python's underscore convention
