@@ -7,9 +7,13 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 
 ## Planned
 
-### For 0.6.4
+### For 0.7.0
 
 - ~Fix the loss-starts-at-0 problem in accumulator.~ Already fixed
+- Support float input parameters
+- Create two indexer types: translator types (for floats) and tokenizer (for tokens)
+- Input types for inputs
+- Support multiple outputs
 
 ### For later
 
@@ -19,6 +23,10 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 - ~Turn Logger into a static class, to prevent overhead from re-instantiation of the class~ (unneeded. As observed through profiler, initializing a Singleton doesn't cost much)
 - ~Turn Settings into a static class, for same reason as above~ (unneeded. As observed through profiler, initializing a Singleton doesn't cost much)
 - Add support for having separate vocabularies for input and output features
+- Copy settings to run directory, load from there if continuing old run
+- Add loss weighting
+- Create backup saves for meta info
+- Add an attention layer
 
 ### Continuously Working On...
 
