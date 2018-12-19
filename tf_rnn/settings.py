@@ -170,6 +170,7 @@ class DatasetSettings(SettingsNamespace):
         self.add_end_token = constants.ADD_END_TOKEN
         self.shuffle_seed = constants.SHUFFLE_SEED
         self.num_features = constants.NUM_FEATURES
+        self.output_indexes = constants.OUTPUT_INDEXES
         SettingsNamespace.__init__(self, parameters)
     # End of __init__()
 # End of DatasetSettings
