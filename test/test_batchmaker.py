@@ -66,7 +66,8 @@ class TestGroupIntoBatches():
 
 class TestTruncateBatches():
     def test_should_raise_value_error_when_data_is_empty(self):
-        batchmaker.TRUNCATE_LENGTH = 2
+        BatchConstants._del()
+        BatchConstants(2, 0, 0)
         with pytest.raises(ValueError):
             assert truncate_batch([]) == []
 
@@ -75,24 +76,28 @@ class TestTruncateBatches():
             truncate_batch([])
 
     def test_should_not_raise_value_error_when_truncate_is_one(self):
-        batchmaker.TRUNCATE_LENGTH = 1
+        BatchConstants._del()
+        BatchConstants(1, 0, 0)
         truncate_batch(BATCHED_SCRAMBLED_DATA_2)
         pass
 
     def test_should_return_same_data_when_truncate_is_equal_to_longest_example(self):
-        batchmaker.TRUNCATE_LENGTH = 8
+        BatchConstants._del()
+        BatchConstants(8, 0, 0)
         assert truncate_batch(BATCHED_SCRAMBLED_DATA_2[0]) == [[True] + BATCHED_SCRAMBLED_DATA_2[0] + [True]]
 
     def test_should_return_batches_with_length_less_than_or_equal_to_truncate(self):
         for i in range(1, 10):
-            batchmaker.TRUNCATE_LENGTH = i
+            BatchConstants._del()
+            BatchConstants(i, 0, 0)
             truncated_data = truncate_batch(BATCHED_SCRAMBLED_DATA_2[0])
             for batch in truncated_data:
                 for example in batch[1:-1]:
                     assert len(example) <= i
 
     def test_should_correctly_truncate_data(self):
-        batchmaker.TRUNCATE_LENGTH = 4
+        BatchConstants._del()
+        BatchConstants(4, 0, 0)
         assert truncate_batch(BATCHED_SCRAMBLED_DATA_2[0]) == TRUNCATED_SCRAMBLED_BATCHES_4[:2]
         assert truncate_batch(BATCHED_SORTED_DATA_3[0]) == TRUNCATED_SORTED_BATCHES_3_4[:2]
         assert truncate_batch(BATCHED_SORTED_DATA_2[0]) == TRUNCATED_SORTED_BATCHES_4[:2]
@@ -117,35 +122,38 @@ class TestPadBatches():
 
 class TestMakeBatches():
     def test_should_do_nothing_when_data_is_empty(self):
-        x_batches, y_batches, lengths = make_batches([], [], 2, 4, PAD, PAD)
-        assert x_batches.tolist() == []
-        assert y_batches.tolist() == []
-        assert lengths == []
+        BatchConstants._del()
+        batches = make_batches([], [], 2, 4, PAD, PAD)
+        assert batches == []
 
     def test_should_raise_value_error_when_batch_size_is_less_than_one(self):
+        BatchConstants._del()
         with pytest.raises(ValueError):
             make_batches([], [], -1, 4, PAD, PAD)
 
     def test_should_not_raise_value_error_when_batch_size_is_one(self):
+        BatchConstants._del()
         make_batches([], [], 1, 4, PAD, PAD)
         pass
 
     def test_should_raise_value_error_when_truncate_is_less_than_one(self):
+        BatchConstants._del()
         with pytest.raises(ValueError):
             make_batches([], [], 2, -1, PAD, PAD)
 
     def test_should_not_raise_value_error_when_truncate_is_one(self):
+        BatchConstants._del()
         make_batches([], [], 2, 1, PAD, PAD)
         pass
 
     def test_should_correctly_create_batches(self):
-        x_batches, y_batches, lengths = make_batches(SCRAMBLED_DATA, SORTED_DATA, 2, 4, PAD, PAD)
-        for batch in x_batches:
-            for example in batch:
+        BatchConstants._del()
+        batches = make_batches(SCRAMBLED_DATA, SORTED_DATA, 2, 4, PAD, PAD)
+        for batch in batches:
+            for example in batch.x:
                 assert len(example) == 4
-        for batch in y_batches:
-            for example in batch:
-                assert len(example) <= 4
-        assert x_batches.tolist() == PADDED_SORTED_BATCHES_4
-        assert y_batches.tolist() == PADDED_SORTED_BATCHES_4
-        assert lengths == SIZES_TRUNCATED_SORTED_BATCHES_4
+            for example in batch.y:
+                assert len(example) == 4
+        assert [batch.x.tolist() for batch in batches] == PADDED_SORTED_BATCHES_4
+        assert [batch.y.tolist() for batch in batches] == PADDED_SORTED_BATCHES_4
+        assert [batch.sequence_lengths for batch in batches] == [size[1:-1] for size in SIZES_TRUNCATED_SORTED_BATCHES_4]
