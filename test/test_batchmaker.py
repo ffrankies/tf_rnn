@@ -99,12 +99,12 @@ class TestTruncateBatches():
 
 class TestGetRowLengths():
     def test_should_return_empty_list_when_data_is_empty(self):
-        assert get_row_lengths([]) == []
+        assert get_sequence_lengths([]) == []
 
     def test_should_return_row_lengths_for_one_piece_of_data(self):
-        assert get_row_lengths(TRUNCATED_SORTED_BATCHES_4) == SIZES_TRUNCATED_SORTED_BATCHES_4
-        assert get_row_lengths(TRUNCATED_SCRAMBLED_BATCHES_4) == SIZES_TRUNCATED_SCRAMBLED_BATCHES_4
-        assert get_row_lengths(TRUNCATED_SORTED_BATCHES_3_4) == SIZES_TRUNCATED_SORTED_BATCHES_3_4
+        assert get_sequence_lengths(TRUNCATED_SORTED_BATCHES_4) == SIZES_TRUNCATED_SORTED_BATCHES_4
+        assert get_sequence_lengths(TRUNCATED_SCRAMBLED_BATCHES_4) == SIZES_TRUNCATED_SCRAMBLED_BATCHES_4
+        assert get_sequence_lengths(TRUNCATED_SORTED_BATCHES_3_4) == SIZES_TRUNCATED_SORTED_BATCHES_3_4
 
 class TestPadBatches():
     def test_should_return_empty_list_when_data_is_empty(self):
