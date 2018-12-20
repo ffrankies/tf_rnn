@@ -2,12 +2,17 @@
 """
 import pytest
 import shutil
+from multiprocessing import Manager
 
 from tf_rnn.batchmaker import *
 from tf_rnn.logger import Logger
 
 from .test_data import *
+from . import utils
 
+
+NEW_BATCHED_SCRAMBLED_DATA_2 = [(item, item) for item in BATCHED_SCRAMBLED_DATA_2]
+NEW_BATCHED_SCRAMBLED_DATA_3 = [(item, item) for item in BATCHED_SCRAMBLED_DATA_3]
 
 def setup_module(module):
     """Initializes logger with a log directory, so the batchmaker class does not break on logger initialization.
@@ -36,23 +41,27 @@ class TestSortByLength():
             SORTED_DATA, SORTED_DATA, SORTED_DATA, SORTED_DATA]
 
 class TestGroupIntoBatches():
-    def test_should_return_empty_list_when_data_is_empty(self):
-        assert group_into_batches([], 4) == []
+    def test_should_raise_value_error_when_data_is_empty(self):
+        with pytest.raises(ValueError):
+            group_into_batches([], 4, Manager())
 
     def test_should_raise_value_error_when_batch_size_is_less_than_one(self):
         with pytest.raises(ValueError):
-            group_into_batches([], 0)
+            group_into_batches([SCRAMBLED_DATA, SCRAMBLED_DATA], 0, Manager())
 
     def test_should_not_raise_value_error_when_batch_size_is_one(self):
-        group_into_batches([], 1)
+        group_into_batches([SCRAMBLED_DATA, SCRAMBLED_DATA], 1, Manager())
         pass
 
-    def test_should_create_batches_out_of_one_set_of_data(self):
-        assert group_into_batches([SCRAMBLED_DATA], 2) == [BATCHED_SCRAMBLED_DATA_2]
-        assert group_into_batches([SCRAMBLED_DATA], 3) == [BATCHED_SCRAMBLED_DATA_3]
+    def test_should_raise_value_error_when_only_one_set_of_data_is_provided(self):
+        with pytest.raises(ValueError):
+            group_into_batches([SCRAMBLED_DATA], 2, Manager())
 
     def test_should_create_batches_out_of_multiple_sets_of_data(self):
-        assert group_into_batches([SCRAMBLED_DATA, SORTED_DATA], 2) == [BATCHED_SCRAMBLED_DATA_2, BATCHED_SORTED_DATA_2]
+        q = group_into_batches([SCRAMBLED_DATA, SCRAMBLED_DATA], 2, Manager())
+        assert utils.equivalent(utils.qdata(q), NEW_BATCHED_SCRAMBLED_DATA_2)
+        q = group_into_batches([SCRAMBLED_DATA, SCRAMBLED_DATA], 3, Manager())
+        assert utils.equivalent(utils.qdata(q), NEW_BATCHED_SCRAMBLED_DATA_3)
 
 class TestTruncateBatches():
     def test_should_do_nothing_when_data_is_empty(self):
