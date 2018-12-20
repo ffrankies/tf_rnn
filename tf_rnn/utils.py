@@ -4,7 +4,7 @@
 """
 
 import os
-from typing import Any
+from typing import Any, Dict
 
 from . import constants
 
@@ -35,9 +35,9 @@ class Singleton(type):
     subsequent calls to the Singleton class do not invoke the __init__() method.
     """
 
-    _instances = {}  # Set of Singleton classes currently in use
+    _instances = {}  # type: Dict
 
-    def __call__(cls: Any, *args: tuple, **kwargs: dict):
+    def __call__(cls, *args: tuple, **kwargs: dict):
         """Whenever the Singleton class is declared, checks if an instance of that class has already been initiated.
         If it has, then return that instance. Otherwise, return a new instance.
         """
@@ -45,6 +45,12 @@ class Singleton(type):
             cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
     # End of __call__()
+
+    def _del(cls):
+        """Deletes the singleton instance.
+        """
+        if cls in cls._instances:
+            del cls._instances[cls]
 # End of Singleton()
 
 
