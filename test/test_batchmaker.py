@@ -108,20 +108,12 @@ class TestGetRowLengths():
 
 class TestPadBatches():
     def test_should_return_empty_list_when_data_is_empty(self):
-        assert pad_batches([], 2, PAD).tolist() == []
-
-    def test_should_throw_value_error_when_truncate_is_less_than_one(self):
-        with pytest.raises(ValueError):
-            pad_batches([], 0, PAD)
-
-    def test_should_not_throw_value_error_when_truncate_is_one(self):
-        pad_batches([], 1, PAD)
-        pass
+        assert pad_batches([], PAD).tolist() == []
 
     def test_should_correctly_pad_data(self):
-        assert pad_batches(TRUNCATED_SCRAMBLED_BATCHES_4, 4, PAD).tolist() == PADDED_SCRAMBLED_BATCHES_4
-        assert pad_batches(TRUNCATED_SORTED_BATCHES_4, 4, PAD).tolist() == PADDED_SORTED_BATCHES_4
-        assert pad_batches(TRUNCATED_SORTED_BATCHES_3_4, 4, PAD).tolist() == PADDED_SORTED_BATCHES_3_4
+        assert pad_batches(TRUNCATED_SCRAMBLED_BATCHES_4, PAD).tolist() == PADDED_SCRAMBLED_BATCHES_4
+        assert pad_batches(TRUNCATED_SORTED_BATCHES_4, PAD).tolist() == PADDED_SORTED_BATCHES_4
+        assert pad_batches(TRUNCATED_SORTED_BATCHES_3_4, PAD).tolist() == PADDED_SORTED_BATCHES_3_4
 
 class TestMakeBatches():
     def test_should_do_nothing_when_data_is_empty(self):
