@@ -7,11 +7,13 @@ The batches are converted into numpy arrays towards the end for them to play nic
 import math
 import multiprocessing
 from collections import namedtuple
-from typing import Any
+from typing import Any, Optional
+from queue import Queue
 
 import numpy as np
 
 from .logger import trace
+from .utils import Singleton
 
 
 TRUNCATE_LENGTH = None
@@ -20,6 +22,34 @@ Y_PAD_TOKEN = None
 
 
 Batch = namedtuple('Batch', ['x', 'y', 'sequence_lengths', 'beginning', 'ending'])
+
+
+class BatchConstants(object, metaclass=Singleton):
+    """Contains the batch constants.
+    """
+
+    def __init__(self, truncate: Optional[int] = None, input_pad: Optional[Any] = None, 
+        label_pad: Optional[Any] = None) -> None:
+        """Initializes a BatchConstants object.
+
+        Params:
+            truncate (int): The length to which to truncate batches
+            input_pad (Any): The input padding
+            label_pad (Any): The label padding
+        """
+        if truncate:  # If parameters are provided
+            if truncate < 1:
+                raise ValueError('The value of truncate cannot be less than one')
+            self.truncate = truncate
+            self.input_pad = input_pad
+            self.label_pad = label_pad
+    # End of __init__()
+
+    def __str__(self) -> str:
+        """String representation of BatchConstants.
+        """
+        return str(self.__dict__)
+# End of BatchConstants()
 
 
 @trace()
@@ -38,10 +68,7 @@ def make_batches(input_data: list, labels: list, batch_size: int, truncate_lengt
     Returns:
     - batches (list<Batch>): The list of Batches produced
     """
-    global TRUNCATE_LENGTH, X_PAD_TOKEN, Y_PAD_TOKEN
-    TRUNCATE_LENGTH = truncate_length
-    X_PAD_TOKEN = x_pad_token
-    Y_PAD_TOKEN = y_pad_token
+    BatchConstants(truncate_length, x_pad_token, y_pad_token)
     data = sort_by_length([input_data, labels])
     manager = multiprocessing.Manager()
     batch_queue = group_into_batches(data, batch_size, manager)
@@ -72,7 +99,7 @@ def sort_by_length(data: list) -> list:
 
 
 @trace()
-def group_into_batches(data: list, batch_size: int, manager: multiprocessing.Manager) -> list:
+def group_into_batches(data: list, batch_size: int, manager: multiprocessing.Manager) -> multiprocessing.Queue:
     """Group each item in data into batches of size 'batch_size'.
 
     Params:
@@ -88,7 +115,9 @@ def group_into_batches(data: list, batch_size: int, manager: multiprocessing.Man
     """
     if batch_size < 1:
         raise ValueError('The size of the batches cannot be less than 1.')
-    batch_queue = manager.Queue()
+    if not data or len(data) != 2:
+        raise ValueError('Must provide some input data and labels.')
+    batch_queue = manager.Queue()  # type: ignore
     inputs, labels = data
     for index in range(0, len(inputs), batch_size):
         batch_inputs = inputs[index:index+batch_size]
@@ -101,21 +130,21 @@ def group_into_batches(data: list, batch_size: int, manager: multiprocessing.Man
 # End of group_into_batches()
 
 
-def process_batch(batch_queue: multiprocessing.Queue, processed_batch_queue: multiprocessing.Queue) -> list:
+def process_batch(batch_queue: multiprocessing.Queue, processed_batch_queue: multiprocessing.Queue):
     """Creates a batch out of input and label data.
 
     Params:
     - batch_queue (multiprocessing.Queue): The managed Queue containing the batches to be processed
     - processed_batch_queue (multiprocessing.Queue): The managed Queue into which to put processed batches
     """
-    global X_PAD_TOKEN, Y_PAD_TOKEN
+    batch_constants = BatchConstants()
     while not batch_queue.empty():
         input_data, label_data = batch_queue.get()
         batch_input = truncate_batch(input_data)
         batch_labels = truncate_batch(label_data)
         sequence_lengths = get_sequence_lengths(batch_labels)[:3]
-        batch_input = pad_batches(batch_input, X_PAD_TOKEN)
-        batch_labels = pad_batches(batch_labels, Y_PAD_TOKEN)
+        batch_input = pad_batches(batch_input, batch_constants.input_pad)
+        batch_labels = pad_batches(batch_labels, batch_constants.label_pad)
         for index in range(len(batch_input)):
             batch = Batch(batch_input[index], batch_labels[index], sequence_lengths[index][1:-1], 
                         sequence_lengths[index][0], sequence_lengths[index][-1])
@@ -132,10 +161,12 @@ def truncate_batch(batch_data: list) -> list:
     Returns:
     - truncated_batch (list<list<Any>>): The truncated batch
     """
-    global TRUNCATE_LENGTH
+    batch_constants = BatchConstants()
+    if batch_constants.truncate < 1:
+        raise ValueError('Truncate length cannot be less than 1')
     max_length = max(map(len, batch_data))
     truncated_batches = list()
-    times_to_truncate = math.ceil(max_length / TRUNCATE_LENGTH)
+    times_to_truncate = math.ceil(max_length / batch_constants.truncate)
     for i in range(times_to_truncate):
         truncated_batch = _truncate_batch(i, times_to_truncate-1, batch_data)
         truncated_batches.append(truncated_batch)
@@ -158,9 +189,9 @@ def _truncate_batch(index: int, last_index: int, batch: list) -> list:
     Returns:
     - truncated_batch_section (list): The truncated section of the batch
     """
-    global TRUNCATE_LENGTH
-    start = index * TRUNCATE_LENGTH
-    end = start + TRUNCATE_LENGTH
+    batch_constants = BatchConstants()
+    start = index * batch_constants.truncate
+    end = start + batch_constants.truncate
     beginning = [True] if index == 0 else [False]
     ending = [True] if index == last_index else [False]
     truncated_batch_section = [example[start:end] for example in batch]
@@ -241,19 +272,19 @@ def pad_sequence(sequence: list, pad_token: Any) -> np.array:
     Return:
     - padded_sequence (np.array): The padded sequence
     """
-    global TRUNCATE_LENGTH
+    batch_constants = BatchConstants()
     padded_sequence = list(sequence)
-    while len(padded_sequence) < TRUNCATE_LENGTH:
+    while len(padded_sequence) < batch_constants.truncate:
         padded_sequence.append(pad_token)
     return np.array(padded_sequence)
 # End of pad_sequence()
 
 
-def combine_batch_lists(processed_batch_queue: multiprocessing.Queue) -> np.array:
+def combine_batch_lists(processed_batch_queue: Queue) -> np.array:
     """Combines processed batches produced my the multiprocessing module into a single batch list.
 
     Params:
-    - processed_batch_queue (multiprocessing.Queue): The Queue of processed batches
+    - processed_batch_queue (queue.Queue): The Queue of processed batches, provided by the multiprocessing Manager
 
     Returns:
     - batches (list<Batch>): The combined list of batches
