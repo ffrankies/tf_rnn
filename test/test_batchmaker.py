@@ -4,6 +4,7 @@ import pytest
 import shutil
 from multiprocessing import Manager
 
+from tf_rnn import batchmaker
 from tf_rnn.batchmaker import *
 from tf_rnn.logger import Logger
 
@@ -64,32 +65,37 @@ class TestGroupIntoBatches():
         assert utils.equivalent(utils.qdata(q), NEW_BATCHED_SCRAMBLED_DATA_3)
 
 class TestTruncateBatches():
-    def test_should_do_nothing_when_data_is_empty(self):
-        assert truncate_batches([], 2) == []
+    def test_should_raise_value_error_when_data_is_empty(self):
+        batchmaker.TRUNCATE_LENGTH = 2
+        with pytest.raises(ValueError):
+            assert truncate_batch([]) == []
 
     def test_should_raise_value_error_when_truncate_is_less_than_one(self):
         with pytest.raises(ValueError):
-            truncate_batches([], 0)
+            truncate_batch([])
 
     def test_should_not_raise_value_error_when_truncate_is_one(self):
-        truncate_batches([], 1)
+        batchmaker.TRUNCATE_LENGTH = 1
+        truncate_batch(BATCHED_SCRAMBLED_DATA_2)
         pass
 
     def test_should_return_same_data_when_truncate_is_equal_to_longest_example(self):
-        assert truncate_batches(BATCHED_SCRAMBLED_DATA_2, 8) == [
-                [True] + batch + [True] for batch in BATCHED_SCRAMBLED_DATA_2]
+        batchmaker.TRUNCATE_LENGTH = 8
+        assert truncate_batch(BATCHED_SCRAMBLED_DATA_2[0]) == [[True] + BATCHED_SCRAMBLED_DATA_2[0] + [True]]
 
     def test_should_return_batches_with_length_less_than_or_equal_to_truncate(self):
         for i in range(1, 10):
-            truncated_data = truncate_batches(BATCHED_SCRAMBLED_DATA_2, i)
+            batchmaker.TRUNCATE_LENGTH = i
+            truncated_data = truncate_batch(BATCHED_SCRAMBLED_DATA_2[0])
             for batch in truncated_data:
                 for example in batch[1:-1]:
                     assert len(example) <= i
 
     def test_should_correctly_truncate_data(self):
-        assert truncate_batches(BATCHED_SCRAMBLED_DATA_2, 4) == TRUNCATED_SCRAMBLED_BATCHES_4
-        assert truncate_batches(BATCHED_SORTED_DATA_3, 4) == TRUNCATED_SORTED_BATCHES_3_4
-        assert truncate_batches(BATCHED_SORTED_DATA_2, 4) == TRUNCATED_SORTED_BATCHES_4
+        batchmaker.TRUNCATE_LENGTH = 4
+        assert truncate_batch(BATCHED_SCRAMBLED_DATA_2[0]) == TRUNCATED_SCRAMBLED_BATCHES_4[:2]
+        assert truncate_batch(BATCHED_SORTED_DATA_3[0]) == TRUNCATED_SORTED_BATCHES_3_4[:2]
+        assert truncate_batch(BATCHED_SORTED_DATA_2[0]) == TRUNCATED_SORTED_BATCHES_4[:2]
 
 class TestGetRowLengths():
     def test_should_return_empty_list_when_data_is_empty(self):
