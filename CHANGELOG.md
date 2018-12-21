@@ -40,6 +40,11 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 - The output_indexes dataset setting, which allows the user to select which features the network will be predicting (previously, it was simply 0).
 - BatchConstants Singleton class to replace global variables in batchmaker
 - Singleton class can now be deleted with the _del() method
+- More tests for data partition
+
+### Changed
+
+- Changed test_dataset.py to test_data_partition.py
 
 ### Removed
 
@@ -49,6 +54,7 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 
 - Type hinting in settings.py
 - Batchmaker tests no longer fail
+- Fixed data partition tests
 
 ### Added
 
