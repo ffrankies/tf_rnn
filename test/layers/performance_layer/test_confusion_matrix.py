@@ -9,6 +9,7 @@ import numpy as np
 from tf_rnn.layers.utils.confusion_matrix import ConfusionMatrix, PerformanceMetrics
 
 from ...test_data import PAD
+from ... import utils
 
 MAX_LENGTH = 8
 
@@ -89,13 +90,13 @@ class TestUpdateConfusionMatrix():
         assert cm.row_labels == cm.col_labels
         assert PAD not in cm.row_labels and PAD not in cm.col_labels
         assert list(cm.matrix[0].keys()) == [0]
-        assert list(cm.matrix[1].keys())== [0, 1, 6]
-        assert list(cm.matrix[2].keys())== [1, 2]
-        assert list(cm.matrix[3].keys())== [2, 3]
-        assert list(cm.matrix[4].keys())== [3]
-        assert list(cm.matrix[5].keys())== [4, 5]
-        assert list(cm.matrix[6].keys())== [6]
-        assert list(cm.matrix[7].keys())== [7]
+        assert utils.equivalent(list(cm.matrix[1].keys()), [0, 1, 6])
+        assert utils.equivalent(list(cm.matrix[2].keys()), [1, 2])
+        assert utils.equivalent(list(cm.matrix[3].keys()), [2, 3])
+        assert list(cm.matrix[4].keys()) == [3]
+        assert utils.equivalent(list(cm.matrix[5].keys()), [4, 5])
+        assert list(cm.matrix[6].keys()) == [6]
+        assert list(cm.matrix[7].keys()) == [7]
         assert cm.matrix[0][0] == 4
         assert cm.matrix[1][0] == 4 and cm.matrix[1][1] == 4 and cm.matrix[1][6] == 1
         assert cm.matrix[2][1] == 3 and cm.matrix[2][2] == 3

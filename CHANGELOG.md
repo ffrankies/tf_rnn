@@ -55,6 +55,7 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 - Type hinting in settings.py
 - Batchmaker tests no longer fail
 - Fixed data partition tests
+- Fixed confusion matrix tests
 
 ### Added
 
