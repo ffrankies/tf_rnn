@@ -45,6 +45,8 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 - `Translator` abstract class for different types of translators
 - `MinMaxNormalizer` class which inherits from `Translator` for normalizing float values between -1 and 1
 - Tests for the `MinMaxNormalizer`'s core functionality
+- `Tokenizer` class which inherits from `Translator` for converting between indexes and tokens
+- Tests for the `Tokenizer`'s core functionality
 
 ### Changed
 
