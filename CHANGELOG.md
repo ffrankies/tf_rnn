@@ -41,6 +41,10 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 - BatchConstants Singleton class to replace global variables in batchmaker
 - Singleton class can now be deleted with the _del() method
 - More tests for data partition
+- `translate` submodule for translating between human and rnn-readable parameters
+- `Translator` abstract class for different types of translators
+- `MinMaxNormalizer` class which inherits from `Translator` for normalizing float values between -1 and 1
+- Tests for the `MinMaxNormalizer`'s core functionality
 
 ### Changed
 
