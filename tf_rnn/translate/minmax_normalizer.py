@@ -24,21 +24,6 @@ class MinMaxNormalizer(Translator):
     original = ([normalized * (max - min)] + max + min) / 2
     """
 
-    @classmethod
-    def create(cls, data: np.ndarray) -> 'MinMaxNormalizer':
-        """Creates a MinMaxNormalizer by finding the minimum and maximum of the given numeric data.
-
-        Params:
-            data (np.ndarray[Numeric]): The numeric data
-        
-        Returns:
-            MinMaxNormalizer: The normalizer created from the numeric data
-        """
-        maximum = np.max(data)
-        minimum = np.min(data)
-        return cls(maximum, minimum)
-    # End of create()
-
     def __init__(self, maximum: float, minimum: float) -> None:
         """Initializes the MinMaxNormalizer object.
 
@@ -153,4 +138,19 @@ class MinMaxNormalizer(Translator):
         normalized = np.apply_along_axis(self.to_rnn_vector, 0, original_matrix)
         return normalized
     # End of to_rnn_matrix()
+
+    @classmethod
+    def create(cls, data: np.ndarray) -> 'MinMaxNormalizer':
+        """Creates a MinMaxNormalizer by finding the minimum and maximum of the given numeric data.
+
+        Params:
+            data (np.ndarray[Numeric]): The numeric data
+        
+        Returns:
+            MinMaxNormalizer: The normalizer created from the numeric data
+        """
+        maximum = np.max(data)
+        minimum = np.min(data)
+        return cls(maximum, minimum)
+    # End of create()
 # End of MinMaxNormalizer()
