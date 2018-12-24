@@ -87,4 +87,16 @@ class Translator(object):
             np.ndarray[Any]: The RNN-readable vector of values
         """
     # End of to_rnn_matrix()
+
+    @abc.abstractclassmethod
+    def create(self, data: np.ndarray) -> 'Translator':
+        """Creates a Translator object from the given data.
+
+        Params:
+            data (np.ndarray[Any]): The data from which to create the translator object
+        
+        Returns:
+            Translator: The translator created from the data
+        """
+    # End of create()
 # End of Translator()
