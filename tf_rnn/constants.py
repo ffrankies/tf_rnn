@@ -111,6 +111,19 @@ MODE_CHOICES = ['sentences', 'paragraphs', 'stories']
 TOKEN_LEVEL_CHOICES = ['words', 'characters']
 
 #########################################
+# FEATURE TYPES
+#########################################
+FEAT_INT = 'int'
+FEAT_FLOAT = 'float'
+FEAT_OBJ = 'O'
+
+#########################################
+# TRANSLATOR TYPES
+#########################################
+TRANSLATOR_TOKENIZER = 'tokenizer'
+TRANSLATOR_MINMAX = 'minmax_normalizer'
+
+#########################################
 # ARG DEFAULTS
 #########################################
 # GENERAL
