@@ -7,7 +7,7 @@ The batches are converted into numpy arrays towards the end for them to play nic
 import math
 import multiprocessing
 from collections import namedtuple
-from typing import Any, Optional
+from typing import Any, Optional, List
 from queue import Queue
 
 import numpy as np
@@ -54,19 +54,19 @@ class BatchConstants(object, metaclass=Singleton):
 
 @trace()
 def make_batches(input_data: list, labels: list, batch_size: int, truncate_length: int, x_pad_token: Any,
-                 y_pad_token: Any) -> tuple:
+                 y_pad_token: Any) -> List[Batch]:
     """Converts both the input data and labels into batches of size 'batch_size'.
 
     Params:
-    - input_data (list): The input data to be made into batches
-    - labels (list): The labels to be made into batches
-    - batch_size (int): The size of the batches
-    - truncate_length (int): The maximum width or length of the batches
-    - x_pad_token (list or int): The token with which to pad the input data batches
-    - y_pad_token (list or int): The token with which to pad the label data batches
+        input_data (list): The input data to be made into batches
+        labels (list): The labels to be made into batches
+        batch_size (int): The size of the batches
+        truncate_length (int): The maximum width or length of the batches
+        x_pad_token (list or int): The token with which to pad the input data batches
+        y_pad_token (list or int): The token with which to pad the label data batches
 
     Returns:
-    - batches (list<Batch>): The list of Batches produced
+        List[Batch]: The list of Batches produced
     """
     BatchConstants(truncate_length, x_pad_token, y_pad_token)
     data = sort_by_length([input_data, labels])
@@ -85,10 +85,10 @@ def sort_by_length(data: list) -> list:
     """Sorts the provided data objects in descending order by length.
 
     Params:
-    - data (list): The list of data to be sorted
+        data (List[List[Any]]): The list of data to be sorted
 
     Returns:
-    - sorted_data (list): The data, sorted in descending order by length
+        List[List[Any]]: The data, sorted in descending order by length
     """
     sorted_data = list()
     for item in data:
@@ -103,15 +103,15 @@ def group_into_batches(data: list, batch_size: int, manager: multiprocessing.Man
     """Group each item in data into batches of size 'batch_size'.
 
     Params:
-    - data (list[list[list[numeric]]]): The data to be grouped into batches
-    - batch_size (int): The size of the data batches
-    - manager (multiprocessing.Manager): The manager from which to create a Queue
+        data (List[List[List[numeric]]]): The data to be grouped into batches
+        batch_size (int): The size of the data batches
+        manager (multiprocessing.Manager): The manager from which to create a Queue
 
     Returns:
-    - batch_queue (multiprocessing.Queue): A managed Queue holding batches to be processed
+        multiprocessing.Queue: A managed Queue holding batches to be processed
 
     Raises:
-    - ValueError when the batch size is less than 1
+        ValueError when the batch size is less than 1
     """
     if batch_size < 1:
         raise ValueError('The size of the batches cannot be less than 1.')
@@ -134,8 +134,8 @@ def process_batch(batch_queue: multiprocessing.Queue, processed_batch_queue: mul
     """Creates a batch out of input and label data.
 
     Params:
-    - batch_queue (multiprocessing.Queue): The managed Queue containing the batches to be processed
-    - processed_batch_queue (multiprocessing.Queue): The managed Queue into which to put processed batches
+        batch_queue (multiprocessing.Queue): The managed Queue containing the batches to be processed
+        processed_batch_queue (multiprocessing.Queue): The managed Queue into which to put processed batches
     """
     batch_constants = BatchConstants()
     while not batch_queue.empty():
@@ -152,14 +152,14 @@ def process_batch(batch_queue: multiprocessing.Queue, processed_batch_queue: mul
 # End of process_batch()
 
 
-def truncate_batch(batch_data: list) -> list:
+def truncate_batch(batch_data: List[List[Any]]) -> list:
     """Truncates each sequence in the given batch. This may result in multiple batches.
 
     Params:
-    - batch_data (list<list<Any>>): The batch data to truncate.
+        batch_data (List[List[Any]]): The batch data to truncate.
 
     Returns:
-    - truncated_batch (list<list<Any>>): The truncated batch
+        List[List[Any]]: The truncated batch
     """
     batch_constants = BatchConstants()
     if batch_constants.truncate < 1:
@@ -181,13 +181,13 @@ def _truncate_batch(index: int, last_index: int, batch: list) -> list:
     - The indicator at the end of the batch is true if it is the ending of the example sequence
 
     Params:
-    - index (int): The index of the resulting batch partition (dictates at what point in the batch the truncation
+        index (int): The index of the resulting batch partition (dictates at what point in the batch the truncation
         starts)
-    - last_index (int): The index of the last batch partition
-    - batch (list): The full-length batch on which to perform the truncation
+        last_index (int): The index of the last batch partition
+        batch (list): The full-length batch on which to perform the truncation
 
     Returns:
-    - truncated_batch_section (list): The truncated section of the batch
+        List[Tuple[bool, List[List[Any]], bool]]: The truncated section of the batch
     """
     batch_constants = BatchConstants()
     start = index * batch_constants.truncate
@@ -200,15 +200,15 @@ def _truncate_batch(index: int, last_index: int, batch: list) -> list:
 # End of _truncate_batch()
 
 
-def get_sequence_lengths(data: list) -> list:
+def get_sequence_lengths(data: list) -> List[List[int]]:
     """Returns the lengths of every row in the given data. The data must be arranged in batches or the function will
     fail.
 
     Params:
-    - data (list): The list of data (arranged in batches) whose length is to be found
+        data (list): The list of data (arranged in batches) whose length is to be found
 
     Returns:
-    - timestep_lengths (list): The lengths of the sequences of every batch in the given data
+        timestep_lengths (List[List[int]]): The lengths of the sequences of every batch in the given data
     """
     batch_lengths = list()
     for batch in data:
@@ -220,15 +220,15 @@ def get_sequence_lengths(data: list) -> list:
 # End of get_sequence_lengths()
 
 
-def pad_batches(data: list, pad_token: Any) -> np.array:
+def pad_batches(data: np.array, pad_token: Any) -> np.array:
     """Pads every row in the data batches so that it's the same length as the value of 'truncate_length'.
 
     Params:
-    - data (list): The batches of data to be padded
-    - pad_token (list or int): The token with which to pad the input data batches
+        data (np.array): The batches of data to be padded
+        pad_token (list or int): The token with which to pad the input data batches
 
     Returns:
-    - padded_batches (np.array): The padded batches of data
+        padded_batches (np.array): The padded batches of data
     """
     padded_batches = list()
     pad_token = get_pad_token(data, pad_token)
@@ -237,24 +237,24 @@ def pad_batches(data: list, pad_token: Any) -> np.array:
         for sequence in batch[1:-1]:
             padded_sequence = pad_sequence(sequence, pad_token)
             padded_batch.append(padded_sequence)
-        padded_batches.append(np.array(padded_batch))
-    return np.array(padded_batches)
+        padded_batches.append(padded_batch)
+    return np.array(padded_batches, dtype=data[0][1].dtype)
 # End of pad_batches()
 
 
-def get_pad_token(data: list, pad_token: Any) -> Any:
+def get_pad_token(batch: list, pad_token: Any) -> Any:
     """Determines the correct padding token. If there are multiple inputs, the pad token is replicated for each feature.
 
     Params:
-    - data (list): The data to be padded
-    - pad_token (numeric): The padding token, to be replicated if there are multiple inputs
+        batch (list): The data to be padded
+        pad_token (numeric): The padding token, to be replicated if there are multiple inputs
 
     Returns:
-    - pad_token (numeric/list): The padding token, replicated if there are multiple inputs
+        pad_token (numeric/list): The padding token, replicated if there are multiple inputs
     """
-    if not data or not data[0] or not data[0][1]:
-        return data
-    data_item = data[0][1][0]
+    if not batch or not batch[0] or batch[0][1].size == 0:
+        return batch
+    data_item = batch[0][1][0]
     if isinstance(data_item, (tuple, list)):
         if not isinstance(pad_token, (tuple, list)):
             pad_token = [pad_token for item in data_item]
@@ -266,11 +266,11 @@ def pad_sequence(sequence: list, pad_token: Any) -> np.array:
     """Pads a single sequence with the given pad token.
 
     Params:
-    - sequence (list): The sequence to pad
-    - pad_token (numeric/list): The token to be used for padding
+        sequence (list): The sequence to pad
+        pad_token (numeric/list): The token to be used for padding
 
     Return:
-    - padded_sequence (np.array): The padded sequence
+        np.array: The padded sequence
     """
     batch_constants = BatchConstants()
     padded_sequence = list(sequence)
@@ -280,14 +280,14 @@ def pad_sequence(sequence: list, pad_token: Any) -> np.array:
 # End of pad_sequence()
 
 
-def combine_batch_lists(processed_batch_queue: Queue) -> np.array:
+def combine_batch_lists(processed_batch_queue: Queue) -> List[Batch]:
     """Combines processed batches produced my the multiprocessing module into a single batch list.
 
     Params:
-    - processed_batch_queue (queue.Queue): The Queue of processed batches, provided by the multiprocessing Manager
+        processed_batch_queue (queue.Queue): The Queue of processed batches, provided by the multiprocessing Manager
 
     Returns:
-    - batches (list<Batch>): The combined list of batches
+        List[Batch]: The combined list of batches
     """
     batches = list()
     while not processed_batch_queue.empty():
