@@ -13,6 +13,10 @@ and this project plans to adhere to [Semantic Versioning](http://semver.org/spec
 - Support float input parameters
 - Create two indexer types: translator types (for floats) and tokenizer (for tokens)
 - Input types for inputs
+
+### For 0.7.1
+
+- Support float outputs
 - Support multiple outputs
 
 ### For later
