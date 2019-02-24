@@ -145,6 +145,8 @@ def process_batch(batch_queue: multiprocessing.Queue, processed_batch_queue: mul
         sequence_lengths = get_sequence_lengths(batch_labels)[:3]
         batch_input = pad_batches(batch_input, batch_constants.input_pad)
         batch_labels = pad_batches(batch_labels, batch_constants.label_pad)
+        batch_input = reshape_batches(batch_input)
+        batch_labels = reshape_batches(batch_labels)
         for index in range(len(batch_input)):
             batch = Batch(batch_input[index], batch_labels[index], sequence_lengths[index][1:-1], 
                         sequence_lengths[index][0], sequence_lengths[index][-1])
@@ -240,6 +242,27 @@ def pad_batches(data: np.array, pad_token: Any) -> np.array:
         padded_batches.append(padded_batch)
     return np.array(padded_batches, dtype=data[0][1].dtype)
 # End of pad_batches()
+
+
+def reshape_batches(data: np.array) -> np.array:
+    """Tensorflow needs simple numpy arrays, while data is a structured array. This reshapes the array into a 
+    simpler format, where everything is cast to a float datatype.
+
+    Params:
+        data (np.array): Numpy structured array
+    
+    Returns:
+        np.array: Array of Numpy array of size (num_features, batch_size..)
+    """
+    reshaped_batches = list()
+    for batch in data:
+        reshaped_batch = list()
+        for feature in batch.dtype.names:
+            reshaped_batch.append(batch[feature].astype(np.float32))
+        reshaped_batches.append(np.asarray(reshaped_batch))
+    np_reshaped_batches = np.asarray(reshaped_batches, dtype=np.float32)
+    return np.asarray(reshaped_batches)
+# End of reshape_batches()
 
 
 def get_pad_token(batch: list, pad_token: Any) -> Any:
