@@ -17,62 +17,35 @@ from . import settings
 from . import utils
 
 from .logger import Logger, info, debug
-from .layers.input_layer import token_to_vector
+from .layers.input_layer import format_feature
 from .layers.hidden_layer import layered_state_tuple, rnn_cell
 # from .layers.output_layer import *
 from .layers.performance_layer import average_loss, performance_ops, PerformancePlaceholders
 
 
-def create_model(settings, dataset):
-    """
-    Creates a model of the given type.ls
+def create_model(settings: settings.RNNSettings, dataset: dataset.DatasetBase) -> 'MultiFeatureRNN':
+    """Creates a model of the given type.ls
 
     Params:
-    - settings (SettingsNamespace): The RNN settings
-    - dataset (DatasetBase): The dataset to be used. Defaults to None, in which case a SimpleDataset is created
+        settings (RNNSettings): The RNN settings
+        dataset (DatasetBase): The dataset to be used. Defaults to None, in which case a SimpleDataset is created
+
+    Returns:
+        MultiFeatureRNN: An RNN model that supports multiple input features
     """
-    if len(settings.rnn.input_names) > 1:
-        rnn_model = MultiFeatureRNN(model_settings=settings, model_dataset=dataset)
-    else:
-        rnn_model = BasicRNN(model_settings=settings, model_dataset=dataset)
+    # if len(settings.rnn.input_names) > 1:
+    #     rnn_model = MultiFeatureRNN(model_settings=settings, model_dataset=dataset)
+    # else:
+    rnn_model = MultiFeatureRNN(model_settings=settings, model_dataset=dataset)
     return rnn_model
 # End of create_model()
 
 
 class RNNBase(object):
     """The base for an RNN model, implemented in tensorflow.
-
-    Instance variables:
-    - settings (settings.Settings): The settings for the RNN
-    - model_path (string): The path to the model's home directory
-    - logger (logger.Logger): The logger for this RNN
-    - dataset (dataset.SimpleDataset): The dataset on which to train the model
-    - graph (tf.Graph): The model's computation graph
-    - session (tf.Session): The model's session for tensorflow variable execution
-    - learning_rate (tf.float32): The learning rate for the model
-    - performance_ops (tf.Tensor): The operations that evaluate the performance of the network on a given minibatch
-    - train_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating training
-                performance
-    - validation_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating
-                validation performance
-    - test_performance (layers.performance_layer.PerformancePlaceholders): placeholders for evaluating test
-                performance
-    - batch_y_placeholder (tf.placeholder): The placeholder for the labels
-    - out_weights (tf.Variable): The output layer weights
-    - out_bias (tf.Variable): The output layer bias
-    - predictions_series (tf.Tensor): The predictions on a given minibatch
-    - batch_sizes (tf.placeholder): The placeholder for the actual size of each sequence in the input minibatch
-    - hidden_state_placeholder (tf.placeholder): The placeholder for the hidden state of the model
-    - hidden_state_shape (tf.placeholder): The shape of the hidden state placeholder
-    - dropout (tf.placeholder): The probability of keeping a weight when doing dropout
-    - saver (saver.Saver): The object used for loading and saving the model's weights
-    - run_dir (string): The directory in which the weights will be saved
-    - summary_writer (tf.summary.FileWriter): The writer for the tensorboard events
-    - summary_ops (tf.Tensor): The operations for the tensorboard summaries
-    - variables (ray.experimental.TensorFlowVariables): All the tensorflow variables, for saving and loading
     """
 
-    def __init__(self, model_settings: settings.Settings = None, model_dataset: dataset.DatasetBase = None):
+    def __init__(self, model_settings: settings.Settings = None, model_dataset: dataset.DatasetBase = None) -> None:
         """Constructor for an RNN Model. Performs the following functions:
         - initializes model settings
         - initializes model path
@@ -81,8 +54,8 @@ class RNNBase(object):
         - creates the computational graph
 
         Params:
-        - model_settings (settings.Settings): The settings to be used for the model
-        - model_dataset (dataset.DatasetBase): The dataset to be used for training the model
+            model_settings (settings.Settings): The settings to be used for the model
+            model_dataset (dataset.DatasetBase): The dataset to be used for training the model
         """
         self.settings = settings.Settings() if model_settings is None else model_settings
         self.model_path = utils.create_model_dir(self.settings.general.model_name)
@@ -126,7 +99,7 @@ class RNNBase(object):
         """Evaluates the performance of the network on a given minibatch.
 
         Returns:
-        - minibatch_loss_op (tf.Tensor): The operation that calculates the loss for the current minibatch
+            tf.Tensor: The operation that calculates the loss for the current minibatch
         """
         logits_series = self.output_layer()
         with tf.variable_scope(constants.LOSS_LAYER):
@@ -134,9 +107,9 @@ class RNNBase(object):
             # labels_series = tf.unstack(self.batch_y_placeholder, name="unstack_labels_series")
             # self.accuracy = calculate_accuracy(labels_series, self.predictions_series)
             self.minibatch_loss_op, _ = average_loss(
-                logits_series, self.batch_y_placeholder, self.batch_sizes, self.settings.train.truncate)
+                logits_series, tf.squeeze(self.batch_y_placeholder), self.batch_sizes, self.settings.train.truncate)
             self.performance_ops = performance_ops(
-                logits_series, self.batch_y_placeholder, self.batch_sizes, self.settings.train.truncate)
+                logits_series, tf.squeeze(self.batch_y_placeholder), self.batch_sizes, self.settings.train.truncate)
         return self.minibatch_loss_op
     # End of performance_evaluation()
 
@@ -158,7 +131,7 @@ class RNNBase(object):
         """Creates the tensorflow variables and operations needed to compute the network outputs.
 
         Return:
-        - logits_series (tf.Tensor): The calculated probabilities of each class for each input in the minibatch
+            tf.Tensor: The calculated probabilities of each class for each input in the minibatch
         """
         states_series = self.hidden_layer()
         with tf.variable_scope(constants.OUTPUT):
@@ -190,7 +163,7 @@ class RNNBase(object):
         """Creates the tensorflow variables and operations needed to compute the hidden layer state.
 
         Return:
-        - states_series (tf.tensor): The RNN state for each input for each timestep in the input
+            tf.Tensor: The RNN state for each input for each timestep in the input
         """
         inputs_series = self.input_layer()
         with tf.variable_scope(constants.HIDDEN):
@@ -221,7 +194,7 @@ class RNNBase(object):
         NOTE: This method **must** create a variable called self.batch_x_placeholder
 
         Returns:
-        - inputs_series (tf.tensor): The inputs series for each timestep for each sequence in the inputs
+            tf.Tensor: The inputs series for each timestep for each sequence in the inputs
         """
         self.batch_x_placeholder = None
     # End of input_layer()
@@ -279,30 +252,28 @@ class BasicRNN(RNNBase):
 
 
 class MultiFeatureRNN(RNNBase):
-    """
-    An implementation of an RNN running with multiple inputs.
+    """An implementation of an RNN running with multiple inputs.
 
     @see RNNBase
     """
 
     @debug()
     def output_layer(self):
-        """
-        @see RNNBase.output_layer
+        """@see RNNBase.output_layer
         """
         states_series, hidden_size = self.hidden_layer()
         with tf.variable_scope(constants.OUTPUT):
             states_series = tf.unstack(states_series, axis=1, name='unstack_states_series')
             self.batch_y_placeholder = tf.placeholder(
                 dtype=tf.int32,
-                shape=[self.settings.train.batch_size, self.settings.train.truncate],
+                shape=[len(self.dataset.label_names), self.settings.train.batch_size, self.settings.train.truncate],
                 name='output_placeholder')
             self.out_weights = tf.Variable(
-                initial_value=np.random.rand(hidden_size, self.dataset.vocabulary_size[0]),
+                initial_value=np.random.rand(hidden_size, self.dataset.translators.output_size()),
                 dtype=tf.float32,
                 name='out_weights')
             self.out_bias = tf.Variable(
-                np.zeros((self.dataset.vocabulary_size[0])),
+                np.zeros((self.dataset.translators.output_size())),
                 dtype=tf.float32,
                 name='out_bias')
             logits_series = [
@@ -317,11 +288,10 @@ class MultiFeatureRNN(RNNBase):
 
     @debug()
     def hidden_layer(self):
-        """
-        @see RNNBase.hidden_layer
+        """@see RNNBase.hidden_layer
 
         Also returns:
-        - hidden_size (int): The size of the hidden layer for multiple inputs (hidden_size * number_of_inputs)
+            int: The size of the hidden layer for multiple inputs (hidden_size * number_of_inputs)
         """
         inputs_series = self.input_layer()
         with tf.variable_scope(constants.HIDDEN):
@@ -347,22 +317,25 @@ class MultiFeatureRNN(RNNBase):
 
     @debug()
     def input_layer(self):
-        """
-        @see RNNBase.input_layer
+        """@see RNNBase.input_layer
         """
         with tf.variable_scope(constants.INPUT):
-            num_features = len(self.settings.rnn.input_names)
+            num_features = self.dataset.num_features
             self.batch_x_placeholder = tf.placeholder(
-                dtype=tf.int32,
-                shape=[self.settings.train.batch_size, self.settings.train.truncate, num_features],
+                dtype=tf.float32,
+                shape=[num_features, self.settings.train.batch_size, self.settings.train.truncate],
                 name='input_placeholder')
-            unstacked_inputs = tf.unstack(self.batch_x_placeholder, axis=-1, name='unstack_inputs')
+            unstacked_inputs = tf.unstack(self.batch_x_placeholder, axis=0, name='unstack_inputs')
             input_vector_list = list()
             for index, inputs in enumerate(unstacked_inputs):
-                input_vectors = token_to_vector(self.dataset.vocabulary_size[index], self.settings.rnn.hidden_size,
-                                                inputs, self.settings.rnn.input_names[index])
+                input_vectors = format_feature(
+                    translator=self.dataset.translators.input_translators[index],
+                    settings=self.settings.rnn,
+                    feature_batch=inputs,
+                    name=self.dataset.input_names[index]
+                )
                 input_vector_list.append(input_vectors)
             inputs_series = tf.concat(input_vector_list, axis=-1, name='concatenate_inputs')
         return inputs_series
     # End of input_layer()
-# End of MultiInputRNN
+# End of MultiFeatureRNN
