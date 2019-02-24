@@ -3,7 +3,7 @@
 @since 0.7.0
 """
 
-from typing import List, Any, Iterable
+from typing import List, Any, Iterable, Type
 
 import numpy as np
 
@@ -17,13 +17,14 @@ class Translators(object):
     """Contains the input and output translators.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, output_indexes: List[int]) -> None:
         """Initializes a Translators object with an empty list of input and output translators.
         """
         self.num_input_translators = 0
         self.input_translators = list()  # type: List[Translator]
         self.num_output_translators = 0
         self.output_translators = list()  # type: List[Translator]
+        self.output_indexes = output_indexes
     # End of __init__()
 
     def add_input_translator(self, translator: Translator):
@@ -123,7 +124,8 @@ class Translators(object):
         Returns:
             np.ndarray[Any]: The RNN-readable vector of values
         """
-        return self.input_translators[index].to_rnn_matrix(value_matrix)
+        translator = self.input_translators[index]
+        return translator.to_rnn_matrix(value_matrix)
     # End of input_to_rnn_matrix()
 
     def output_to_human(self, index: int, value: Any) -> Any:
@@ -206,29 +208,79 @@ class Translators(object):
         return self.output_translators[index].to_rnn_matrix(value_matrix)
     # End of output_to_rnn_matrix()
 
+    def translate_all(self, sequence_data: np.ndarray) -> np.ndarray:
+        """Translates a matrix of all features to their RNN-readable values.
+
+        Params:
+            sequence_data (np.ndarray[Any]): The input features dataset
+        
+        Returns:
+            np.ndarray[Any]: The RNN-readable versions of the input features
+        """
+        print("=====First sequence to be translated (shape = {} dtype = {})=====\n{}".format(
+            np.shape(sequence_data), sequence_data.dtype, sequence_data[0]))
+        expected_dtype = self._expected_rnn_input_dtype(sequence_data.dtype.names)
+        stacked = np.empty(sequence_data.shape, dtype=expected_dtype)
+        for feature_index, feature_name in enumerate(sequence_data.dtype.names):
+            feature_data = sequence_data[feature_name]
+            print("dtype of feature {} = {}\n{}".format(feature_index, feature_data.dtype, feature_data[0]))
+            translated = self.input_to_rnn_matrix(feature_index, feature_data)
+            stacked[feature_name] = translated
+        print("=====Stacked Sequence (shape = {} dtype = {})=====\n{}".format(
+            stacked.shape, stacked.dtype, stacked[0]
+        ))
+        return stacked
+    # End of translate_all()
+
+    def _expected_rnn_input_dtype(self, feature_names: List[str]) -> np.dtype:
+        """
+        """
+        types = list()  # type: List[Type]
+        for translator in self.input_translators:
+            if isinstance(translator, MinMaxNormalizer):
+                types.append(float)
+            else:
+                types.append(int)
+        expected_dtype_desc = list(zip(feature_names, types))
+        return np.dtype(expected_dtype_desc)
+    # End of _expected_types()
+
+    def output_size(self) -> int:
+        """Calculates how many array elements are needed to encode the outputs of all the output translators.
+        
+        Returns:
+            int: The number of array elements needed to encode the output of all the output translators
+        """
+        out_size = 0
+        for translator in self.output_translators:
+            out_size += translator.output_size()
+        return out_size
+    # End of output_size()
+    
     @classmethod
-    def create(cls, output_indexes: List[int], feature_types: str, translator_types: List[str], 
-        data: np.ndarray) -> 'Translators':
+    def create(cls, output_indexes: List[int], translator_types: List[str], sequence_data: np.ndarray) -> 'Translators':
         """Creates the necessary translators from the given data.
+
+        Assumes that the correct translator_types have been provided by the user.
+        Casts all input features translated by a MinMaxNormalizer to floats.
         
         Params:
             output_indexes (List[int]): The feature indexes that represent output data (data to be predicted)
-            feature_types (str): The list of types for each feature, as a comma-separated string (e.g.: "O, int, float")
             translator_types (List[str]): The list of types of translators to create
-            data (np.ndarray): The data from which to create the translators
+            sequence_data (np.ndarray): The data from which to create the translators
         
         Returns:
             Translators: The translators created from the data
         """
-        translators = Translators()
-        if len(np.shape(data)) == 2:  # Only one input/output
-            data = np.reshape(data, np.shape(data) + (1,))
-        data = np.asarray(data, dtype=feature_types)
-        features = np.split(data, data.shape[-1], axis=-1)
-        for feature_index, feature_data in enumerate(features):
+        print('=====Creating Translators=====')
+        translators = Translators(output_indexes)
+        if len(np.shape(sequence_data)) == 2:  # Only one input/output
+            sequence_data = sequence_data.reshape(np.shape(sequence_data) + (1,))
+        for feature_index, feature_name in enumerate(sequence_data.dtype.names):
+            feature_data = sequence_data[feature_name]
             translator_type = translator_types[feature_index]
             if translator_type == constants.TRANSLATOR_TOKENIZER:
-                translator = Tokenizer.create(feature_data)
+                translator = Tokenizer.create(feature_data)  # type: Translator
             elif translator_type == constants.TRANSLATOR_MINMAX:
                 translator = MinMaxNormalizer.create(feature_data)
             else:
