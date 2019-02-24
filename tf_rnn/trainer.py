@@ -29,7 +29,7 @@ def train(model: RNNBase):
     to the <model_path>/tensorboard directory for tensorboard functionality.
 
     Params:
-    - model (model.RNNBase): The model to train
+        model (model.RNNBase): The model to train
     """
     # Create accumulators, pass them to the training, validation and testing steps
     metrics = model.saver.meta.latest()[constants.METRICS]
@@ -60,10 +60,10 @@ def train_epoch(model: RNNBase, epoch_num: int, train_accumulator: Accumulator, 
     """Trains one full epoch.
 
     Params:
-    - model (model.RNNBase): The model to train
-    - epoch_num (int): The number of the current epoch
-    - train_accumulator (layers.utils.Accumulator): The accumulator for training performance
-    - valid_accumulator (layers.utils.Accumulator): The accumulator for validation performance
+        model (model.RNNBase): The model to train
+        epoch_num (int): The number of the current epoch
+        train_accumulator (layers.utils.Accumulator): The accumulator for training performance
+        valid_accumulator (layers.utils.Accumulator): The accumulator for validation performance
     """
     model.logger.info("Starting epoch: %d" % (epoch_num))
 
@@ -85,10 +85,10 @@ def train_step(model: RNNBase, epoch_num: int, current_state: np.array, accumula
     Trains the model on the dataset's training partition.
 
     Params:
-    - model (model.RNNBase): The model to train
-    - epoch_num (int): The number of the current epoch
-    - current_state (np.array): The current state of the hidden layer
-    - accumulator (layers.utils.Accumulator): The accumulator for training performance
+        model (model.RNNBase): The model to train
+        epoch_num (int): The number of the current epoch
+        current_state (np.array): The current state of the hidden layer
+        accumulator (layers.utils.Accumulator): The accumulator for training performance
     """
     for batch in model.dataset.train:
         if epoch_num == 0:
@@ -103,13 +103,13 @@ def train_minibatch(model: RNNBase, batch: Batch, current_state: np.array, accum
     """Trains one minibatch.
 
     Params:
-    - model (model.RNNBase): The model to train
-    - batch (Batch): The batch to be used for training
-    - current_state (np.array): The current hidden state of the model
-    - accumulator (layers.utils.Accumulator): The accumulator for training performance
+        model (model.RNNBase): The model to train
+        batch (Batch): The batch to be used for training
+        current_state (np.array): The current hidden state of the model
+        accumulator (layers.utils.Accumulator): The accumulator for training performance
 
     Return:
-    - updated_hidden_state (np.array): The updated state of the hidden layer after training
+        np.array: The updated state of the hidden layer after training
     """
     current_feed_dict = get_feed_dict(model, batch, current_state)
     performance_data, _, current_state = model.session.run(
@@ -126,13 +126,13 @@ def get_feed_dict(model: RNNBase, batch: Batch, current_state: np.array, trainin
     """Obtains the information needed for running tensorflow operations as a feed dictionary.
 
     Params:
-    - model (model.RNNBase): The model containing the operations
-    - batch (Batch): The batch whose information will make up the feed dict
-    - current_state (np.array): The current hidden state of the RNN
-    - training (bool): Whether or not this batch is being trained on (default: False)
+        model (model.RNNBase): The model containing the operations
+        batch (Batch): The batch whose information will make up the feed dict
+        current_state (np.array): The current hidden state of the RNN
+        training (bool): Whether or not this batch is being trained on (default: False)
 
     Return:
-    - feed_dict (dict): The dictionary holding the necessary information for running tensorflow operations
+        dict: The dictionary holding the necessary information for running tensorflow operations
     """
     current_state = reset_state(current_state, batch.beginning)
     feed_dict = build_feed_dict(model, batch, current_state, training)
@@ -145,11 +145,11 @@ def reset_state(current_state: np.array, beginning: bool) -> np.array:
     """Resets the current state to zeros if the batch contains data from the beginning of a sequence.
 
     Params:
-    - current_state (np.array): The current hidden state of the network after training the previous batch
-    - beginning (boolean): True if the batch represents the start of a sequence
+        current_state (np.array): The current hidden state of the network after training the previous batch
+        beginning (boolean): True if the batch represents the start of a sequence
 
     Return:
-    - current_state (np.array): The current hidden state of the network.
+        np.array: The current hidden state of the network.
     """
     if beginning:  # If start of sequence
         current_state = np.zeros_like(current_state)
@@ -162,13 +162,13 @@ def build_feed_dict(model: RNNBase, batch: Batch, current_state: np.array, train
     """Builds a dictionary to feed into the model for performing tensorflow operations.
 
     Params:
-    - model (model.RNNBase): The model for which to build the feed dictionary
-    - batch (Batch): Contains the inputs, outputs and sequence lengths of the current batch
-    - current_state (np.array): The current hidden state of the RNN
-    - training (bool): Whether or not this batch is being trained on (default: False)
+        model (model.RNNBase): The model for which to build the feed dictionary
+        batch (Batch): Contains the inputs, outputs and sequence lengths of the current batch
+        current_state (np.array): The current hidden state of the RNN
+        training (bool): Whether or not this batch is being trained on (default: False)
 
     Return:
-    - feed_dict (dict): The dictionary built out of the provided batch and current state
+        dict: The dictionary built out of the provided batch and current state
     """
     if training:
         dropout = model.settings.rnn.dropout
@@ -193,16 +193,19 @@ def update_accumulator(accumulator: Accumulator, batch: Batch, performance_data:
     the dataset.
 
     Params:
-    - accumulator (layers.utils.Accumulator): The accumulator to update with new performance data
-    - batch (Batch): The batch about which the performance data was gathered
-    - performance_data (list): The performance data for the given minibatch
-      - loss (float): The average loss for the given minibatch
-      - size (int): The number of valid elements in this minibatch
-      - timestep_accuracies (list): The average accuracy for each timestep in this minibatch
-      - timestep_elements (list): The number of valid elements for each timestep in this minibatch
-      - predictions (tf.Tensor): The predictions made at every timestep
-      - labels (list): The labels for the minibatch
-      - sequence_lengths (list): The list of lengths of each sequence in the minibatch
+        accumulator (layers.utils.Accumulator): The accumulator to update with new performance data
+        batch (Batch): The batch about which the performance data was gathered
+        performance_data (list): The performance data for the given minibatch
+            loss (float): The average loss for the given minibatch
+            size (int): The number of valid elements in this minibatch
+            timestep_accuracies (list): The average accuracy for each timestep in this minibatch
+            timestep_elements (list): The number of valid elements for each timestep in this minibatch
+            predictions (tf.Tensor): The predictions made at every timestep
+            labels (list): The labels for the minibatch
+            sequence_lengths (list): The list of lengths of each sequence in the minibatch
+    
+    Returns:
+        AccumulatorData: The Accumulator Data constructed from the given parameters
     """
     performance_data.extend([batch.y, batch.sequence_lengths])
     data = AccumulatorData._make(performance_data)
@@ -216,9 +219,9 @@ def validation_step(model: RNNBase, current_state: np.array, accumulator: Accumu
     """Performs performance calculations on the dataset's validation partition.
 
     Params:
-    - model (model.RNNBase): The model to train
-    - current_state (np.array): The current state of the hidden layer
-    - accumulator (layers.utils.Accumulator): The accumulator for validation performance
+        model (model.RNNBase): The model to train
+        current_state (np.array): The current state of the hidden layer
+        accumulator (layers.utils.Accumulator): The accumulator for validation performance
     """
     for batch in model.dataset.valid:
         current_state = validate_minibatch(model, batch, current_state, accumulator)
@@ -230,13 +233,13 @@ def validate_minibatch(model: RNNBase, batch: Batch, current_state: np.array, ac
     """Calculates the performance of the network on one minibatch, logs the performance to tensorflow.
 
     Params:
-    - model (model.RNNBase): The model to validate
-    - batch (Batch): The batch to be used for validation
-    - current_state (np.array): The current hidden state of the model
-    - accumulator (layers.utils.Accumulator): The accumulator for validation performance
+        model (model.RNNBase): The model to validate
+        batch (Batch): The batch to be used for validation
+        current_state (np.array): The current hidden state of the model
+        accumulator (layers.utils.Accumulator): The accumulator for validation performance
 
     Return:
-    - updated_hidden_state (np.array): The updated state of the hidden layer after validating
+        np.array: The updated state of the hidden layer after validating
     """
     current_feed_dict = get_feed_dict(model, batch, current_state)
     performance_data, current_state = model.session.run(
@@ -245,7 +248,7 @@ def validate_minibatch(model: RNNBase, batch: Batch, current_state: np.array, ac
         )
     performance_data = list(performance_data)
     accumulator_data = update_accumulator(accumulator, batch, performance_data)
-    Observer.observe(accumulator_data, model.dataset.indexer)
+    Observer.observe(accumulator_data, model.dataset.translators.output_translators[0])
     return current_state
 # End of validate_minibatch()
 
@@ -256,10 +259,10 @@ def summarize(model: RNNBase, train_accumulator: Accumulator, valid_accumulator:
     summary.
 
     Params:
-    - model (model.RNNBase): The RNN model containing the operations and placeholders for the performance calculations
-    - train_accumulator (layers.utils.Accumulator): The accumulator for training performance
-    - valid_accumulator (layers.utils.Accumulator): The accumulator for validation performance
-    - epoch_num (int): The epoch number for which the calculation is performed
+        model (model.RNNBase): The RNN model containing the operations and placeholders for the performance calculations
+        train_accumulator (layers.utils.Accumulator): The accumulator for training performance
+        valid_accumulator (layers.utils.Accumulator): The accumulator for validation performance
+        epoch_num (int): The epoch number for which the calculation is performed
     """
     model.logger.debug('Evaluating the model\'s performance after training for an epoch')
     summary = model.session.run(
@@ -281,8 +284,8 @@ def performance_eval(model: RNNBase, accumulator: Accumulator):
     """Performs a final performance evaluation on the test partition of the dataset.
 
     Params:
-    - model (model.RNNBase): The RNN model containing the session and tensorflow variable placeholders
-    - accumulator (layers.utils.Accumulator): Accumulator for performance metrics of the test dataset
+        model (model.RNNBase): The RNN model containing the session and tensorflow variable placeholders
+        accumulator (layers.utils.Accumulator): Accumulator for performance metrics of the test dataset
             partition
     """
     test_step(model, accumulator)
@@ -304,8 +307,8 @@ def test_step(model: RNNBase, accumulator: Accumulator):
     performance test for the model.
 
     Params:
-    - model (model.RNNBase): The trained model
-    - accumulator (layers.utils.Accumulator): Accumulator for performance metrics of the test dataset
+        model (model.RNNBase): The trained model
+        accumulator (layers.utils.Accumulator): Accumulator for performance metrics of the test dataset
                 partition
     """
     current_state = np.zeros(tuple(model.hidden_state_shape), dtype=float)
@@ -319,13 +322,13 @@ def test_minibatch(model: RNNBase, batch: Batch, current_state: np.array, accumu
     """Calculates the performance of the network on one minibatch, and saves the .
 
     Params:
-    - model (model.RNNBase): The model to validate
-    - batch (Batch): The batch to be used for testing the model
-    - current_state (np.array): The current hidden state of the model
-    - accumulator (layers.utils.Accumulator): The accumulator for validation performance
+        model (model.RNNBase): The model to validate
+        batch (Batch): The batch to be used for testing the model
+        current_state (np.array): The current hidden state of the model
+        accumulator (layers.utils.Accumulator): The accumulator for validation performance
 
     Return:
-    - updated_hidden_state (np.array): The updated state of the hidden layer after validating
+        np.array: The updated state of the hidden layer after validating
     """
     current_feed_dict = get_feed_dict(model, batch, current_state)
     performance_data, current_state = model.session.run(
@@ -344,12 +347,12 @@ def early_stop(valid_accumulator: Accumulator, epoch_num: int, num_epochs: int) 
     """Checks whether or not the model should stop training because it has started to over-fit the data.
 
     Params:
-    - valid_accumulator (layers.utils.Accumulator): The accumulator for validation performance
-    - epoch_num (int): The number of epochs the model has trained for
-    - num_epochs (int): The maximum number of epochs the model is set to train for
+        valid_accumulator (layers.utils.Accumulator): The accumulator for validation performance
+        epoch_num (int): The number of epochs the model has trained for
+        num_epochs (int): The maximum number of epochs the model is set to train for
 
     Return:
-    - should_stop (bool): True if the model has started to overfit the data
+        bool: True if the model has started to overfit the data
     """
     should_stop = False
     portion_size = min(10, max(5, math.ceil(num_epochs/10)))  # Keep portion size between 5 and 10
@@ -367,9 +370,9 @@ def save_predictions(predictions: np.array, model: RNNBase, batch: Batch):
     """Saves the predictions made by the RNN during testing for analysis.
 
     Params:
-    - data (np.array): The predictions made
-    - model (RNNBase): Contains the test partition and saver object
-    - batch (Batch): The batch for which the predictions were made
+        data (np.array): The predictions made
+        model (RNNBase): Contains the test partition and saver object
+        batch (Batch): The batch for which the predictions were made
     """
     predictions_path = model.saver.meta.latest()[constants.DIR] + 'predictions.csv'
     if not os.path.isfile(predictions_path):
@@ -387,10 +390,10 @@ def log_post_epoch(model: RNNBase, epoch_num: int, train_accumulator: Accumulato
     only logs epoch number and training loss.
 
     Params:
-    - model (RNNBase): The RNN model doing the logging
-    - epoch_num (int): The number of the current epoch
-    - train_accumulator (layers.utils.Accumulator): The accumulator for training performance
-    - valid_accumulator (layers.utils.Accumulator): The accumulator for validation performance
+        model (RNNBase): The RNN model doing the logging
+        epoch_num (int): The number of the current epoch
+        train_accumulator (layers.utils.Accumulator): The accumulator for training performance
+        valid_accumulator (layers.utils.Accumulator): The accumulator for validation performance
     """
     if epoch_num == 0:
         model.logger.info("Finished epoch: {:d} | training_loss: {:.2f}".format(epoch_num, train_accumulator.loss))
