@@ -1,12 +1,15 @@
 """The performance accumulator class.
 
-@since 0.6.1
+@since 0.7.0
 """
 
 from copy import copy
 from collections import namedtuple
+from typing import List
 
-from .confusion_matrix import ConfusionMatrix
+import numpy as np
+
+from .confusion_matrix import ConfusionMatrix, PerformanceMetrics
 
 
 AccumulatorData = namedtuple('AccumulatorData',
@@ -18,17 +21,17 @@ class TimestepAccuracies(object):
     """Keeps track of timestep accuracies.
     """
 
-    def __init__(self, max_sequence_length: int):
+    def __init__(self, max_sequence_length: int) -> None:
         """Creates a new TimestepAccuracies object.
 
         Params:
-        - max_sequence_length (int): The maximum length of a sequence
+            max_sequence_length (int): The maximum length of a sequence
         """
         self.max_sequence_length = max_sequence_length
-        self.timestep_accuracy_list = list()
-        self.timestep_count_list = list()
-        self._incoming_timestep_accuracies = list()
-        self._incoming_timestep_counts = list()
+        self.timestep_accuracy_list = list()  # type: List[float]
+        self.timestep_count_list = list()  # type: List[int]
+        self._incoming_timestep_accuracies = list()  # type: List[float]
+        self._incoming_timestep_counts = list()  # type: List[int]
         self._epoch = 0
     # End of __init__()
 
@@ -38,25 +41,25 @@ class TimestepAccuracies(object):
         self._epoch += 1
     # End of next_epoch()
 
-    def update(self, accuracies: list, counts: list, ending: bool):
+    def update(self, accuracies: List[float], counts: List[int], ending: bool):
         """Updates the timestep accuracies with info from a new minibatch.
 
         Params:
-        - accuracies (list<float>): The timestep accuracies for a new minibatch
-        - counts (list<int>): The timestep counts for a new minibatch
-        - ending (bool): Whether or not the minibatch is the ending of a sequence
+            accuracies (List[float]): The timestep accuracies for a new minibatch
+            counts (List[int]): The timestep counts for a new minibatch
+            ending (bool): Whether or not the minibatch is the ending of a sequence
         """
         self._extend_timesteps(accuracies, counts)
         if ending:
             self._merge_timesteps()
     # End of update()
 
-    def _extend_timesteps(self, accuracies: list, counts: list):
+    def _extend_timesteps(self, accuracies: List[float], counts: List[int]):
         """Appends the timestep accuracies and timestep counts to the next_timestep_counts list.
 
         Params:
-        - accuracies (list<float>): The timestep accuracies for a new minibatch
-        - counts (list<int>): The timestep counts for a new minibatch
+            accuracies (List[float]): The timestep accuracies for a new minibatch
+            counts (List[int]): The timestep counts for a new minibatch
         """
         if len(self.timestep_accuracy_list) < self._epoch + 1:
             self.timestep_accuracy_list.append(list())
@@ -96,29 +99,19 @@ class TimestepAccuracies(object):
 
 class Accumulator(object):
     """Stores the data needed to evaluate the performance of the model on a given partition of the dataset.
-
-    Instance Variables:
-    - max_sequence_length (int): The maximum sequence length for this dataset
-    - loss (float): The cumulative average loss for every minibatch
-    - counts (float): The cumulative total number of valid elements seen so far
-    - timestep_accuracies (TimestepAccuracies): The cumulative average accuracy for each timestep for every epoch
-    - losses (list): List of losses for every epoch
-    - metrics (list<layers.PerformanceMetrics>): List of performance metrics for every epoch
-    - confusion_matrix (ConfusionMatrix): The confusion matrix for visualizing prediction accuracies
-    - latest_confusion_matrix (ConfusionMatrix): The confusion matrix for the latest completed epoch
     """
 
-    def __init__(self, max_sequence_length: int):
+    def __init__(self, max_sequence_length: int) -> None:
         """Creates a new PerformanceData object.
 
         Params:
-        - max_sequence_length (int): The maximum sequence length for this dataset
+            max_sequence_length (int): The maximum sequence length for this dataset
         """
         self.max_sequence_length = max_sequence_length
         self.confusion_matrix = ConfusionMatrix()
         self.latest_confusion_matrix = None
-        self.losses = list()
-        self.metrics = list()
+        self.losses = list()  # type: List[float]
+        self.metrics = list()  # type: List[PerformanceMetrics]
         self.timestep_accuracies = TimestepAccuracies(max_sequence_length)
         self.loss = None
         self.counts = 0
@@ -129,8 +122,8 @@ class Accumulator(object):
         """Adds the performance data from a given minibatch to the PerformanceData object.
 
         Params:
-        - data (AccumulatorData): The performance data for the given minibatch
-        - ending (boolean): True if this minibatch marks the end of a sequence
+            data (AccumulatorData): The performance data for the given minibatch
+            ending (boolean): True if this minibatch marks the end of a sequence
         """
         if self.loss is None:
             self.loss = data.loss
@@ -138,7 +131,8 @@ class Accumulator(object):
             self.loss = update_average(self.loss, self.counts, data.loss, data.size)
         self.counts += data.size
         self.timestep_accuracies.update(data.timestep_accuracies, data.timestep_counts, ending)
-        self.confusion_matrix.update(data.predictions, data.labels, data.sequence_lengths)
+        self.confusion_matrix.update(data.predictions, np.asarray(data.labels, dtype=np.int32).squeeze(), 
+                                     data.sequence_lengths)
     # End of update()
 
     def next_epoch(self):
@@ -157,9 +151,9 @@ class Accumulator(object):
         """Resets the performance metrics for the next epoch.
 
         Creates the following instance variables, if they haven't already been created:
-        - loss (float): The cumulative average loss for every minibatch
-        - accuracy (float): The cumulative average accuracy for every minibatch
-        - counts (float): The cumulative total number of valid elements seen so far
+            loss (float): The cumulative average loss for every minibatch
+            accuracy (float): The cumulative average accuracy for every minibatch
+            counts (float): The cumulative total number of valid elements seen so far
         """
         self.latest_confusion_matrix = self.confusion_matrix.copy()
         self.confusion_matrix = ConfusionMatrix()
@@ -169,7 +163,7 @@ class Accumulator(object):
         """Returns the list of accuracies from the list of metrics.
 
         Returns:
-        - accuracies (list<float>): The list of accuracies for completed epochs
+            accuracies (List[float]): The list of accuracies for completed epochs
         """
         return [metric.accuracy for metric in self.metrics]
     # End of accuracies()
@@ -178,7 +172,7 @@ class Accumulator(object):
         """Returns the list of precision values from the list of metrics.
 
         Returns:
-        - precisions (list<float>): The list of precision values for completed epochs
+            precisions (List[float]): The list of precision values for completed epochs
         """
         return [metric.precision for metric in self.metrics]
     # End of precisions()
@@ -187,7 +181,7 @@ class Accumulator(object):
         """Returns the list of recall values from the list of metrics.
 
         Returns:
-        - recalls (list<float>): The list of recall values for completed epochs
+            recalls (List[float]): The list of recall values for completed epochs
         """
         return [metric.recall for metric in self.metrics]
     # End of recalls()
@@ -196,7 +190,7 @@ class Accumulator(object):
         """Returns the list of f1_scores from the list of metrics.
 
         Returns:
-        - f1_scores (list<float>): The list of f1_scores for completed epochs
+            f1_scores (List[float]): The list of f1_scores for completed epochs
         """
         return [metric.f1_score for metric in self.metrics]
     # End of f1_scores()
@@ -205,7 +199,7 @@ class Accumulator(object):
         """Returns the best attained accuracy.
 
         Returns:
-        - accuracy (float): The best attained accuracy. If the accumulator has no accuracies yet, returns -1.0
+            accuracy (float): The best attained accuracy. If the accumulator has no accuracies yet, returns -1.0
         """
         accuracies = self.accuracies()
         if accuracies:
@@ -219,7 +213,7 @@ class Accumulator(object):
         """Indicates whether or not the latest accuracy is the best attained accuracy.
 
         Returns:
-        - indicator (bool): True if the latest accuracy is the best attained accuracy.
+            indicator (bool): True if the latest accuracy is the best attained accuracy.
         """
         accuracies = self.accuracies()
         if accuracies:
@@ -234,21 +228,24 @@ class Accumulator(object):
         """Returns the latest timestep accuracies, or the timestep accuracies for any given epoch.
 
         Params:
-        - index (int): The index of the epoch to retrieve. Defaults to -1, which retrieves the last epoch
+            index (int): The index of the epoch to retrieve. Defaults to -1, which retrieves the last epoch
         """
         return self.timestep_accuracies.timestep_accuracy_list[index]
     # End of get_timestep_accuracies()
 # End of PerformanceData()
 
 
-def update_average(old_avg: float, old_num: int, new_avg: float, new_num: int):
+def update_average(old_avg: float, old_num: int, new_avg: float, new_num: int) -> float:
     """Updates the old average with new data.
 
     Params:
-    - old_avg (float): The current average value
-    - old_num (int): The number of elements contributing to the current average
-    - new_avg (float): The new average value
-    - new_num (int): The number of elements contributing to the new average
+        old_avg (float): The current average value
+        old_num (int): The number of elements contributing to the current average
+        new_avg (float): The new average value
+        new_num (int): The number of elements contributing to the new average
+
+    Returns:
+        float: The updated running average
     """
     old_sum = old_avg * old_num
     new_sum = new_avg * new_num
