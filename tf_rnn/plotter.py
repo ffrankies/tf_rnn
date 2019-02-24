@@ -7,6 +7,7 @@
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa
+from typing import Iterable, Any
 
 import numpy as np  # noqa
 
@@ -17,7 +18,7 @@ from .logger import debug, trace  # noqa
 from .model import RNNBase  # noqa
 from .layers.utils import Accumulator  # noqa
 from .layers.utils import ConfusionMatrix  # noqa
-from .indexer import Indexer  # noqa
+from .translate.tokenizer import Tokenizer  # noqa
 
 plt.style.use('ggplot')
 
@@ -40,7 +41,8 @@ def plot(model: RNNBase, train_accumulator: Accumulator, valid_accumulator: Accu
     plot_training_accuracy(directory, train_accumulator.accuracies(), valid_accumulator.accuracies())
     plot_f1_score(directory, valid_accumulator)
     plot_timestep_accuracy(directory, test_accumulator)
-    plot_confusion_matrix(directory, test_accumulator.latest_confusion_matrix, model.dataset.indexer)
+    plot_confusion_matrix(directory, test_accumulator.latest_confusion_matrix,
+                          model.dataset.translators.output_translators[0])
 # End of plot()
 
 
@@ -158,13 +160,13 @@ def plot_timestep_accuracy(directory: str, accumulator: Accumulator, timestep_la
 
 
 @trace()
-def plot_confusion_matrix(directory: str, confusion_matrix: ConfusionMatrix, indexer: Indexer = None):
+def plot_confusion_matrix(directory: str, confusion_matrix: ConfusionMatrix, indexer: Tokenizer = None):
     """Plots a confusion matrix a more accurate breakdown of the predictions made.
 
     Params:
     - directory (str): The directory in which to save the plot
     - confusion_matrix (layers.utils.ConfusionMatrix): The confusion matrix
-    - indexer (indexer.Indexer): Converts the label indexes to tokens
+    - indexer (translate.Tokenizer): Converts the label indexes to tokens
     """
     if confusion_matrix.is_empty():
         return  # Don't do anything if confusion matrix is empty
@@ -172,10 +174,9 @@ def plot_confusion_matrix(directory: str, confusion_matrix: ConfusionMatrix, ind
     figure, axes = setup_plot('Predictions Breakdown', 'Prediction', 'Correct Label')
 
     # Get labels
-    labels = confusion_matrix.all_labels()
-    # print('Labels: ', labels)
+    labels = confusion_matrix.all_labels()  # type: Iterable[Any]
     if indexer is not None:
-        labels = indexer.to_tokens(labels)
+        labels = indexer.to_human_vector(labels)
 
     normalized_cm = confusion_matrix.to_normalized_array()
 
