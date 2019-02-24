@@ -7,7 +7,7 @@ from typing import List, Iterable, Dict, Union
 
 import numpy as np
 
-from . import Translator
+from .translator import Translator
 
 
 Numeric = Union[int, float]
@@ -138,6 +138,15 @@ class MinMaxNormalizer(Translator):
         normalized = np.apply_along_axis(self.to_rnn_vector, 0, original_matrix)
         return normalized
     # End of to_rnn_matrix()
+
+    def output_size(self) -> int:
+        """Calculates how many array elements are needed to encode the output of this translator.
+        
+        Returns:
+            int: The number of array elements needed to encode the output of this translator
+        """
+        return 1
+    # End of output_size()
 
     @classmethod
     def create(cls, data: np.ndarray) -> 'MinMaxNormalizer':
