@@ -7,11 +7,13 @@ from typing import List, Iterable, Dict, Any
 
 import numpy as np
 
-from . import Translator
+from .translator import Translator
 
 
 class Tokenizer(Translator):
     """Converts indexes to tokens and tokens to indexes.
+
+    TODO(): Find a way to pass in the vocabulary size here
     """
 
     def __init__(self, index_to_token: List[Any], token_to_index: Dict[Any, int]) -> None:
@@ -102,6 +104,15 @@ class Tokenizer(Translator):
         indexes = np.apply_along_axis(self.to_rnn_vector, 0, token_matrix)
         return indexes
     # End of to_rnn_matrix()
+
+    def output_size(self) -> int:
+        """Calculates how many array elements are needed to encode the output of this translator.
+        
+        Returns:
+            int: The number of array elements needed to encode the output of this translator
+        """
+        return len(self.index_to_token)
+    # End of output_size()
 
     @classmethod
     def create(cls, data: List[List[Any]]) -> 'Tokenizer':
