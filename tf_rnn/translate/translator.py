@@ -89,6 +89,15 @@ class Translator(object):
     # End of to_rnn_matrix()
 
     @abc.abstractclassmethod
+    def output_size(self) -> int:
+        """Calculates how many array elements are needed to encode the output of this translator.
+        
+        Returns:
+            int: The number of array elements needed to encode the output of this translator
+        """
+    # End of output_size()
+
+    @abc.abstractclassmethod
     def create(self, data: np.ndarray) -> 'Translator':
         """Creates a Translator object from the given data.
 
